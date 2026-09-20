@@ -103,6 +103,7 @@ button, input, textarea, select {
 }
 
 .btn-text {
+  border: none;
   background: transparent;
   color: var(--md-sys-color-primary);
 }

@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useTasks } from "../hooks/useTasks";
+import DateField from "../components/DateField";
 import { TASK_RECURRENCE_OPTIONS, TASK_RECURRENCE_LABELS, type TaskRecurrence } from "../types";
 
 export default function Tasks() {
@@ -61,7 +62,7 @@ export default function Tasks() {
 
         {showOptions && (
           <>
-            <input className="input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <DateField value={dueDate} onChange={setDueDate} placeholder="Échéance (optionnel)" />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {TASK_RECURRENCE_OPTIONS.map((r) => (
                 <button key={r} type="button" className={`chip${recurrence === r ? " selected" : ""}`} onClick={() => setRecurrence(r)}>

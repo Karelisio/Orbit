@@ -59,7 +59,7 @@ export default function Calendar() {
           ←
         </button>
         <button
-          className="btn-text"
+          className="btn btn-text"
           style={{ fontSize: 17, fontWeight: 700, textTransform: "capitalize", padding: "4px 10px" }}
           onClick={() => setQuickJumpOpen((v) => !v)}
         >

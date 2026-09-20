@@ -21,16 +21,25 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Widget "Calendrier" : une vraie mini-grille du mois en cours (comme le
- * widget calendrier natif d'Android), avec le jour du jour surligné et un
- * petit point sous les jours qui ont un événement. Un RemoteViews ne peut
- * pas héberger de vue custom : la grille est dessinée sur un Bitmap (même
- * technique que le widget "Orbite" de Wenn) puis affichée dans un ImageView.
+ * Widget "Calendrier" : une vraie mini-grille du mois (comme le widget
+ * calendrier natif d'Android), colorée dynamiquement avec le thème Material
+ * You courant de l'app (couleurs poussées par WidgetSync.tsx), et navigable
+ * mois par mois (flèches natives) — un RemoteViews ne peut pas héberger de
+ * vue custom : la grille elle-même est dessinée sur un Bitmap (même
+ * technique que le widget "Orbite" de Wenn), l'en-tête et les flèches sont
+ * des TextView RemoteViews classiques par-dessus.
+ *
+ * Les points d'événement ne sont disponibles que pour le mois réel en cours
+ * (calculé côté app) : en navigant vers un autre mois, la grille reste
+ * exacte mais sans les points d'événement.
  */
 public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
     private static final int BITMAP_W = 320;
-    private static final int BITMAP_H = 220;
+    private static final int BITMAP_H = 190;
+
+    private static final String ACTION_PREV_MONTH = "io.karelisio.orbit.CAL_WIDGET_PREV";
+    private static final String ACTION_NEXT_MONTH = "io.karelisio.orbit.CAL_WIDGET_NEXT";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -39,14 +48,63 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        super.onReceive(context, intent);
+        String action = intent.getAction();
+        if (!ACTION_PREV_MONTH.equals(action) && !ACTION_NEXT_MONTH.equals(action)) return;
+
+        int appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return;
+
+        SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
+        String offsetKey = OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId;
+        int offset = prefs.getInt(offsetKey, 0) + (ACTION_PREV_MONTH.equals(action) ? -1 : 1);
+        prefs.edit().putInt(offsetKey, offset).apply();
+
+        updateWidget(context, AppWidgetManager.getInstance(context), appWidgetId);
+    }
+
+    @Override
+    public void onDeleted(Context context, int[] appWidgetIds) {
+        SharedPreferences.Editor editor = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE).edit();
+        for (int id : appWidgetIds) {
+            editor.remove(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + id);
+        }
+        editor.apply();
+    }
+
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
         String eventDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_DAYS_THIS_MONTH, "");
+        int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
+
+        int onPrimaryContainer = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, null), "#21005D");
+
+        Calendar shownMonth = Calendar.getInstance();
+        shownMonth.add(Calendar.MONTH, offset);
+        String monthLabel = new SimpleDateFormat("MMMM yyyy", Locale.FRENCH).format(shownMonth.getTime());
+        monthLabel = monthLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + monthLabel.substring(1);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
-        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(eventDaysCsv));
-        views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
+        views.setTextViewText(R.id.widget_cal_month, monthLabel);
+        views.setTextColor(R.id.widget_cal_month, onPrimaryContainer);
+        views.setTextColor(R.id.widget_cal_prev, onPrimaryContainer);
+        views.setTextColor(R.id.widget_cal_next, onPrimaryContainer);
+        views.setOnClickPendingIntent(R.id.widget_cal_prev, navIntent(context, appWidgetId, ACTION_PREV_MONTH));
+        views.setOnClickPendingIntent(R.id.widget_cal_next, navIntent(context, appWidgetId, ACTION_NEXT_MONTH));
+
+        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(context, prefs, offset, eventDaysCsv));
+        views.setOnClickPendingIntent(R.id.widget_calendar_image, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    private static int parseColorOr(String hex, String fallbackHex) {
+        try {
+            return Color.parseColor(hex != null ? hex : fallbackHex);
+        } catch (IllegalArgumentException e) {
+            return Color.parseColor(fallbackHex);
+        }
     }
 
     private static Set<Integer> parseDays(String csv) {
@@ -62,63 +120,65 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         return days;
     }
 
-    private static Bitmap drawMonthGrid(String eventDaysCsv) {
-        Set<Integer> eventDays = parseDays(eventDaysCsv);
+    private static Bitmap drawMonthGrid(Context context, SharedPreferences prefs, int offset, String eventDaysCsv) {
+        // Les jours d'événements ne sont calculés côté app que pour le mois réel en cours.
+        Set<Integer> eventDays = offset == 0 ? parseDays(eventDaysCsv) : new HashSet<>();
+
+        int primary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_PRIMARY, null), "#6750A4");
+        int onPrimary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY, null), "#FFFFFF");
+        int onSurface = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, null), "#1C1B1F");
+        int onSurfaceVariant = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, null), "#79747E");
+        int tertiary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_TERTIARY, null), "#7D5260");
+
         Bitmap bitmap = Bitmap.createBitmap(BITMAP_W, BITMAP_H, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
         Calendar today = Calendar.getInstance();
         int todayDay = today.get(Calendar.DAY_OF_MONTH);
-        int daysInMonth = today.getActualMaximum(Calendar.DAY_OF_MONTH);
 
-        Calendar firstOfMonth = (Calendar) today.clone();
+        Calendar shownMonth = Calendar.getInstance();
+        shownMonth.add(Calendar.MONTH, offset);
+        boolean isCurrentMonth = offset == 0;
+        int daysInMonth = shownMonth.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        Calendar firstOfMonth = (Calendar) shownMonth.clone();
         firstOfMonth.set(Calendar.DAY_OF_MONTH, 1);
         // Calendar.DAY_OF_WEEK : dimanche=1..samedi=7 ; on veut lundi=0..dimanche=6.
         int firstWeekday = (firstOfMonth.get(Calendar.DAY_OF_WEEK) + 5) % 7;
 
-        float headerHeight = BITMAP_H * 0.17f;
-        float weekdayRowHeight = BITMAP_H * 0.15f;
-        float gridTop = headerHeight + weekdayRowHeight;
+        float weekdayRowHeight = BITMAP_H * 0.2f;
+        float gridTop = weekdayRowHeight;
         float gridHeight = BITMAP_H - gridTop;
         int rows = (int) Math.ceil((firstWeekday + daysInMonth) / 7.0);
         float cellW = BITMAP_W / 7f;
         float cellH = gridHeight / rows;
 
-        Paint headerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        headerPaint.setColor(Color.parseColor("#21005D"));
-        headerPaint.setTextSize(BITMAP_H * 0.12f);
-        headerPaint.setFakeBoldText(true);
-        headerPaint.setTextAlign(Paint.Align.CENTER);
-        String monthLabel = new SimpleDateFormat("MMMM yyyy", Locale.FRENCH).format(today.getTime());
-        monthLabel = monthLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + monthLabel.substring(1);
-        canvas.drawText(monthLabel, BITMAP_W / 2f, headerHeight * 0.7f, headerPaint);
-
         Paint weekdayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        weekdayPaint.setColor(Color.parseColor("#79747E"));
-        weekdayPaint.setTextSize(BITMAP_H * 0.09f);
+        weekdayPaint.setColor(onSurfaceVariant);
+        weekdayPaint.setTextSize(BITMAP_H * 0.1f);
         weekdayPaint.setTextAlign(Paint.Align.CENTER);
         String[] weekdays = {"L", "M", "M", "J", "V", "S", "D"};
         for (int i = 0; i < 7; i++) {
-            canvas.drawText(weekdays[i], cellW * i + cellW / 2f, headerHeight + weekdayRowHeight * 0.75f, weekdayPaint);
+            canvas.drawText(weekdays[i], cellW * i + cellW / 2f, weekdayRowHeight * 0.7f, weekdayPaint);
         }
 
         Paint dayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        dayPaint.setColor(Color.parseColor("#1C1B1F"));
-        dayPaint.setTextSize(BITMAP_H * 0.1f);
+        dayPaint.setColor(onSurface);
+        dayPaint.setTextSize(BITMAP_H * 0.11f);
         dayPaint.setTextAlign(Paint.Align.CENTER);
 
         Paint todayCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        todayCirclePaint.setColor(Color.parseColor("#6750A4"));
+        todayCirclePaint.setColor(primary);
         todayCirclePaint.setStyle(Paint.Style.FILL);
 
         Paint todayTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        todayTextPaint.setColor(Color.WHITE);
-        todayTextPaint.setTextSize(BITMAP_H * 0.1f);
+        todayTextPaint.setColor(onPrimary);
+        todayTextPaint.setTextSize(BITMAP_H * 0.11f);
         todayTextPaint.setFakeBoldText(true);
         todayTextPaint.setTextAlign(Paint.Align.CENTER);
 
         Paint eventDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        eventDotPaint.setColor(Color.parseColor("#7D5260"));
+        eventDotPaint.setColor(tertiary);
         eventDotPaint.setStyle(Paint.Style.FILL);
 
         for (int day = 1; day <= daysInMonth; day++) {
@@ -128,20 +188,28 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             float cx = cellW * col + cellW / 2f;
             float cy = gridTop + cellH * row + cellH / 2f;
 
-            boolean isToday = day == todayDay;
+            boolean isToday = isCurrentMonth && day == todayDay;
             if (isToday) {
                 canvas.drawCircle(cx, cy, Math.min(cellW, cellH) * 0.36f, todayCirclePaint);
-                canvas.drawText(String.valueOf(day), cx, cy + BITMAP_H * 0.035f, todayTextPaint);
+                canvas.drawText(String.valueOf(day), cx, cy + BITMAP_H * 0.038f, todayTextPaint);
             } else {
-                canvas.drawText(String.valueOf(day), cx, cy + BITMAP_H * 0.035f, dayPaint);
+                canvas.drawText(String.valueOf(day), cx, cy + BITMAP_H * 0.038f, dayPaint);
             }
 
             if (eventDays.contains(day)) {
-                canvas.drawCircle(cx, cy + cellH * 0.32f, BITMAP_H * 0.018f, eventDotPaint);
+                canvas.drawCircle(cx, cy + cellH * 0.32f, BITMAP_H * 0.02f, eventDotPaint);
             }
         }
 
         return bitmap;
+    }
+
+    static PendingIntent navIntent(Context context, int appWidgetId, String action) {
+        Intent intent = new Intent(context, OrbitCalendarWidgetProvider.class);
+        intent.setAction(action);
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+        int requestCode = appWidgetId * 10 + (ACTION_PREV_MONTH.equals(action) ? 1 : 2);
+        return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     static PendingIntent openAppIntent(Context context, int appWidgetId) {

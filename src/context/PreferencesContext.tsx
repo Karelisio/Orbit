@@ -14,14 +14,35 @@ const DEFAULT_HOME_SECTIONS: HomeSectionsVisibility = {
   tasks: true,
 };
 
+export type NavTab = "calendar" | "tasks" | "budget" | "journal";
+
+export const NAV_TAB_LABELS: Record<NavTab, string> = {
+  calendar: "Calendrier",
+  tasks: "Tâches",
+  budget: "Budget",
+  journal: "Journal",
+};
+
+export type NavTabsVisibility = Record<NavTab, boolean>;
+
+const DEFAULT_NAV_TABS: NavTabsVisibility = {
+  calendar: true,
+  tasks: true,
+  budget: true,
+  journal: true,
+};
+
 const HOME_SECTIONS_KEY = "orbit-home-sections";
 const SHOW_PERIOD_KEY = "orbit-show-period-in-calendar";
+const NAV_TABS_KEY = "orbit-nav-tabs";
 
 interface PreferencesContextValue {
   homeSections: HomeSectionsVisibility;
   setHomeSectionVisible: (section: keyof HomeSectionsVisibility, visible: boolean) => void;
   showPeriodInCalendar: boolean;
   setShowPeriodInCalendar: (value: boolean) => void;
+  navTabs: NavTabsVisibility;
+  setNavTabVisible: (tab: NavTab, visible: boolean) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextValue | undefined>(undefined);
@@ -51,6 +72,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   });
 
+  const [navTabs, setNavTabs] = useState<NavTabsVisibility>(() => {
+    try {
+      const stored = localStorage.getItem(NAV_TABS_KEY);
+      return stored ? { ...DEFAULT_NAV_TABS, ...JSON.parse(stored) } : DEFAULT_NAV_TABS;
+    } catch {
+      return DEFAULT_NAV_TABS;
+    }
+  });
+
   useEffect(() => {
     try {
       localStorage.setItem(HOME_SECTIONS_KEY, JSON.stringify(homeSections));
@@ -67,13 +97,32 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   }, [showPeriodInCalendar]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(NAV_TABS_KEY, JSON.stringify(navTabs));
+    } catch {
+      // idem
+    }
+  }, [navTabs]);
+
   function setHomeSectionVisible(section: keyof HomeSectionsVisibility, visible: boolean) {
     setHomeSections((prev) => ({ ...prev, [section]: visible }));
   }
 
+  function setNavTabVisible(tab: NavTab, visible: boolean) {
+    setNavTabs((prev) => ({ ...prev, [tab]: visible }));
+  }
+
   return (
     <PreferencesContext.Provider
-      value={{ homeSections, setHomeSectionVisible, showPeriodInCalendar, setShowPeriodInCalendar: setShowPeriodInCalendarState }}
+      value={{
+        homeSections,
+        setHomeSectionVisible,
+        showPeriodInCalendar,
+        setShowPeriodInCalendar: setShowPeriodInCalendarState,
+        navTabs,
+        setNavTabVisible,
+      }}
     >
       {children}
     </PreferencesContext.Provider>

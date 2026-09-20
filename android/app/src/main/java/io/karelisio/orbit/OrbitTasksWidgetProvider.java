@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.widget.RemoteViews;
 
 /**
@@ -33,8 +34,21 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_tasks_label, count <= 1 ? "tâche à faire" : "tâches à faire");
         views.setTextViewText(R.id.widget_tasks_next, count == 0 ? "Tout est fait ✨" : nextTaskTitle);
 
+        int onPrimaryContainer = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, null), "#21005D");
+        views.setTextColor(R.id.widget_tasks_count, onPrimaryContainer);
+        views.setTextColor(R.id.widget_tasks_label, onPrimaryContainer);
+        views.setTextColor(R.id.widget_tasks_next, onPrimaryContainer);
+
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    private static int parseColorOr(String hex, String fallbackHex) {
+        try {
+            return Color.parseColor(hex != null ? hex : fallbackHex);
+        } catch (IllegalArgumentException e) {
+            return Color.parseColor(fallbackHex);
+        }
     }
 
     static PendingIntent openAppIntent(Context context, int appWidgetId) {

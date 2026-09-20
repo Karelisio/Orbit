@@ -3,7 +3,8 @@ import { Capacitor } from "@capacitor/core";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useThemeMode } from "../context/ThemeModeContext";
-import { usePreferences, type HomeSectionsVisibility } from "../context/PreferencesContext";
+import { usePreferences, type HomeSectionsVisibility, type NavTab, NAV_TAB_LABELS } from "../context/PreferencesContext";
+import DateField from "../components/DateField";
 import { supabase } from "../lib/supabase";
 import { requestNotificationPermission } from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
@@ -103,7 +104,7 @@ export default function Settings() {
   const { user, profile, signOut } = useAuth();
   const { couple, role, leaveCouple, renameCouple, setTogetherSince } = useCouple();
   const { mode, setMode, setThemeImageUrl } = useThemeMode();
-  const { homeSections, setHomeSectionVisible, showPeriodInCalendar, setShowPeriodInCalendar } = usePreferences();
+  const { homeSections, setHomeSectionVisible, showPeriodInCalendar, setShowPeriodInCalendar, navTabs, setNavTabVisible } = usePreferences();
 
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -253,6 +254,21 @@ export default function Settings() {
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
+        <h3 className="section-title">Onglets affichés en bas</h3>
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Propre à cet appareil. « Accueil » reste toujours affiché.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {(Object.keys(NAV_TAB_LABELS) as NavTab[]).map((tab) => (
+            <label key={tab} className="checkbox-row">
+              <input type="checkbox" checked={navTabs[tab]} onChange={(e) => setNavTabVisible(tab, e.target.checked)} />
+              <span>{NAV_TAB_LABELS[tab]}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
         <h3 className="section-title">Calendrier</h3>
         <label className="checkbox-row">
           <input
@@ -267,13 +283,9 @@ export default function Settings() {
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 className="section-title">Jours ensemble</h3>
         <div style={{ display: "flex", gap: 8 }}>
-          <input
-            className="input"
-            type="date"
-            value={togetherSince}
-            onChange={(e) => setTogetherSinceInput(e.target.value)}
-            style={{ flex: 1 }}
-          />
+          <div style={{ flex: 1 }}>
+            <DateField value={togetherSince} onChange={setTogetherSinceInput} placeholder="Date de mise en couple" clearLabel="Effacer" />
+          </div>
           <button className="btn btn-secondary" onClick={handleTogetherSinceSave} disabled={togetherSince === (couple?.together_since ?? "")}>
             Enregistrer
           </button>

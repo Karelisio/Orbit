@@ -41,11 +41,26 @@ public class WidgetDataPlugin extends Plugin {
         String eventDaysThisMonth = call.getString("eventDaysThisMonth");
         editor.putString(OrbitWidgetPrefs.KEY_EVENT_DAYS_THIS_MONTH, eventDaysThisMonth != null ? eventDaysThisMonth : "");
 
+        putColorIfPresent(call, editor, "primaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY);
+        putColorIfPresent(call, editor, "onPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY);
+        putColorIfPresent(call, editor, "onPrimaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER);
+        putColorIfPresent(call, editor, "onSurfaceColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE);
+        putColorIfPresent(call, editor, "onSurfaceVariantColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT);
+        putColorIfPresent(call, editor, "tertiaryColor", OrbitWidgetPrefs.KEY_COLOR_TERTIARY);
+
         editor.apply();
 
         OrbitCalendarWidgetProvider.refreshAll(context);
         OrbitTasksWidgetProvider.refreshAll(context);
         OrbitCombinedWidgetProvider.refreshAll(context);
         call.resolve();
+    }
+
+    /** Couleur Material You optionnelle (hex "#rrggbb") envoyée depuis le thème JS courant. */
+    private void putColorIfPresent(PluginCall call, SharedPreferences.Editor editor, String field, String prefKey) {
+        String value = call.getString(field);
+        if (value != null) {
+            editor.putString(prefKey, value);
+        }
     }
 }
