@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/widget_tasks_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="—"
+        android:textColor="#21005D"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_tasks_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="tâches à faire"
+        android:textColor="#4F378A"
+        android:textSize="12sp"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/widget_tasks_next"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text=""
+        android:textColor="#4F378A"
+        android:textSize="11sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+</LinearLayout>

@@ -1,6 +1,7 @@
 import { Navigate, HashRouter, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { CoupleProvider, useCouple } from "./context/CoupleContext";
+import { PreferencesProvider } from "./context/PreferencesContext";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
@@ -10,10 +11,12 @@ import Budget from "./pages/Budget";
 import Journal from "./pages/Journal";
 import Settings from "./pages/Settings";
 import BottomNav from "./components/BottomNav";
+import WidgetSync from "./components/WidgetSync";
 
 function AppShell() {
   return (
     <div className="app-shell">
+      <WidgetSync />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/calendar" element={<Calendar />} />
@@ -32,7 +35,11 @@ function CoupleGate() {
   const { couple, loading } = useCouple();
   if (loading) return <div className="center-screen">Chargement...</div>;
   if (!couple) return <Onboarding />;
-  return <AppShell />;
+  return (
+    <PreferencesProvider>
+      <AppShell />
+    </PreferencesProvider>
+  );
 }
 
 export default function App() {

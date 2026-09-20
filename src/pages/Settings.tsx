@@ -3,13 +3,107 @@ import { Capacitor } from "@capacitor/core";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useThemeMode } from "../context/ThemeModeContext";
+import { usePreferences, type HomeSectionsVisibility } from "../context/PreferencesContext";
 import { supabase } from "../lib/supabase";
 import { requestNotificationPermission } from "../lib/notifications";
+import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
+
+const HOME_SECTION_LABELS: Record<keyof HomeSectionsVisibility, string> = {
+  together: "Compteur jours ensemble",
+  cycle: "Widget cycle",
+  events: "Prochains événements",
+  tasks: "Tâches en cours",
+};
+
+function UpdateCard() {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<UpdateCheckResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  if (!Capacitor.isNativePlatform()) return null;
+
+  async function handleCheck() {
+    setChecking(true);
+    setError(null);
+    try {
+      setResult(await checkForUpdate());
+    } catch {
+      setError("Impossible de vérifier les mises à jour pour le moment.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function handleInstall() {
+    if (!result?.downloadUrl) return;
+    setError(null);
+
+    if (Capacitor.getPlatform() !== "android") {
+      await openUpdateDownload(result.downloadUrl);
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      await downloadAndInstallUpdate(result.downloadUrl);
+    } catch {
+      setError("Le téléchargement de la mise à jour a échoué.");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Mises à jour</h3>
+      {result?.currentVersion && (
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Version installée : {result.currentVersion}
+        </p>
+      )}
+      {!result?.updateAvailable ? (
+        <button className="btn btn-secondary" onClick={handleCheck} disabled={checking}>
+          {checking ? "Vérification..." : "Vérifier les mises à jour"}
+        </button>
+      ) : (
+        <>
+          {result.releaseNotes && (
+            <div
+              style={{
+                background: "var(--md-sys-color-surface-variant)",
+                color: "var(--md-sys-color-on-surface-variant)",
+                borderRadius: "var(--radius-m)",
+                padding: 12,
+                marginBottom: 12,
+                fontSize: 13,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <strong style={{ display: "block", marginBottom: 4, color: "var(--md-sys-color-on-surface)" }}>
+                Nouveautés de la version {result.latestVersion}
+              </strong>
+              {result.releaseNotes}
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={handleInstall} disabled={downloading}>
+            {downloading ? "Téléchargement en cours..." : `Installer la version ${result.latestVersion}`}
+          </button>
+        </>
+      )}
+      {result && !result.updateAvailable && result.currentVersion && (
+        <p style={{ fontSize: 13, marginTop: 10 }}>Tu as déjà la dernière version ✅</p>
+      )}
+      {error && <p style={{ fontSize: 13, marginTop: 10, color: "var(--md-sys-color-error)" }}>{error}</p>}
+    </div>
+  );
+}
 
 export default function Settings() {
   const { user, profile, signOut } = useAuth();
   const { couple, role, leaveCouple, renameCouple, setTogetherSince } = useCouple();
   const { mode, setMode, setThemeImageUrl } = useThemeMode();
+  const { homeSections, setHomeSectionVisible, showPeriodInCalendar, setShowPeriodInCalendar } = usePreferences();
 
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -135,6 +229,39 @@ export default function Settings() {
           Activer les notifications
         </button>
         {notifStatus && <p style={{ fontSize: 13, marginTop: 10 }}>{notifStatus}</p>}
+      </div>
+
+      <UpdateCard />
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 className="section-title">Sections de l'accueil</h3>
+        <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+          Propre à cet appareil.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {(Object.keys(HOME_SECTION_LABELS) as (keyof HomeSectionsVisibility)[]).map((section) => (
+            <label key={section} className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={homeSections[section]}
+                onChange={(e) => setHomeSectionVisible(section, e.target.checked)}
+              />
+              <span>{HOME_SECTION_LABELS[section]}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 className="section-title">Calendrier</h3>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={showPeriodInCalendar}
+            onChange={(e) => setShowPeriodInCalendar(e.target.checked)}
+          />
+          <span>Afficher discrètement les règles (Wenn) dans le calendrier</span>
+        </label>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

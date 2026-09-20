@@ -1,15 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import TogetherCounter from "../components/TogetherCounter";
 import CycleWidget from "../components/CycleWidget";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
+import { usePreferences } from "../context/PreferencesContext";
 import { EVENT_CATEGORY_COLORS } from "../types";
 
 export default function Home() {
   const { events } = useEvents();
   const { tasks, toggleTask } = useTasks();
+  const { homeSections } = usePreferences();
 
   const upcomingEvents = useMemo(() => {
     const now = Date.now();
@@ -28,43 +30,51 @@ export default function Home() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <TogetherCounter />
-        <CycleWidget />
+        {homeSections.together && <TogetherCounter />}
+        {homeSections.cycle && <CycleWidget />}
 
-        <section>
-          <p className="section-title">Prochains événements</p>
-          {upcomingEvents.length === 0 ? (
-            <p className="empty-state">Rien de prévu pour l'instant.</p>
-          ) : (
-            <div className="list">
-              {upcomingEvents.map((event) => (
-                <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={event.color ?? EVENT_CATEGORY_COLORS[event.category]} />
-              ))}
-            </div>
-          )}
-          <Link to="/calendar" className="btn btn-text" style={{ padding: "8px 0" }}>
-            Voir le calendrier →
-          </Link>
-        </section>
+        {homeSections.events && (
+          <section>
+            <p className="section-title">Prochains événements</p>
+            {upcomingEvents.length === 0 ? (
+              <p className="empty-state">Rien de prévu pour l'instant.</p>
+            ) : (
+              <div className="list">
+                {upcomingEvents.map((event) => (
+                  <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={event.color ?? EVENT_CATEGORY_COLORS[event.category]} />
+                ))}
+              </div>
+            )}
+            <Link to="/calendar" className="btn btn-text" style={{ padding: "8px 0" }}>
+              Voir le calendrier →
+            </Link>
+          </section>
+        )}
 
-        <section>
-          <p className="section-title">Tâches en cours</p>
-          {pendingTasks.length === 0 ? (
-            <p className="empty-state">Tout est fait ✨</p>
-          ) : (
-            <div className="list">
-              {pendingTasks.map((task) => (
-                <label key={task.id} className="list-item checkbox-row">
-                  <input type="checkbox" checked={task.done} onChange={() => toggleTask(task)} />
-                  <span>{task.title}</span>
-                </label>
-              ))}
-            </div>
-          )}
-          <Link to="/tasks" className="btn btn-text" style={{ padding: "8px 0" }}>
-            Voir toutes les tâches →
-          </Link>
-        </section>
+        {homeSections.tasks && (
+          <section>
+            <p className="section-title">Tâches en cours</p>
+            {pendingTasks.length === 0 ? (
+              <p className="empty-state">Tout est fait ✨</p>
+            ) : (
+              <div className="list">
+                {pendingTasks.map((task) => (
+                  <label key={task.id} className="list-item checkbox-row">
+                    <input type="checkbox" checked={task.done} onChange={() => toggleTask(task)} />
+                    <span>{task.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <Link to="/tasks" className="btn btn-text" style={{ padding: "8px 0" }}>
+              Voir toutes les tâches →
+            </Link>
+          </section>
+        )}
+
+        {!homeSections.together && !homeSections.cycle && !homeSections.events && !homeSections.tasks && (
+          <p className="empty-state">Toutes les sections sont masquées — réactive-les dans Réglages.</p>
+        )}
       </div>
     </div>
   );

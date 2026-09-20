@@ -24,23 +24,52 @@ en app Android avec Capacitor.
 ```
 src/
   context/     AuthContext (session Supabase), CoupleContext (lien de couple,
-               réutilise la table "couples" de Wenn), ThemeModeContext
+               réutilise la table "couples" de Wenn), ThemeModeContext,
+               PreferencesContext (sections d'accueil masquables, affichage
+               des règles dans le calendrier — préférences par appareil)
   hooks/       useRealtimeCollection (fetch + sync temps réel générique),
                useEvents, useTasks, useJournal, useExpenses, useCycleStatus
-               (lecture seule de cycle_days, widget dashboard)
+               (lecture seule de cycle_days, widget dashboard),
+               useCyclePeriodDays (lecture seule, overlay calendrier)
   pages/       Home (dashboard), Calendar, Tasks, Budget, Journal, Settings,
                Login, Onboarding
-  components/  BottomNav, TogetherCounter, CycleWidget, EventSheet, ExpenseSheet
+  components/  BottomNav, TogetherCounter, CycleWidget, EventSheet,
+               ExpenseSheet, WidgetSync (pousse les données vers les widgets
+               Android)
   lib/         supabase, materialYou, wallpaperColor, notifications,
                cyclePredictions (calcul de phase, adapté de Wenn), balances
-               (calcul budget partagé)
+               (calcul budget partagé), appUpdate (mise à jour in-app),
+               widgetSync, deepLink
 
 android/app/src/main/java/io/karelisio/orbit/
-  MainActivity.java          enregistre le plugin Capacitor custom
-  WallpaperColorPlugin.java  lit la couleur dominante du fond d'écran (thème)
+  MainActivity.java              enregistre les plugins Capacitor custom
+  WallpaperColorPlugin.java      lit la couleur dominante du fond d'écran (thème)
+  ApkInstallerPlugin.java        lance l'installeur système pour l'APK téléchargé
+  WidgetDataPlugin.java          pont JS -> widgets (SharedPreferences + refresh)
+  OrbitWidgetPrefs.java          clés SharedPreferences partagées
+  OrbitEventsWidgetProvider.java    widget "prochain événement"
+  OrbitTasksWidgetProvider.java     widget "tâches en attente"
+  OrbitCombinedWidgetProvider.java  widget fusionnant les deux
 
 supabase/schema.sql   tables propres à Orbit (additif à celui de Wenn, voir plus bas)
 ```
+
+## Widgets Android (trois, au choix dans le sélecteur de widgets)
+
+Les trois lisent les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites
+par `WidgetDataPlugin.update()` côté natif, appelé depuis `WidgetSync.tsx`
+(monté dans `AppShell`) à chaque changement d'événements ou de tâches :
+prochain événement (titre + échéance relative) et nombre de tâches en
+attente (+ la prochaine). Toute nouvelle donnée à exposer à un widget suit
+le même chemin que sur Wenn : calculer dans `WidgetSync.tsx` → ajouter un
+champ à `WidgetDataPlugin.update()` (JS + Java) → lire depuis
+`SharedPreferences` dans le(s) `AppWidgetProvider`.
+
+## Mise à jour in-app
+
+`Réglages → Mises à jour` vérifie la dernière Release GitHub du dépôt Orbit
+et propose de l'installer directement (même mécanisme CORS/`CapacitorHttp`
+que sur Wenn, voir `src/lib/appUpdate.ts`).
 
 ## Connexion au projet Supabase partagé avec Wenn — IMPORTANT
 
