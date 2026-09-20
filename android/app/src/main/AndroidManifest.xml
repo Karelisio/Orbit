@@ -51,16 +51,16 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- Widget d'écran d'accueil : prochain événement -->
+        <!-- Widget d'écran d'accueil : mini calendrier du mois -->
         <receiver
-            android:name=".OrbitEventsWidgetProvider"
+            android:name=".OrbitCalendarWidgetProvider"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_events_info" />
+                android:resource="@xml/widget_calendar_info" />
         </receiver>
 
         <!-- Widget d'écran d'accueil : tâches en attente -->

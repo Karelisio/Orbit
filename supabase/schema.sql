@@ -83,6 +83,8 @@ create table if not exists public.orbit_tasks (
   title text not null,
   notes text,
   assigned_to uuid references auth.users (id) on delete set null,
+  due_date date,
+  recurrence text not null default 'none' check (recurrence in ('none', 'daily', 'weekly', 'monthly')),
   done boolean not null default false,
   done_at timestamptz,
   created_by uuid not null references auth.users (id),
@@ -229,3 +231,16 @@ alter publication supabase_realtime add table public.orbit_events;
 alter publication supabase_realtime add table public.orbit_tasks;
 alter publication supabase_realtime add table public.orbit_journal_entries;
 alter publication supabase_realtime add table public.orbit_expenses;
+
+-- ---------------------------------------------------------------------------
+-- Migration additive : date d'échéance + récurrence des tâches
+-- (à exécuter une fois dans le SQL Editor si le projet existe déjà)
+-- ---------------------------------------------------------------------------
+alter table public.orbit_tasks
+  add column if not exists due_date date;
+alter table public.orbit_tasks
+  add column if not exists recurrence text not null default 'none';
+alter table public.orbit_tasks
+  drop constraint if exists orbit_tasks_recurrence_check;
+alter table public.orbit_tasks
+  add constraint orbit_tasks_recurrence_check check (recurrence in ('none', 'daily', 'weekly', 'monthly'));

@@ -7,7 +7,7 @@ import type { OrbitJournalEntry } from "../types";
 export function useJournal() {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const { rows, loading } = useRealtimeCollection<OrbitJournalEntry>("orbit_journal_entries", couple?.id ?? null, (a, b) =>
+  const { rows, loading, setRows } = useRealtimeCollection<OrbitJournalEntry>("orbit_journal_entries", couple?.id ?? null, (a, b) =>
     b.created_at.localeCompare(a.created_at)
   );
 
@@ -22,6 +22,7 @@ export function useJournal() {
   }
 
   async function deleteEntry(id: string) {
+    setRows((prev) => prev.filter((e) => e.id !== id));
     const { error } = await supabase.from("orbit_journal_entries").delete().eq("id", id);
     return { error: error?.message ?? null };
   }

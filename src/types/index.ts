@@ -60,12 +60,24 @@ export interface OrbitEvent {
   updated_at: string;
 }
 
+export const TASK_RECURRENCE_OPTIONS = ["none", "daily", "weekly", "monthly"] as const;
+export type TaskRecurrence = (typeof TASK_RECURRENCE_OPTIONS)[number];
+
+export const TASK_RECURRENCE_LABELS: Record<TaskRecurrence, string> = {
+  none: "Ne se répète pas",
+  daily: "Tous les jours",
+  weekly: "Toutes les semaines",
+  monthly: "Tous les mois",
+};
+
 export interface OrbitTask {
   id: string;
   couple_id: string;
   title: string;
   notes: string | null;
   assigned_to: string | null;
+  due_date: string | null;
+  recurrence: TaskRecurrence;
   done: boolean;
   done_at: string | null;
   created_by: string;

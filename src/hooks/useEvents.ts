@@ -13,7 +13,7 @@ export type NewEvent = Pick<
 export function useEvents() {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const { rows, loading } = useRealtimeCollection<OrbitEvent>("orbit_events", couple?.id ?? null, (a, b) =>
+  const { rows, loading, setRows } = useRealtimeCollection<OrbitEvent>("orbit_events", couple?.id ?? null, (a, b) =>
     a.starts_at.localeCompare(b.starts_at)
   );
 
@@ -37,6 +37,7 @@ export function useEvents() {
   }
 
   async function deleteEvent(event: OrbitEvent) {
+    setRows((prev) => prev.filter((e) => e.id !== event.id));
     const { error } = await supabase.from("orbit_events").delete().eq("id", event.id);
     if (error) return { error: error.message };
     await cancelEventNotifications(event);

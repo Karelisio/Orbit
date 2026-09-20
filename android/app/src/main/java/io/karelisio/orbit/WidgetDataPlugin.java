@@ -38,9 +38,12 @@ public class WidgetDataPlugin extends Plugin {
         String nextTaskTitle = call.getString("nextTaskTitle");
         editor.putString(OrbitWidgetPrefs.KEY_NEXT_TASK_TITLE, nextTaskTitle != null ? nextTaskTitle : "");
 
+        String eventDaysThisMonth = call.getString("eventDaysThisMonth");
+        editor.putString(OrbitWidgetPrefs.KEY_EVENT_DAYS_THIS_MONTH, eventDaysThisMonth != null ? eventDaysThisMonth : "");
+
         editor.apply();
 
-        OrbitEventsWidgetProvider.refreshAll(context);
+        OrbitCalendarWidgetProvider.refreshAll(context);
         OrbitTasksWidgetProvider.refreshAll(context);
         OrbitCombinedWidgetProvider.refreshAll(context);
         call.resolve();

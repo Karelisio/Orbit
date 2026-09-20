@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, format, isSameMonth } from "date-fns";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { syncWidgets } from "../lib/widgetSync";
@@ -20,15 +20,23 @@ export default function WidgetSync() {
   const { tasks } = useTasks();
 
   useEffect(() => {
-    const now = Date.now();
-    const nextEvent = events.filter((e) => new Date(e.starts_at).getTime() >= now)[0] ?? null;
+    const now = new Date();
+    const nextEvent = events.filter((e) => new Date(e.starts_at).getTime() >= now.getTime())[0] ?? null;
     const pendingTasks = tasks.filter((t) => !t.done);
+    const eventDaysThisMonth = Array.from(
+      new Set(
+        events
+          .filter((e) => isSameMonth(new Date(e.starts_at), now))
+          .map((e) => new Date(e.starts_at).getDate())
+      )
+    );
 
     syncWidgets({
       nextEventTitle: nextEvent?.title ?? null,
       nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.starts_at, nextEvent.all_day) : null,
       pendingTasksCount: pendingTasks.length,
       nextTaskTitle: pendingTasks[0]?.title ?? null,
+      eventDaysThisMonth,
     });
   }, [events, tasks]);
 

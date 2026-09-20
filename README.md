@@ -47,9 +47,9 @@ android/app/src/main/java/io/karelisio/orbit/
   ApkInstallerPlugin.java        lance l'installeur système pour l'APK téléchargé
   WidgetDataPlugin.java          pont JS -> widgets (SharedPreferences + refresh)
   OrbitWidgetPrefs.java          clés SharedPreferences partagées
-  OrbitEventsWidgetProvider.java    widget "prochain événement"
+  OrbitCalendarWidgetProvider.java  widget mini calendrier du mois (grille dessinée)
   OrbitTasksWidgetProvider.java     widget "tâches en attente"
-  OrbitCombinedWidgetProvider.java  widget fusionnant les deux
+  OrbitCombinedWidgetProvider.java  widget fusionnant calendrier + tâches
 
 supabase/schema.sql   tables propres à Orbit (additif à celui de Wenn, voir plus bas)
 ```
@@ -58,12 +58,14 @@ supabase/schema.sql   tables propres à Orbit (additif à celui de Wenn, voir pl
 
 Les trois lisent les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites
 par `WidgetDataPlugin.update()` côté natif, appelé depuis `WidgetSync.tsx`
-(monté dans `AppShell`) à chaque changement d'événements ou de tâches :
-prochain événement (titre + échéance relative) et nombre de tâches en
-attente (+ la prochaine). Toute nouvelle donnée à exposer à un widget suit
-le même chemin que sur Wenn : calculer dans `WidgetSync.tsx` → ajouter un
-champ à `WidgetDataPlugin.update()` (JS + Java) → lire depuis
-`SharedPreferences` dans le(s) `AppWidgetProvider`.
+(monté dans `AppShell`) à chaque changement d'événements ou de tâches.
+Le widget "Calendrier" dessine une vraie mini-grille du mois (jour du jour
+surligné, petit point sous les jours avec événement) sur un `Bitmap`/`Canvas`
+— un `RemoteViews` ne peut pas héberger de vue custom, même technique que le
+widget "Orbite" de Wenn. Toute nouvelle donnée à exposer à un widget suit le
+même chemin que sur Wenn : calculer dans `WidgetSync.tsx` → ajouter un champ
+à `WidgetDataPlugin.update()` (JS + Java) → lire depuis `SharedPreferences`
+dans le(s) `AppWidgetProvider`.
 
 ## Mise à jour in-app
 

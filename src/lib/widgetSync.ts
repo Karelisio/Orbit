@@ -6,6 +6,7 @@ interface WidgetDataPlugin {
     nextEventTimeLabel?: string;
     pendingTasksCount: number;
     nextTaskTitle?: string;
+    eventDaysThisMonth: string;
   }): Promise<void>;
 }
 
@@ -16,6 +17,7 @@ export async function syncWidgets(data: {
   nextEventTimeLabel: string | null;
   pendingTasksCount: number;
   nextTaskTitle: string | null;
+  eventDaysThisMonth: number[];
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -24,6 +26,7 @@ export async function syncWidgets(data: {
       nextEventTimeLabel: data.nextEventTimeLabel ?? undefined,
       pendingTasksCount: data.pendingTasksCount,
       nextTaskTitle: data.nextTaskTitle ?? undefined,
+      eventDaysThisMonth: data.eventDaysThisMonth.join(","),
     });
   } catch {
     // plateforme sans widgets (ou plugin indisponible) : tant pis

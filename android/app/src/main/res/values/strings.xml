@@ -4,7 +4,7 @@
     <string name="title_activity_main">Orbit</string>
     <string name="package_name">io.karelisio.orbit</string>
     <string name="custom_url_scheme">io.karelisio.orbit</string>
-    <string name="widget_events_description">Orbit — prochain événement du calendrier</string>
+    <string name="widget_calendar_description">Orbit — mini calendrier du mois avec les jours d\'événements</string>
     <string name="widget_tasks_description">Orbit — tâches en attente</string>
     <string name="widget_combined_description">Orbit — calendrier et tâches réunis</string>
 </resources>
