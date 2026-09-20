@@ -29,15 +29,19 @@ export function useCycleStatus(): CycleStatus {
     let cancelled = false;
 
     async function load() {
-      const { data, error } = await supabase
-        .from("cycle_days")
-        .select("date, flow")
-        .eq("couple_id", couple!.id)
-        .order("date");
+      let data: { date: string; flow: string | null }[] | null = null;
+      let error: unknown = null;
+      try {
+        const result = await supabase.from("cycle_days").select("date, flow").eq("couple_id", couple!.id).order("date");
+        data = result.data;
+        error = result.error;
+      } catch (e) {
+        error = e; // hors ligne : le widget reste sur son dernier état connu
+      }
 
       if (cancelled) return;
       if (error || !data || data.length === 0) {
-        setStatus({ available: false, phase: "inconnu", daysUntilNextPeriod: null, nextPeriodStart: null });
+        if (!error) setStatus({ available: false, phase: "inconnu", daysUntilNextPeriod: null, nextPeriodStart: null });
         return;
       }
 

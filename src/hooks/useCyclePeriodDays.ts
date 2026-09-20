@@ -30,10 +30,15 @@ export function useCyclePeriodDays(rangeStart: Date, rangeEnd: Date, enabled: bo
       .not("flow", "is", null)
       .gte("date", startStr)
       .lte("date", endStr)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setPeriodDates(new Set(((data as { date: string }[]) ?? []).map((d) => d.date)));
-      });
+      .then(
+        ({ data }) => {
+          if (cancelled) return;
+          if (data) setPeriodDates(new Set((data as { date: string }[]).map((d) => d.date)));
+        },
+        () => {
+          // hors ligne : on garde les jours de règles déjà affichés
+        }
+      );
 
     return () => {
       cancelled = true;

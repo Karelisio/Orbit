@@ -5,10 +5,40 @@ interface WithId {
   id: string;
 }
 
+function cacheKey(table: string, coupleId: string): string {
+  return `orbit-cache-${table}-${coupleId}`;
+}
+
+function readCache<T>(table: string, coupleId: string): T[] {
+  try {
+    const raw = localStorage.getItem(cacheKey(table, coupleId));
+    return raw ? (JSON.parse(raw) as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCache<T>(table: string, coupleId: string, rows: T[]): void {
+  try {
+    localStorage.setItem(cacheKey(table, coupleId), JSON.stringify(rows));
+  } catch {
+    // stockage indisponible : tant pis, pas de cache hors-ligne cette fois
+  }
+}
+
 /**
  * Charge une table filtrée par couple_id puis la garde synchronisée en temps
  * réel (INSERT/UPDATE/DELETE) — factorise ce qui serait sinon dupliqué à
  * l'identique dans useEvents/useTasks/useJournal/useExpenses.
+ *
+ * Hydrate immédiatement depuis un cache localStorage (dernière copie connue)
+ * avant même la réponse réseau : lancement hors ligne ou connexion lente,
+ * l'app affiche tout de suite les dernières données vues plutôt qu'un écran
+ * vide. Le cache est ensuite tenu à jour à chaque changement de `rows`.
+ * Écrire pendant qu'on est hors ligne reste possible mais échoue (l'erreur
+ * réseau remonte normalement) : pas de file d'attente à resynchroniser plus
+ * tard, pour éviter les doublons/conflits d'un système de sync maison sur
+ * des données partagées en temps réel.
  */
 export function useRealtimeCollection<T extends WithId>(
   table: string,
@@ -26,17 +56,30 @@ export function useRealtimeCollection<T extends WithId>(
     }
 
     let cancelled = false;
-    setLoading(true);
+
+    const cached = readCache<T>(table, coupleId);
+    if (cached.length > 0) {
+      setRows(cached.sort(sortBy));
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
     supabase
       .from(table)
       .select("*")
       .eq("couple_id", coupleId)
-      .then(({ data }) => {
-        if (cancelled) return;
-        setRows(((data as T[]) ?? []).sort(sortBy));
-        setLoading(false);
-      });
+      .then(
+        ({ data, error }) => {
+          if (cancelled) return;
+          setLoading(false);
+          if (error || !data) return; // hors ligne / erreur réseau : le cache déjà affiché reste
+          setRows((data as T[]).sort(sortBy));
+        },
+        () => {
+          if (!cancelled) setLoading(false);
+        }
+      );
 
     // Nom de channel unique par instance : plusieurs composants montent ce
     // hook en parallèle (WidgetSync + une page) pour la même table/couple,
@@ -66,6 +109,10 @@ export function useRealtimeCollection<T extends WithId>(
       supabase.removeChannel(channel);
     };
   }, [table, coupleId]);
+
+  useEffect(() => {
+    if (coupleId) writeCache(table, coupleId, rows);
+  }, [rows, table, coupleId]);
 
   return { rows, loading, setRows };
 }

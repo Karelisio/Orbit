@@ -18,6 +18,27 @@ interface CoupleContextValue {
 
 const CoupleContext = createContext<CoupleContextValue | undefined>(undefined);
 
+function coupleCacheKey(userId: string): string {
+  return `orbit-couple-cache-${userId}`;
+}
+
+function readCoupleCache(userId: string): Couple | null {
+  try {
+    const raw = localStorage.getItem(coupleCacheKey(userId));
+    return raw ? (JSON.parse(raw) as Couple) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCoupleCache(userId: string, couple: Couple): void {
+  try {
+    localStorage.setItem(coupleCacheKey(userId), JSON.stringify(couple));
+  } catch {
+    // stockage indisponible : tant pis, pas de cache hors-ligne cette fois
+  }
+}
+
 /**
  * Orbit réutilise directement la table `couples` de Wenn comme source de
  * vérité pour le lien de couple : même projet Supabase, mêmes comptes —
@@ -36,13 +57,25 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
-    const { data } = await supabase
-      .from("couples")
-      .select("*")
-      .or(`owner_id.eq.${user.id},partner_id.eq.${user.id}`)
-      .maybeSingle();
-    setCouple((data as Couple) ?? null);
-    setLoading(false);
+    // Affichage immédiat depuis le dernier couple connu (lancement hors
+    // ligne) pendant que le réseau répond, ou à la place s'il ne répond pas.
+    const cached = readCoupleCache(user.id);
+    if (cached) setCouple(cached);
+    try {
+      const { data, error } = await supabase
+        .from("couples")
+        .select("*")
+        .or(`owner_id.eq.${user.id},partner_id.eq.${user.id}`)
+        .maybeSingle();
+      if (!error) {
+        setCouple((data as Couple) ?? null);
+        if (data) writeCoupleCache(user.id, data as Couple);
+      }
+    } catch {
+      // hors ligne : on garde le cache déjà affiché s'il existe
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
