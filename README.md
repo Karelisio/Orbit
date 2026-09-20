@@ -139,11 +139,21 @@ npm run cap:sync    # copie le build dans android/ et synchronise les plugins
 Le workflow `.github/workflows/build-android.yml` :
 1. build le frontend React (secrets `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`),
 2. `npx cap sync android`,
-3. décode `ANDROID_KEYSTORE_BASE64` en fichier `.keystore`,
-4. build et signe l'APK release (`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+3. archive la section `## Non publié` de `CHANGELOG.md` sous le tag de
+   version (`scripts/archive-changelog.cjs`), la vide, et repousse ce commit
+   directement sur `main` — ces notes deviennent le corps de la Release
+   GitHub, affiché dans Réglages > Mises à jour côté app,
+4. décode `ANDROID_KEYSTORE_BASE64` en fichier `.keystore`,
+5. build et signe l'APK release (`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
    `ANDROID_KEY_PASSWORD`),
-5. publie l'APK en artifact GitHub Actions à chaque push sur `main`, et en
+6. publie l'APK en artifact GitHub Actions à chaque push sur `main`, et en
    Release GitHub sur les tags `v*`.
+
+**Avant de commiter un changement visible par l'utilisatrice**, ajouter une
+puce sous `## Non publié` dans `CHANGELOG.md`. Comme la CI repousse un commit
+sur `main` après chaque release, penser à `git fetch origin main` avant tout
+nouveau push sur `main` dans la même session pour éviter un conflit sur ce
+fichier (même piège que sur Wenn).
 
 ### Générer le keystore de signature (une fois)
 

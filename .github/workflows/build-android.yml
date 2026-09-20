@@ -67,6 +67,29 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Tag de release : $TAG"
 
+      - name: Archive changelog "Non publié"
+        id: changelog
+        if: steps.release_tag.outputs.tag != ''
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          node scripts/archive-changelog.cjs "${{ steps.release_tag.outputs.tag }}" "$DATE"
+          {
+            echo "notes<<EOF_NOTES"
+            cat changelog-notes.txt
+            echo "EOF_NOTES"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit archived changelog
+        if: steps.release_tag.outputs.tag != '' && github.ref == 'refs/heads/main'
+        run: |
+          if ! git diff --quiet -- CHANGELOG.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "Changelog : ${{ steps.release_tag.outputs.tag }}"
+            git push origin HEAD:main
+          fi
+
       - name: Stamp app version
         working-directory: android
         run: |
@@ -127,4 +150,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
+          body: ${{ steps.changelog.outputs.notes }}
           files: orbit-release.apk
