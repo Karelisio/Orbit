@@ -38,8 +38,12 @@ export function useRealtimeCollection<T extends WithId>(
         setLoading(false);
       });
 
+    // Nom de channel unique par instance : plusieurs composants montent ce
+    // hook en parallèle (WidgetSync + une page) pour la même table/couple,
+    // et Supabase réutilise un channel existant du même nom déjà abonné, ce
+    // qui fait planter le .on() suivant ("... after subscribe()").
     const channel = supabase
-      .channel(`orbit-${table}-${coupleId}`)
+      .channel(`orbit-${table}-${coupleId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table, filter: `couple_id=eq.${coupleId}` },
