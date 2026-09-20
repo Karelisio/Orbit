@@ -1,4 +1,5 @@
 import { useCycleStatus } from "../hooks/useCycleStatus";
+import WennMark from "./WennMark";
 
 const PHASE_LABELS: Record<string, string> = {
   regles: "Règles en cours",
@@ -28,7 +29,7 @@ export default function CycleWidget() {
               : "Règles prévues aujourd'hui"}
         </p>
       </div>
-      <span style={{ fontSize: 24 }}>🌸</span>
+      <WennMark size={28} />
     </div>
   );
 }

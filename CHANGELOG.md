@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Corrige la bande sombre qui apparaissait sous la barre d'état sur certains appareils (le fond derrière l'horloge/les icônes système ne correspondait pas au reste de l'en-tête), et laisse un peu plus d'air en haut de l'écran.
+- Ajoute le logo Orbit à côté du titre sur l'accueil, et remplace l'icône fleur du widget cycle par le logo Wenn.
 
 ## v1.0.13 — 2026-09-20
 - Anniversaires : les événements de catégorie "Anniversaire" (ou avec l'option "Se répète chaque année" activée) comptent désormais chaque année automatiquement, sans avoir à les recréer.

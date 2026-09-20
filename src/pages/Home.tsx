@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import TogetherCounter from "../components/TogetherCounter";
 import CycleWidget from "../components/CycleWidget";
+import OrbitLogo from "../components/OrbitLogo";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { usePreferences } from "../context/PreferencesContext";
@@ -29,7 +30,10 @@ export default function Home() {
   return (
     <div className="screen">
       <div className="row" style={{ marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Orbit</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <OrbitLogo size={32} />
+          <h1 style={{ margin: 0 }}>Orbit</h1>
+        </div>
         <Link to="/settings" className="btn-icon" aria-label="Réglages">
           ⚙️
         </Link>

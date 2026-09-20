@@ -55,6 +55,7 @@ button, input, textarea, select {
 }
 
 .app-shell {
+  position: relative;
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
@@ -62,9 +63,23 @@ button, input, textarea, select {
   flex-direction: column;
   /* Android 15 (targetSdk 35) impose l'affichage bord à bord par défaut :
      sans ce padding, le contenu dessine sous la barre d'état et se
-     retrouve caché derrière son horloge/ses icônes. */
-  padding-top: env(safe-area-inset-top);
+     retrouve caché derrière son horloge/ses icônes. Un petit supplément
+     fixe laisse un peu plus d'air sous la barre d'état. */
+  padding-top: calc(env(safe-area-inset-top) + 8px);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app-shell::before {
+  /* Même couleur que le haut du dégradé de .screen : sans ça, la bande
+     sous la barre d'état (ce padding) retombe sur le fond neutre du body,
+     bien plus sombre, et se voit comme une barre noire distincte. */
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(env(safe-area-inset-top) + 8px);
+  background: var(--md-sys-color-primary-container);
 }
 
 .screen {
