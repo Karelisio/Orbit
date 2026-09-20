@@ -19,17 +19,22 @@ function nextDueDate(fromDate: string | null, recurrence: TaskRecurrence, interv
   }
 }
 
+function sortTasks(a: OrbitTask, b: OrbitTask): number {
+  if (a.done !== b.done) return a.done ? 1 : -1;
+  if (a.due_date && b.due_date && a.due_date !== b.due_date) return a.due_date.localeCompare(b.due_date);
+  if (a.due_date && !b.due_date) return -1;
+  if (!a.due_date && b.due_date) return 1;
+  return b.created_at.localeCompare(a.created_at);
+}
+
 export function useTasks() {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const { rows, loading, setRows } = useRealtimeCollection<OrbitTask>("orbit_tasks", couple?.id ?? null, (a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    if (a.due_date && b.due_date && a.due_date !== b.due_date) return a.due_date.localeCompare(b.due_date);
-    if (a.due_date && !b.due_date) return -1;
-    if (!a.due_date && b.due_date) return 1;
-    return b.created_at.localeCompare(a.created_at);
-  });
+  const { rows, loading, setRows } = useRealtimeCollection<OrbitTask>("orbit_tasks", couple?.id ?? null, sortTasks);
 
+  // Ajout optimiste : sans ça, l'app (et le widget, qui réagit au même état
+  // `tasks`) n'affichaient la nouvelle tâche qu'au retour de l'écho temps
+  // réel Supabase, avec un délai réseau perceptible.
   async function addTask(fields: {
     title: string;
     assignedTo: string | null;
@@ -38,16 +43,23 @@ export function useTasks() {
     recurrenceInterval: number;
   }) {
     if (!couple || !user) return { error: "Aucun couple lié" };
-    const { error } = await supabase.from("orbit_tasks").insert({
-      couple_id: couple.id,
-      title: fields.title,
-      assigned_to: fields.assignedTo,
-      due_date: fields.dueDate,
-      recurrence: fields.recurrence,
-      recurrence_interval: fields.recurrenceInterval,
-      created_by: user.id,
-    });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase
+      .from("orbit_tasks")
+      .insert({
+        couple_id: couple.id,
+        title: fields.title,
+        assigned_to: fields.assignedTo,
+        due_date: fields.dueDate,
+        recurrence: fields.recurrence,
+        recurrence_interval: fields.recurrenceInterval,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+    if (error) return { error: error.message };
+    const created = data as OrbitTask;
+    setRows((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created].sort(sortTasks)));
+    return { error: null };
   }
 
   // Une tâche récurrente ne se "termine" jamais : cocher fait juste avancer

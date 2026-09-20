@@ -20,7 +20,7 @@ import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences } from "../context/PreferencesContext";
 import { useCouple } from "../context/CoupleContext";
 import EventSheet from "../components/EventSheet";
-import { eventDisplayColor, type OrbitEvent } from "../types";
+import { eventDisplayColor, eventOccursOnDay, type OrbitEvent } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMM", { locale: fr }));
@@ -30,6 +30,11 @@ function eventTimeRange(event: OrbitEvent): string {
   const start = format(new Date(event.starts_at), "HH:mm");
   if (!event.ends_at) return start;
   return `${start} – ${format(new Date(event.ends_at), "HH:mm")}`;
+}
+
+/** Les événements récurrents chaque année comptent pour n'importe quelle année. */
+function eventsOnDay(events: OrbitEvent[], day: Date): OrbitEvent[] {
+  return events.filter((e) => eventOccursOnDay(e, day));
 }
 
 export default function Calendar() {
@@ -49,18 +54,7 @@ export default function Calendar() {
 
   const periodDates = useCyclePeriodDays(days[0], days[days.length - 1], showPeriodInCalendar);
 
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, OrbitEvent[]>();
-    for (const event of events) {
-      const key = event.starts_at.slice(0, 10);
-      const list = map.get(key) ?? [];
-      list.push(event);
-      map.set(key, list);
-    }
-    return map;
-  }, [events]);
-
-  const selectedEvents = eventsByDate.get(selectedDate) ?? [];
+  const selectedEvents = useMemo(() => eventsOnDay(events, new Date(selectedDate)), [events, selectedDate]);
 
   return (
     <div className="screen">
@@ -151,7 +145,7 @@ export default function Calendar() {
       <div className="calendar-grid">
         {days.map((date) => {
           const dateStr = format(date, "yyyy-MM-dd");
-          const dayEvents = eventsByDate.get(dateStr) ?? [];
+          const dayEvents = eventsOnDay(events, date);
           const isPeriodDay = showPeriodInCalendar && periodDates.has(dateStr);
           const classes = ["calendar-day"];
           if (!isSameMonth(date, month)) classes.push("outside");

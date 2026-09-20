@@ -7,6 +7,9 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Anniversaires : les événements de catégorie "Anniversaire" (ou avec l'option "Se répète chaque année" activée) comptent désormais chaque année automatiquement, sans avoir à les recréer.
+- Ajout/modification instantanés : créer un événement, une tâche, une dépense ou une note se reflète immédiatement dans l'app et sur les widgets, sans attendre un aller-retour réseau.
+- Widget calendrier : la couleur des pastilles suit bien la personne assignée à chaque rendez-vous (comme dans l'app).
 
 ## v1.0.12 — 2026-09-20
 - Barre d'état : corrige le contenu masqué/collé sous l'horloge et les icônes système sur Android 15 (affichage bord à bord imposé par défaut).

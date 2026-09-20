@@ -7,7 +7,7 @@ import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { usePreferences } from "../context/PreferencesContext";
 import { useCouple } from "../context/CoupleContext";
-import { eventDisplayColor } from "../types";
+import { eventDisplayColor, nextEventOccurrence } from "../types";
 
 export default function Home() {
   const { events } = useEvents();
@@ -16,8 +16,12 @@ export default function Home() {
   const { couple } = useCouple();
 
   const upcomingEvents = useMemo(() => {
-    const now = Date.now();
-    return events.filter((e) => new Date(e.starts_at).getTime() >= now).slice(0, 3);
+    const now = new Date();
+    return events
+      .map((event) => ({ event, occursAt: nextEventOccurrence(event, now) }))
+      .filter(({ occursAt }) => occursAt.getTime() >= now.getTime())
+      .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime())
+      .slice(0, 3);
   }, [events]);
 
   const pendingTasks = useMemo(() => tasks.filter((t) => !t.done).slice(0, 4), [tasks]);
@@ -42,8 +46,13 @@ export default function Home() {
               <p className="empty-state">Rien de prévu pour l'instant.</p>
             ) : (
               <div className="list">
-                {upcomingEvents.map((event) => (
-                  <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={eventDisplayColor(event, couple)} />
+                {upcomingEvents.map(({ event, occursAt }) => (
+                  <CountdownRow
+                    key={event.id}
+                    title={event.title}
+                    startsAt={occursAt.toISOString()}
+                    color={eventDisplayColor(event, couple)}
+                  />
                 ))}
               </div>
             )}

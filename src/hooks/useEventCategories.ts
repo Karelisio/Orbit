@@ -34,8 +34,15 @@ export function useEventCategories() {
 
   async function addCategory(name: string, color: string) {
     if (!couple) return { error: "Aucun couple lié" };
-    const { error } = await supabase.from("orbit_event_categories").insert({ couple_id: couple.id, name, color });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase
+      .from("orbit_event_categories")
+      .insert({ couple_id: couple.id, name, color })
+      .select()
+      .single();
+    if (error) return { error: error.message };
+    const created = data as OrbitEventCategory;
+    setRows((prev) => (prev.some((c) => c.id === created.id) ? prev : [...prev, created]));
+    return { error: null };
   }
 
   return { categories: rows, loading, addCategory };

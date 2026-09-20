@@ -36,6 +36,10 @@ create table if not exists public.orbit_events (
   all_day boolean not null default false,
   reminder_minutes_before integer[] not null default '{}',
   assigned_to uuid references auth.users (id) on delete set null,
+  -- 'yearly' : l'événement compte pour la même date (mois/jour) chaque
+  -- année à venir (anniversaires...), calculé côté app sans dupliquer de
+  -- lignes — starts_at reste la date de la toute première occurrence.
+  recurrence text not null default 'none' check (recurrence in ('none', 'yearly')),
   created_by uuid not null references auth.users (id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -390,3 +394,18 @@ where not exists (
   select 1 from public.orbit_event_categories oc where oc.couple_id = c.id
 )
 on conflict (couple_id, name) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Migration additive : événements récurrents chaque année (anniversaires...)
+-- (à exécuter une fois dans le SQL Editor si le projet existe déjà)
+-- ---------------------------------------------------------------------------
+alter table public.orbit_events
+  add column if not exists recurrence text not null default 'none';
+alter table public.orbit_events
+  drop constraint if exists orbit_events_recurrence_check;
+alter table public.orbit_events
+  add constraint orbit_events_recurrence_check check (recurrence in ('none', 'yearly'));
+
+-- Les événements déjà catégorisés "Anniversaire" comptent désormais chaque
+-- année automatiquement, sans avoir à les rouvrir un par un pour l'activer.
+update public.orbit_events set recurrence = 'yearly' where category = 'Anniversaire' and recurrence = 'none';

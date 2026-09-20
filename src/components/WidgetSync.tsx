@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { differenceInCalendarDays, format, isSameMonth } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { useCouple } from "../context/CoupleContext";
 import { syncWidgets } from "../lib/widgetSync";
-import { eventDisplayColor } from "../types";
+import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
 
 function eventTimeLabel(startsAt: string, allDay: boolean): string {
   const date = new Date(startsAt);
@@ -29,19 +29,25 @@ export default function WidgetSync() {
 
   useEffect(() => {
     const now = new Date();
-    const nextEvent = events.filter((e) => new Date(e.starts_at).getTime() >= now.getTime())[0] ?? null;
+    const upcoming = events
+      .map((event) => ({ event, occursAt: nextEventOccurrence(event, now) }))
+      .filter(({ occursAt }) => occursAt.getTime() >= now.getTime())
+      .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime());
+    const nextEvent = upcoming[0] ?? null;
     const pendingTasks = tasks.filter((t) => !t.done);
 
     // Un seul événement (le premier) affiché par jour du mois en cours, avec
     // son titre et sa couleur, pour dessiner de vraies pastilles colorées sur
-    // le widget calendrier plutôt qu'un simple point.
+    // le widget calendrier plutôt qu'un simple point. Un événement récurrent
+    // chaque année compte pour n'importe quel jour du mois affiché qui
+    // correspond, quelle que soit l'année de sa création.
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const byDay = new Map<number, { title: string; color: string }>();
-    for (const e of events) {
-      const d = new Date(e.starts_at);
-      if (!isSameMonth(d, now)) continue;
-      const day = d.getDate();
-      if (!byDay.has(day)) {
-        byDay.set(day, { title: sanitizeForWidget(e.title), color: eventDisplayColor(e, couple).replace("#", "") });
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayDate = new Date(now.getFullYear(), now.getMonth(), day);
+      const match = events.find((e) => eventOccursOnDay(e, dayDate));
+      if (match) {
+        byDay.set(day, { title: sanitizeForWidget(match.title), color: eventDisplayColor(match, couple).replace("#", "") });
       }
     }
     const eventsThisMonth = Array.from(byDay.entries())
@@ -49,8 +55,8 @@ export default function WidgetSync() {
       .join(";");
 
     syncWidgets({
-      nextEventTitle: nextEvent?.title ?? null,
-      nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.starts_at, nextEvent.all_day) : null,
+      nextEventTitle: nextEvent?.event.title ?? null,
+      nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt.toISOString(), nextEvent.event.all_day) : null,
       pendingTasksCount: pendingTasks.length,
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsThisMonth,

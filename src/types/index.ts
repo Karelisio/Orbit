@@ -81,6 +81,8 @@ export const REMINDER_UNIT_OPTIONS = [
   { unit: "jours", label: "jours", toMinutes: (n: number) => n * 24 * 60 },
 ] as const;
 
+export type EventRecurrence = "none" | "yearly";
+
 export interface OrbitEvent {
   id: string;
   couple_id: string;
@@ -94,9 +96,34 @@ export interface OrbitEvent {
   all_day: boolean;
   reminder_minutes_before: number[];
   assigned_to: string | null;
+  recurrence: EventRecurrence;
   created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Prochaine occurrence d'un événement à partir d'une date de référence :
+ * la date exacte pour un événement simple, ou la même date (mois/jour)
+ * projetée sur l'année en cours (ou la suivante si déjà passée) pour un
+ * événement récurrent chaque année (anniversaires...).
+ */
+export function nextEventOccurrence(event: Pick<OrbitEvent, "starts_at" | "recurrence">, from: Date = new Date()): Date {
+  const start = new Date(event.starts_at);
+  if (event.recurrence !== "yearly") return start;
+  const projected = new Date(start);
+  projected.setFullYear(from.getFullYear());
+  if (projected.getTime() < from.getTime()) projected.setFullYear(from.getFullYear() + 1);
+  return projected;
+}
+
+/** Un événement récurrent tombe-t-il ce jour-là (n'importe quelle année) ? */
+export function eventOccursOnDay(event: Pick<OrbitEvent, "starts_at" | "recurrence">, day: Date): boolean {
+  const start = new Date(event.starts_at);
+  if (event.recurrence === "yearly") {
+    return start.getMonth() === day.getMonth() && start.getDate() === day.getDate();
+  }
+  return start.getFullYear() === day.getFullYear() && start.getMonth() === day.getMonth() && start.getDate() === day.getDate();
 }
 
 export const TASK_RECURRENCE_OPTIONS = ["none", "daily", "weekly", "monthly"] as const;

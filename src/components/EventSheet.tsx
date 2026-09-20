@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useEventCategories } from "../hooks/useEventCategories";
 import DateTimeField from "./DateTimeField";
-import { EVENT_CATEGORY_COLOR_PALETTE, REMINDER_OPTIONS, REMINDER_UNIT_OPTIONS, type OrbitEvent } from "../types";
+import { EVENT_CATEGORY_COLOR_PALETTE, REMINDER_OPTIONS, REMINDER_UNIT_OPTIONS, type EventRecurrence, type OrbitEvent } from "../types";
 import type { NewEvent } from "../hooks/useEvents";
 
 interface EventSheetProps {
@@ -29,6 +29,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [category, setCategory] = useState<string>(event?.category ?? "Autre");
+  const [recurrence, setRecurrence] = useState<EventRecurrence>(event?.recurrence ?? (category === "Anniversaire" ? "yearly" : "none"));
   const [assignedTo, setAssignedTo] = useState<string | null>(event?.assigned_to ?? null);
   const [location, setLocation] = useState(event?.location ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
@@ -44,6 +45,11 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
   const [newCategoryColor, setNewCategoryColor] = useState(EVENT_CATEGORY_COLOR_PALETTE[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function selectCategory(name: string) {
+    setCategory(name);
+    if (name === "Anniversaire") setRecurrence("yearly");
+  }
 
   function toggleHasEnd(checked: boolean) {
     setHasEnd(checked);
@@ -96,6 +102,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
       all_day: allDay,
       reminder_minutes_before: reminders,
       assigned_to: assignedTo,
+      recurrence,
     });
     setSaving(false);
     if (error) setError(error);
@@ -119,6 +126,15 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
             <label htmlFor="has-end">Ajouter une heure de fin</label>
           </div>
           {hasEnd && <DateTimeField value={endsAt} onChange={setEndsAt} />}
+          <div className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={recurrence === "yearly"}
+              onChange={(e) => setRecurrence(e.target.checked ? "yearly" : "none")}
+              id="yearly"
+            />
+            <label htmlFor="yearly">Se répète chaque année (anniversaire...)</label>
+          </div>
           <input className="input" placeholder="Lieu (optionnel)" value={location} onChange={(e) => setLocation(e.target.value)} />
           <textarea
             className="input"
@@ -154,7 +170,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
                 type="button"
                 className={`chip${category === c.name ? " selected" : ""}`}
                 style={category === c.name ? { background: c.color, color: "#fff" } : undefined}
-                onClick={() => setCategory(c.name)}
+                onClick={() => selectCategory(c.name)}
               >
                 {c.name}
               </button>
