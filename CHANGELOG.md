@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.12 — 2026-09-20
 - Barre d'état : corrige le contenu masqué/collé sous l'horloge et les icônes système sur Android 15 (affichage bord à bord imposé par défaut).
 - Lancement hors ligne : l'app affiche immédiatement les dernières données connues (couple, événements, tâches, budget, journal) même sans réseau, au lieu d'un écran de chargement bloqué. Créer/modifier reste impossible hors ligne (réessaie une fois connecté·e) — pas de file d'attente de synchronisation automatique pour l'instant, afin d'éviter tout risque de doublon sur des données partagées à deux.
 
