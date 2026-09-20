@@ -6,7 +6,8 @@ import CycleWidget from "../components/CycleWidget";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { usePreferences } from "../context/PreferencesContext";
-import { EVENT_CATEGORY_COLORS } from "../types";
+
+const FALLBACK_EVENT_COLOR = "#79747e";
 
 export default function Home() {
   const { events } = useEvents();
@@ -41,7 +42,7 @@ export default function Home() {
             ) : (
               <div className="list">
                 {upcomingEvents.map((event) => (
-                  <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={event.color ?? EVENT_CATEGORY_COLORS[event.category]} />
+                  <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={event.color ?? FALLBACK_EVENT_COLOR} />
                 ))}
               </div>
             )}

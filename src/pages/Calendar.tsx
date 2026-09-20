@@ -18,9 +18,10 @@ import { useEvents } from "../hooks/useEvents";
 import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences } from "../context/PreferencesContext";
 import EventSheet from "../components/EventSheet";
-import { EVENT_CATEGORY_COLORS, EVENT_CATEGORY_LABELS, type OrbitEvent } from "../types";
+import type { OrbitEvent } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
+const FALLBACK_EVENT_COLOR = "#79747e";
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMMM", { locale: fr }));
 
 export default function Calendar() {
@@ -149,7 +150,7 @@ export default function Calendar() {
                 <span className="calendar-day-dots">
                   {isPeriodDay && <span className="dot" style={{ background: "#b3261e" }} title="Règles" />}
                   {dayEvents.slice(0, isPeriodDay ? 2 : 3).map((e) => (
-                    <span key={e.id} className="dot" style={{ background: e.color ?? EVENT_CATEGORY_COLORS[e.category] }} />
+                    <span key={e.id} className="dot" style={{ background: e.color ?? FALLBACK_EVENT_COLOR }} />
                   ))}
                 </span>
               )}
@@ -173,11 +174,11 @@ export default function Calendar() {
           <div className="list">
             {selectedEvents.map((event) => (
               <button key={event.id} className="list-item" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => setSheet(event)}>
-                <span className="dot" style={{ background: event.color ?? EVENT_CATEGORY_COLORS[event.category] }} />
+                <span className="dot" style={{ background: event.color ?? FALLBACK_EVENT_COLOR }} />
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontWeight: 600 }}>{event.title}</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)" }}>
-                    {event.all_day ? "Toute la journée" : format(new Date(event.starts_at), "HH:mm")} · {EVENT_CATEGORY_LABELS[event.category]}
+                    {event.all_day ? "Toute la journée" : format(new Date(event.starts_at), "HH:mm")} · {event.category}
                   </p>
                 </div>
               </button>

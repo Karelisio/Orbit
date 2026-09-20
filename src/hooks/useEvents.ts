@@ -7,7 +7,16 @@ import type { OrbitEvent } from "../types";
 
 export type NewEvent = Pick<
   OrbitEvent,
-  "title" | "description" | "location" | "category" | "color" | "starts_at" | "ends_at" | "all_day" | "reminder_minutes_before"
+  | "title"
+  | "description"
+  | "location"
+  | "category"
+  | "color"
+  | "starts_at"
+  | "ends_at"
+  | "all_day"
+  | "reminder_minutes_before"
+  | "assigned_to"
 >;
 
 export function useEvents() {

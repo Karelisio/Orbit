@@ -11,32 +11,34 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.widget.RemoteViews;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 
 /**
  * Widget "Calendrier" : une vraie mini-grille du mois (comme le widget
  * calendrier natif d'Android), colorée dynamiquement avec le thème Material
- * You courant de l'app (couleurs poussées par WidgetSync.tsx), et navigable
- * mois par mois (flèches natives) — un RemoteViews ne peut pas héberger de
- * vue custom : la grille elle-même est dessinée sur un Bitmap (même
- * technique que le widget "Orbite" de Wenn), l'en-tête et les flèches sont
- * des TextView RemoteViews classiques par-dessus.
+ * You courant de l'app (couleurs poussées par WidgetSync.tsx), navigable
+ * mois par mois (flèches natives), avec le titre du premier événement de
+ * chaque jour affiché dans une pastille colorée — un RemoteViews ne peut pas
+ * héberger de vue custom : la grille elle-même est dessinée sur un Bitmap
+ * (même technique que le widget "Orbite" de Wenn), l'en-tête et les flèches
+ * sont des TextView RemoteViews classiques par-dessus.
  *
- * Les points d'événement ne sont disponibles que pour le mois réel en cours
- * (calculé côté app) : en navigant vers un autre mois, la grille reste
- * exacte mais sans les points d'événement.
+ * Les événements ne sont disponibles que pour le mois réel en cours (calculé
+ * côté app) : en navigant vers un autre mois, la grille reste exacte mais
+ * sans pastilles.
  */
 public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
     private static final int BITMAP_W = 320;
-    private static final int BITMAP_H = 190;
+    private static final int BITMAP_H = 340;
 
     private static final String ACTION_PREV_MONTH = "io.karelisio.orbit.CAL_WIDGET_PREV";
     private static final String ACTION_NEXT_MONTH = "io.karelisio.orbit.CAL_WIDGET_NEXT";
@@ -76,7 +78,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
-        String eventDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_DAYS_THIS_MONTH, "");
+        String eventsCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
         int onPrimaryContainer = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, null), "#21005D");
@@ -94,7 +96,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_cal_prev, navIntent(context, appWidgetId, ACTION_PREV_MONTH));
         views.setOnClickPendingIntent(R.id.widget_cal_next, navIntent(context, appWidgetId, ACTION_NEXT_MONTH));
 
-        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(context, prefs, offset, eventDaysCsv));
+        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(prefs, offset, eventsCsv));
         views.setOnClickPendingIntent(R.id.widget_calendar_image, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -107,28 +109,43 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static Set<Integer> parseDays(String csv) {
-        Set<Integer> days = new HashSet<>();
-        if (TextUtils.isEmpty(csv)) return days;
-        for (String part : csv.split(",")) {
-            try {
-                days.add(Integer.parseInt(part.trim()));
-            } catch (NumberFormatException ignored) {
-                // valeur invalide : on l'ignore simplement
-            }
+    private static final class DayEvent {
+        final String title;
+        final int color;
+
+        DayEvent(String title, int color) {
+            this.title = title;
+            this.color = color;
         }
-        return days;
     }
 
-    private static Bitmap drawMonthGrid(Context context, SharedPreferences prefs, int offset, String eventDaysCsv) {
-        // Les jours d'événements ne sont calculés côté app que pour le mois réel en cours.
-        Set<Integer> eventDays = offset == 0 ? parseDays(eventDaysCsv) : new HashSet<>();
+    /** Format : "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." (voir WidgetSync.tsx). */
+    private static Map<Integer, DayEvent> parseEvents(String csv) {
+        Map<Integer, DayEvent> map = new HashMap<>();
+        if (TextUtils.isEmpty(csv)) return map;
+        for (String entry : csv.split(";")) {
+            String[] fields = entry.split(":", 3);
+            if (fields.length < 3) continue;
+            try {
+                int day = Integer.parseInt(fields[0].trim());
+                String title = fields[1];
+                int color = parseColorOr("#" + fields[2].trim(), "#7D5260");
+                map.put(day, new DayEvent(title, color));
+            } catch (NumberFormatException ignored) {
+                // entrée invalide : on l'ignore simplement
+            }
+        }
+        return map;
+    }
+
+    private static Bitmap drawMonthGrid(SharedPreferences prefs, int offset, String eventsCsv) {
+        // Les événements ne sont calculés côté app que pour le mois réel en cours.
+        Map<Integer, DayEvent> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
 
         int primary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_PRIMARY, null), "#6750A4");
         int onPrimary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY, null), "#FFFFFF");
         int onSurface = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, null), "#1C1B1F");
         int onSurfaceVariant = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, null), "#79747E");
-        int tertiary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_TERTIARY, null), "#7D5260");
 
         Bitmap bitmap = Bitmap.createBitmap(BITMAP_W, BITMAP_H, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -146,7 +163,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         // Calendar.DAY_OF_WEEK : dimanche=1..samedi=7 ; on veut lundi=0..dimanche=6.
         int firstWeekday = (firstOfMonth.get(Calendar.DAY_OF_WEEK) + 5) % 7;
 
-        float weekdayRowHeight = BITMAP_H * 0.2f;
+        float weekdayRowHeight = BITMAP_H * 0.07f;
         float gridTop = weekdayRowHeight;
         float gridHeight = BITMAP_H - gridTop;
         int rows = (int) Math.ceil((firstWeekday + daysInMonth) / 7.0);
@@ -155,7 +172,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
         Paint weekdayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         weekdayPaint.setColor(onSurfaceVariant);
-        weekdayPaint.setTextSize(BITMAP_H * 0.1f);
+        weekdayPaint.setTextSize(BITMAP_H * 0.045f);
         weekdayPaint.setTextAlign(Paint.Align.CENTER);
         String[] weekdays = {"L", "M", "M", "J", "V", "S", "D"};
         for (int i = 0; i < 7; i++) {
@@ -164,7 +181,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
         Paint dayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         dayPaint.setColor(onSurface);
-        dayPaint.setTextSize(BITMAP_H * 0.11f);
+        dayPaint.setTextSize(cellH * 0.34f);
         dayPaint.setTextAlign(Paint.Align.CENTER);
 
         Paint todayCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -173,31 +190,49 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
         Paint todayTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         todayTextPaint.setColor(onPrimary);
-        todayTextPaint.setTextSize(BITMAP_H * 0.11f);
+        todayTextPaint.setTextSize(cellH * 0.34f);
         todayTextPaint.setFakeBoldText(true);
         todayTextPaint.setTextAlign(Paint.Align.CENTER);
 
-        Paint eventDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        eventDotPaint.setColor(tertiary);
-        eventDotPaint.setStyle(Paint.Style.FILL);
+        Paint chipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        chipPaint.setStyle(Paint.Style.FILL);
+
+        TextPaint chipTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        chipTextPaint.setColor(Color.WHITE);
+        chipTextPaint.setTextSize(cellH * 0.24f);
+        chipTextPaint.setTextAlign(Paint.Align.CENTER);
 
         for (int day = 1; day <= daysInMonth; day++) {
             int cellIndex = firstWeekday + day - 1;
             int col = cellIndex % 7;
             int row = cellIndex / 7;
-            float cx = cellW * col + cellW / 2f;
-            float cy = gridTop + cellH * row + cellH / 2f;
+            float cellLeft = cellW * col;
+            float cellTop = gridTop + cellH * row;
+            float cx = cellLeft + cellW / 2f;
+            float numberCy = cellTop + cellH * 0.32f;
 
             boolean isToday = isCurrentMonth && day == todayDay;
             if (isToday) {
-                canvas.drawCircle(cx, cy, Math.min(cellW, cellH) * 0.36f, todayCirclePaint);
-                canvas.drawText(String.valueOf(day), cx, cy + BITMAP_H * 0.038f, todayTextPaint);
+                canvas.drawCircle(cx, numberCy - cellH * 0.1f, Math.min(cellW, cellH) * 0.26f, todayCirclePaint);
+                canvas.drawText(String.valueOf(day), cx, numberCy + cellH * 0.02f, todayTextPaint);
             } else {
-                canvas.drawText(String.valueOf(day), cx, cy + BITMAP_H * 0.038f, dayPaint);
+                canvas.drawText(String.valueOf(day), cx, numberCy + cellH * 0.02f, dayPaint);
             }
 
-            if (eventDays.contains(day)) {
-                canvas.drawCircle(cx, cy + cellH * 0.32f, BITMAP_H * 0.02f, eventDotPaint);
+            DayEvent event = events.get(day);
+            if (event != null) {
+                float chipLeft = cellLeft + cellW * 0.08f;
+                float chipRight = cellLeft + cellW * 0.92f;
+                float chipTop = cellTop + cellH * 0.5f;
+                float chipBottom = cellTop + cellH * 0.86f;
+                float radius = (chipBottom - chipTop) * 0.3f;
+
+                chipPaint.setColor(event.color);
+                canvas.drawRoundRect(chipLeft, chipTop, chipRight, chipBottom, radius, radius, chipPaint);
+
+                float maxTextWidth = (chipRight - chipLeft) * 0.86f;
+                CharSequence label = TextUtils.ellipsize(event.title, chipTextPaint, maxTextWidth, TextUtils.TruncateAt.END);
+                canvas.drawText(label.toString(), cx, (chipTop + chipBottom) / 2f + cellH * 0.08f, chipTextPaint);
             }
         }
 

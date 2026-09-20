@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, REMINDER_OPTIONS, type EventCategory, type OrbitEvent } from "../types";
+import { useAuth } from "../context/AuthContext";
+import { useCouple } from "../context/CoupleContext";
+import { useEventCategories } from "../hooks/useEventCategories";
+import DateTimeField from "./DateTimeField";
+import { EVENT_CATEGORY_COLOR_PALETTE, REMINDER_OPTIONS, REMINDER_UNIT_OPTIONS, type OrbitEvent } from "../types";
 import type { NewEvent } from "../hooks/useEvents";
 
 interface EventSheetProps {
@@ -18,18 +22,45 @@ function toLocalInput(iso: string | null): string {
 }
 
 export default function EventSheet({ initialDate, event, onSave, onDelete, onClose }: EventSheetProps) {
+  const { user } = useAuth();
+  const { partnerId } = useCouple();
+  const { categories, addCategory } = useEventCategories();
+
   const [title, setTitle] = useState(event?.title ?? "");
-  const [category, setCategory] = useState<EventCategory>(event?.category ?? "autre");
+  const [category, setCategory] = useState<string>(event?.category ?? "Autre");
+  const [assignedTo, setAssignedTo] = useState<string | null>(event?.assigned_to ?? null);
   const [location, setLocation] = useState(event?.location ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
   const [allDay, setAllDay] = useState(event?.all_day ?? false);
   const [startsAt, setStartsAt] = useState(toLocalInput(event?.starts_at ?? (initialDate ? `${initialDate}T09:00` : null)));
   const [reminders, setReminders] = useState<number[]>(event?.reminder_minutes_before ?? []);
+  const [reminderAmount, setReminderAmount] = useState(10);
+  const [reminderUnit, setReminderUnit] = useState<(typeof REMINDER_UNIT_OPTIONS)[number]["unit"]>("minutes");
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryColor, setNewCategoryColor] = useState(EVENT_CATEGORY_COLOR_PALETTE[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleReminder(minutes: number) {
     setReminders((prev) => (prev.includes(minutes) ? prev.filter((m) => m !== minutes) : [...prev, minutes]));
+  }
+
+  function addCustomReminder() {
+    const unit = REMINDER_UNIT_OPTIONS.find((u) => u.unit === reminderUnit)!;
+    const minutes = unit.toMinutes(Math.max(1, reminderAmount));
+    if (!reminders.includes(minutes)) setReminders((prev) => [...prev, minutes].sort((a, b) => a - b));
+  }
+
+  async function handleAddCategory() {
+    const name = newCategoryName.trim();
+    if (!name) return;
+    const { error } = await addCategory(name, newCategoryColor);
+    if (!error) {
+      setCategory(name);
+      setNewCategoryName("");
+      setAddingCategory(false);
+    }
   }
 
   async function handleSave() {
@@ -39,16 +70,18 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
     }
     setSaving(true);
     setError(null);
+    const selectedColor = categories.find((c) => c.name === category)?.color ?? null;
     const { error } = await onSave({
       title: title.trim(),
       description: description.trim() || null,
       location: location.trim() || null,
       category,
-      color: null,
+      color: selectedColor,
       starts_at: new Date(startsAt).toISOString(),
       ends_at: null,
       all_day: allDay,
       reminder_minutes_before: reminders,
+      assigned_to: assignedTo,
     });
     setSaving(false);
     if (error) setError(error);
@@ -62,12 +95,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
         <h2 style={{ marginTop: 0 }}>{event ? "Modifier l'événement" : "Nouvel événement"}</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <input className="input" placeholder="Titre" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <input
-            className="input"
-            type="datetime-local"
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-          />
+          <DateTimeField value={startsAt} onChange={setStartsAt} />
           <div className="checkbox-row">
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} id="all-day" />
             <label htmlFor="all-day">Toute la journée</label>
@@ -81,20 +109,73 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
           />
 
           <p className="section-title" style={{ margin: "4px 0 0" }}>
+            Pour qui
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button type="button" className={`chip${assignedTo === null ? " selected" : ""}`} onClick={() => setAssignedTo(null)}>
+              Ensemble
+            </button>
+            <button type="button" className={`chip${assignedTo === user?.id ? " selected" : ""}`} onClick={() => setAssignedTo(user!.id)}>
+              Moi
+            </button>
+            {partnerId && (
+              <button type="button" className={`chip${assignedTo === partnerId ? " selected" : ""}`} onClick={() => setAssignedTo(partnerId)}>
+                Mon/ma partenaire
+              </button>
+            )}
+          </div>
+
+          <p className="section-title" style={{ margin: "4px 0 0" }}>
             Catégorie
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {EVENT_CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <button
-                key={c}
+                key={c.id}
                 type="button"
-                className={`chip${category === c ? " selected" : ""}`}
-                onClick={() => setCategory(c)}
+                className={`chip${category === c.name ? " selected" : ""}`}
+                style={category === c.name ? { background: c.color, color: "#fff" } : undefined}
+                onClick={() => setCategory(c.name)}
               >
-                {EVENT_CATEGORY_LABELS[c]}
+                {c.name}
               </button>
             ))}
+            <button type="button" className="chip" onClick={() => setAddingCategory((v) => !v)}>
+              + Nouvelle
+            </button>
           </div>
+
+          {addingCategory && (
+            <div className="card" style={{ padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+              <input
+                className="input"
+                placeholder="Nom de la catégorie"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {EVENT_CATEGORY_COLOR_PALETTE.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    aria-label={color}
+                    onClick={() => setNewCategoryColor(color)}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: color,
+                      border: newCategoryColor === color ? "3px solid var(--md-sys-color-on-surface)" : "3px solid transparent",
+                      cursor: "pointer",
+                    }}
+                  />
+                ))}
+              </div>
+              <button type="button" className="btn btn-secondary" onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
+                Ajouter la catégorie
+              </button>
+            </div>
+          )}
 
           <p className="section-title" style={{ margin: "4px 0 0" }}>
             Rappels
@@ -110,6 +191,34 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
                 {option.label}
               </button>
             ))}
+            {reminders
+              .filter((m) => !REMINDER_OPTIONS.some((o) => o.minutes === m))
+              .map((m) => (
+                <button key={m} type="button" className="chip selected" onClick={() => toggleReminder(m)}>
+                  {m} min avant
+                </button>
+              ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={999}
+              value={reminderAmount}
+              onChange={(e) => setReminderAmount(Math.max(1, Number(e.target.value) || 1))}
+              style={{ width: 70, padding: "8px 10px" }}
+            />
+            <select className="input" value={reminderUnit} onChange={(e) => setReminderUnit(e.target.value as typeof reminderUnit)} style={{ flex: 1 }}>
+              {REMINDER_UNIT_OPTIONS.map((u) => (
+                <option key={u.unit} value={u.unit}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
+            <button type="button" className="btn btn-secondary" onClick={addCustomReminder}>
+              Ajouter
+            </button>
           </div>
 
           {error && <p style={{ color: "var(--md-sys-color-error)", fontSize: 13, margin: 0 }}>{error}</p>}

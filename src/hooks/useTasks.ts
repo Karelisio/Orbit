@@ -5,15 +5,15 @@ import { supabase } from "../lib/supabase";
 import { useRealtimeCollection } from "./useRealtimeCollection";
 import type { OrbitTask, TaskRecurrence } from "../types";
 
-function nextDueDate(fromDate: string | null, recurrence: TaskRecurrence): string {
+function nextDueDate(fromDate: string | null, recurrence: TaskRecurrence, interval: number): string {
   const base = fromDate ? new Date(fromDate) : new Date();
   switch (recurrence) {
     case "daily":
-      return format(addDays(base, 1), "yyyy-MM-dd");
+      return format(addDays(base, interval), "yyyy-MM-dd");
     case "weekly":
-      return format(addWeeks(base, 1), "yyyy-MM-dd");
+      return format(addWeeks(base, interval), "yyyy-MM-dd");
     case "monthly":
-      return format(addMonths(base, 1), "yyyy-MM-dd");
+      return format(addMonths(base, interval), "yyyy-MM-dd");
     default:
       return format(base, "yyyy-MM-dd");
   }
@@ -35,6 +35,7 @@ export function useTasks() {
     assignedTo: string | null;
     dueDate: string | null;
     recurrence: TaskRecurrence;
+    recurrenceInterval: number;
   }) {
     if (!couple || !user) return { error: "Aucun couple lié" };
     const { error } = await supabase.from("orbit_tasks").insert({
@@ -43,6 +44,7 @@ export function useTasks() {
       assigned_to: fields.assignedTo,
       due_date: fields.dueDate,
       recurrence: fields.recurrence,
+      recurrence_interval: fields.recurrenceInterval,
       created_by: user.id,
     });
     return { error: error?.message ?? null };
@@ -52,7 +54,7 @@ export function useTasks() {
   // son échéance à la prochaine occurrence, sans jamais passer par done=true.
   async function toggleTask(task: OrbitTask) {
     if (task.recurrence !== "none") {
-      const due = nextDueDate(task.due_date, task.recurrence);
+      const due = nextDueDate(task.due_date, task.recurrence, task.recurrence_interval);
       setRows((prev) => prev.map((t) => (t.id === task.id ? { ...t, due_date: due } : t)));
       const { error } = await supabase.from("orbit_tasks").update({ due_date: due }).eq("id", task.id);
       return { error: error?.message ?? null };

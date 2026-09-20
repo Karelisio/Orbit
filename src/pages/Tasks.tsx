@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useTasks } from "../hooks/useTasks";
 import DateField from "../components/DateField";
-import { TASK_RECURRENCE_OPTIONS, TASK_RECURRENCE_LABELS, type TaskRecurrence } from "../types";
+import { TASK_RECURRENCE_OPTIONS, TASK_RECURRENCE_UNIT_LABELS, taskRecurrenceLabel, type TaskRecurrence } from "../types";
 
 export default function Tasks() {
   const { user } = useAuth();
@@ -15,15 +15,23 @@ export default function Tasks() {
   const [assignee, setAssignee] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [showOptions, setShowOptions] = useState(false);
 
   async function handleAdd() {
     if (!title.trim()) return;
-    await addTask({ title: title.trim(), assignedTo: assignee, dueDate: dueDate || null, recurrence });
+    await addTask({
+      title: title.trim(),
+      assignedTo: assignee,
+      dueDate: dueDate || null,
+      recurrence,
+      recurrenceInterval: recurrence === "none" ? 1 : recurrenceInterval,
+    });
     setTitle("");
     setAssignee(null);
     setDueDate("");
     setRecurrence("none");
+    setRecurrenceInterval(1);
     setShowOptions(false);
   }
 
@@ -66,10 +74,25 @@ export default function Tasks() {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {TASK_RECURRENCE_OPTIONS.map((r) => (
                 <button key={r} type="button" className={`chip${recurrence === r ? " selected" : ""}`} onClick={() => setRecurrence(r)}>
-                  {TASK_RECURRENCE_LABELS[r]}
+                  {TASK_RECURRENCE_UNIT_LABELS[r]}
                 </button>
               ))}
             </div>
+            {recurrence !== "none" && (
+              <div className="row" style={{ justifyContent: "flex-start", gap: 10 }}>
+                <span style={{ fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>{taskRecurrenceLabel(recurrence, recurrenceInterval)}</span>
+                <span style={{ fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>· intervalle :</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={recurrenceInterval}
+                  onChange={(e) => setRecurrenceInterval(Math.max(1, Number(e.target.value) || 1))}
+                  style={{ width: 70, padding: "8px 10px" }}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -132,7 +155,7 @@ function TaskRow({
               {isRecurring && "🔁 "}
               {task.due_date ? format(new Date(task.due_date), "d MMM", { locale: fr }) : ""}
               {isRecurring && task.due_date ? " · " : ""}
-              {isRecurring ? TASK_RECURRENCE_LABELS[task.recurrence] : ""}
+              {isRecurring ? taskRecurrenceLabel(task.recurrence, task.recurrence_interval) : ""}
             </span>
           )}
         </span>

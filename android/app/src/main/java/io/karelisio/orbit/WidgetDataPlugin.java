@@ -38,8 +38,8 @@ public class WidgetDataPlugin extends Plugin {
         String nextTaskTitle = call.getString("nextTaskTitle");
         editor.putString(OrbitWidgetPrefs.KEY_NEXT_TASK_TITLE, nextTaskTitle != null ? nextTaskTitle : "");
 
-        String eventDaysThisMonth = call.getString("eventDaysThisMonth");
-        editor.putString(OrbitWidgetPrefs.KEY_EVENT_DAYS_THIS_MONTH, eventDaysThisMonth != null ? eventDaysThisMonth : "");
+        String eventsThisMonth = call.getString("eventsThisMonth");
+        editor.putString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, eventsThisMonth != null ? eventsThisMonth : "");
 
         putColorIfPresent(call, editor, "primaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY);
         putColorIfPresent(call, editor, "onPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY);

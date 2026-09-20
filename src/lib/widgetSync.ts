@@ -6,7 +6,7 @@ interface WidgetDataPlugin {
     nextEventTimeLabel?: string;
     pendingTasksCount: number;
     nextTaskTitle?: string;
-    eventDaysThisMonth: string;
+    eventsThisMonth: string;
     primaryColor?: string;
     onPrimaryColor?: string;
     onPrimaryContainerColor?: string;
@@ -37,7 +37,8 @@ export async function syncWidgets(data: {
   nextEventTimeLabel: string | null;
   pendingTasksCount: number;
   nextTaskTitle: string | null;
-  eventDaysThisMonth: number[];
+  /** "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." pour le mois en cours. */
+  eventsThisMonth: string;
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -46,7 +47,7 @@ export async function syncWidgets(data: {
       nextEventTimeLabel: data.nextEventTimeLabel ?? undefined,
       pendingTasksCount: data.pendingTasksCount,
       nextTaskTitle: data.nextTaskTitle ?? undefined,
-      eventDaysThisMonth: data.eventDaysThisMonth.join(","),
+      eventsThisMonth: data.eventsThisMonth,
       ...currentThemeColors(),
     });
   } catch {
