@@ -9,12 +9,18 @@ export default function Journal() {
   const { entries, addEntry, deleteEntry } = useJournal();
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleAdd() {
     if (!content.trim()) return;
     setSaving(true);
-    await addEntry(content);
+    setError(null);
+    const { error } = await addEntry(content);
     setSaving(false);
+    if (error) {
+      setError(error);
+      return;
+    }
     setContent("");
   }
 
@@ -29,6 +35,8 @@ export default function Journal() {
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
+        {error && <p style={{ color: "var(--md-sys-color-error)", fontSize: 13, margin: 0 }}>{error}</p>}
+
         <button className="btn btn-primary" onClick={handleAdd} disabled={!content.trim() || saving}>
           {saving ? "Enregistrement..." : "Publier"}
         </button>

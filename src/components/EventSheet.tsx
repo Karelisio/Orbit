@@ -199,7 +199,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
                 </button>
               ))}
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <input
               className="input"
               type="number"
@@ -209,13 +209,16 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
               onChange={(e) => setReminderAmount(Math.max(1, Number(e.target.value) || 1))}
               style={{ width: 70, padding: "8px 10px" }}
             />
-            <select className="input" value={reminderUnit} onChange={(e) => setReminderUnit(e.target.value as typeof reminderUnit)} style={{ flex: 1 }}>
-              {REMINDER_UNIT_OPTIONS.map((u) => (
-                <option key={u.unit} value={u.unit}>
-                  {u.label}
-                </option>
-              ))}
-            </select>
+            {REMINDER_UNIT_OPTIONS.map((u) => (
+              <button
+                key={u.unit}
+                type="button"
+                className={`chip${reminderUnit === u.unit ? " selected" : ""}`}
+                onClick={() => setReminderUnit(u.unit)}
+              >
+                {u.label}
+              </button>
+            ))}
             <button type="button" className="btn btn-secondary" onClick={addCustomReminder}>
               Ajouter
             </button>

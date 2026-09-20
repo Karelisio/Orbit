@@ -17,16 +17,25 @@ export default function Tasks() {
   const [recurrence, setRecurrence] = useState<TaskRecurrence>("none");
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [showOptions, setShowOptions] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   async function handleAdd() {
     if (!title.trim()) return;
-    await addTask({
+    setSaving(true);
+    setError(null);
+    const { error } = await addTask({
       title: title.trim(),
       assignedTo: assignee,
       dueDate: dueDate || null,
       recurrence,
       recurrenceInterval: recurrence === "none" ? 1 : recurrenceInterval,
     });
+    setSaving(false);
+    if (error) {
+      setError(error);
+      return;
+    }
     setTitle("");
     setAssignee(null);
     setDueDate("");
@@ -96,8 +105,10 @@ export default function Tasks() {
           </>
         )}
 
-        <button className="btn btn-primary" onClick={handleAdd} disabled={!title.trim()}>
-          Ajouter
+        {error && <p style={{ color: "var(--md-sys-color-error)", fontSize: 13, margin: 0 }}>{error}</p>}
+
+        <button className="btn btn-primary" onClick={handleAdd} disabled={!title.trim() || saving}>
+          {saving ? "Enregistrement..." : "Ajouter"}
         </button>
       </div>
 

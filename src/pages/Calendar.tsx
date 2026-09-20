@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   addMonths,
+  addYears,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
@@ -22,7 +23,7 @@ import type { OrbitEvent } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
 const FALLBACK_EVENT_COLOR = "#79747e";
-const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMMM", { locale: fr }));
+const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMM", { locale: fr }));
 
 export default function Calendar() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
@@ -86,31 +87,36 @@ export default function Calendar() {
               width: 260,
             }}
           >
-            <div style={{ display: "flex", gap: 8 }}>
-              <select
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <button type="button" className="btn btn-icon" onClick={() => setMonth((m) => addYears(m, -1))} aria-label="Année précédente">
+                ←
+              </button>
+              <input
                 className="input"
-                value={month.getMonth()}
-                onChange={(e) => setMonth((m) => setDateMonth(m, Number(e.target.value)))}
-                style={{ flex: 1 }}
-              >
-                {MONTH_NAMES.map((name, i) => (
-                  <option key={i} value={i} style={{ textTransform: "capitalize" }}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="input"
+                type="number"
                 value={month.getFullYear()}
-                onChange={(e) => setMonth((m) => setYear(m, Number(e.target.value)))}
-                style={{ width: 90 }}
-              >
-                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
+                onChange={(e) => {
+                  const y = Number(e.target.value);
+                  if (!Number.isNaN(y)) setMonth((m) => setYear(m, y));
+                }}
+                style={{ width: 90, padding: "6px 8px", textAlign: "center" }}
+              />
+              <button type="button" className="btn btn-icon" onClick={() => setMonth((m) => addYears(m, 1))} aria-label="Année suivante">
+                →
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+              {MONTH_NAMES.map((name, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`chip${month.getMonth() === i ? " selected" : ""}`}
+                  style={{ padding: "6px 4px", fontSize: 12, textTransform: "capitalize", justifyContent: "center" }}
+                  onClick={() => setMonth((m) => setDateMonth(m, i))}
+                >
+                  {name}
+                </button>
+              ))}
             </div>
             <button
               className="btn btn-text"

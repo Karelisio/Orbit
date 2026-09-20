@@ -6,14 +6,16 @@ interface DateTimeFieldProps {
   onChange: (value: string) => void;
 }
 
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-const MINUTES = ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+function clamp(n: number, min: number, max: number): number {
+  if (Number.isNaN(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
 
 /**
  * Remplace `<input type="datetime-local">` : même bug que le date-picker
  * natif Android (dialogue cassé/vide dans la WebView Capacitor). La partie
- * date réutilise DateField ; l'heure passe par deux <select> natifs, qui eux
- * s'affichent correctement.
+ * date réutilise DateField ; l'heure passe par deux champs numériques (un
+ * `<select>` ouvre lui aussi une liste native qui s'affiche mal ici).
  */
 export default function DateTimeField({ value, onChange }: DateTimeFieldProps) {
   const [datePart, timePart] = value ? value.split("T") : ["", ""];
@@ -23,35 +25,44 @@ export default function DateTimeField({ value, onChange }: DateTimeFieldProps) {
     onChange(date ? `${date}T${timePart || "09:00"}` : "");
   }
 
-  function setHour(h: string) {
+  function setHour(raw: string) {
     const d = datePart || format(new Date(), "yyyy-MM-dd");
-    onChange(`${d}T${h}:${minuteStr || "00"}`);
+    const h = clamp(Number(raw), 0, 23);
+    onChange(`${d}T${String(h).padStart(2, "0")}:${minuteStr || "00"}`);
   }
 
-  function setMinute(m: string) {
+  function setMinute(raw: string) {
     const d = datePart || format(new Date(), "yyyy-MM-dd");
-    onChange(`${d}T${hourStr || "09"}:${m}`);
+    const m = clamp(Number(raw), 0, 59);
+    onChange(`${d}T${hourStr || "09"}:${String(m).padStart(2, "0")}`);
   }
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
+    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
       <div style={{ flex: 1 }}>
         <DateField value={datePart} onChange={setDate} placeholder="Date" clearLabel="Effacer" />
       </div>
-      <select className="input" value={hourStr} onChange={(e) => setHour(e.target.value)} style={{ width: 78 }}>
-        {HOURS.map((h) => (
-          <option key={h} value={h}>
-            {h} h
-          </option>
-        ))}
-      </select>
-      <select className="input" value={minuteStr} onChange={(e) => setMinute(e.target.value)} style={{ width: 70 }}>
-        {MINUTES.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
+      <input
+        className="input"
+        type="number"
+        min={0}
+        max={23}
+        value={hourStr}
+        onChange={(e) => setHour(e.target.value)}
+        style={{ width: 62, padding: "8px 6px", textAlign: "center" }}
+        aria-label="Heure"
+      />
+      <span>h</span>
+      <input
+        className="input"
+        type="number"
+        min={0}
+        max={59}
+        value={minuteStr}
+        onChange={(e) => setMinute(e.target.value)}
+        style={{ width: 62, padding: "8px 6px", textAlign: "center" }}
+        aria-label="Minute"
+      />
     </div>
   );
 }

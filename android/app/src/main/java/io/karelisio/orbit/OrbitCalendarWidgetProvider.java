@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -37,8 +38,13 @@ import java.util.Map;
  */
 public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
-    private static final int BITMAP_W = 320;
-    private static final int BITMAP_H = 340;
+    // Tailles de secours si les dimensions réelles du widget ne sont pas
+    // disponibles (ne devrait pas arriver en pratique).
+    private static final int FALLBACK_BITMAP_W = 320;
+    private static final int FALLBACK_BITMAP_H = 340;
+    // Ratio hauteur/largeur du layout (en-tête + grille), pour dériver une
+    // hauteur de rendu cohérente à partir de la largeur réelle du widget.
+    private static final float ASPECT_RATIO = FALLBACK_BITMAP_H / (float) FALLBACK_BITMAP_W;
 
     private static final String ACTION_PREV_MONTH = "io.karelisio.orbit.CAL_WIDGET_PREV";
     private static final String ACTION_NEXT_MONTH = "io.karelisio.orbit.CAL_WIDGET_NEXT";
@@ -76,10 +82,40 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         editor.apply();
     }
 
+    @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager, int appWidgetId, Bundle newOptions) {
+        // L'utilisateur redimensionne le widget : redessiner à la nouvelle
+        // taille pour éviter le flou/pixelisation d'un agrandissement du
+        // bitmap fixe précédent.
+        updateWidget(context, appWidgetManager, appWidgetId);
+    }
+
+    /** Dimensions cibles du bitmap en pixels, dérivées de la taille réelle du widget sur l'écran d'accueil. */
+    private static int[] targetBitmapSize(Context context, AppWidgetManager manager, int appWidgetId) {
+        Bundle options = manager.getAppWidgetOptions(appWidgetId);
+        int minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0);
+        int maxWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0);
+        int minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
+        int maxHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0);
+
+        int widthDp = Math.max(minWidthDp, maxWidthDp);
+        int heightDp = Math.max(minHeightDp, maxHeightDp);
+        if (widthDp <= 0) widthDp = 250;
+        if (heightDp <= 0) heightDp = Math.round(widthDp * ASPECT_RATIO);
+
+        float density = context.getResources().getDisplayMetrics().density;
+        // Marge (x1.5) pour rester net même si l'utilisateur agrandit encore
+        // le widget après ce rendu, sans attendre un nouveau redessin.
+        int widthPx = Math.round(widthDp * density * 1.5f);
+        int heightPx = Math.round(heightDp * density * 1.5f);
+        return new int[] { Math.max(widthPx, FALLBACK_BITMAP_W), Math.max(heightPx, FALLBACK_BITMAP_H) };
+    }
+
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
         String eventsCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
+        int[] bitmapSize = targetBitmapSize(context, appWidgetManager, appWidgetId);
 
         int onPrimaryContainer = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, null), "#21005D");
 
@@ -96,7 +132,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_cal_prev, navIntent(context, appWidgetId, ACTION_PREV_MONTH));
         views.setOnClickPendingIntent(R.id.widget_cal_next, navIntent(context, appWidgetId, ACTION_NEXT_MONTH));
 
-        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(prefs, offset, eventsCsv));
+        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(prefs, offset, eventsCsv, bitmapSize[0], bitmapSize[1]));
         views.setOnClickPendingIntent(R.id.widget_calendar_image, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -138,7 +174,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         return map;
     }
 
-    private static Bitmap drawMonthGrid(SharedPreferences prefs, int offset, String eventsCsv) {
+    private static Bitmap drawMonthGrid(SharedPreferences prefs, int offset, String eventsCsv, int bitmapW, int bitmapH) {
         // Les événements ne sont calculés côté app que pour le mois réel en cours.
         Map<Integer, DayEvent> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
 
@@ -147,7 +183,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         int onSurface = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, null), "#1C1B1F");
         int onSurfaceVariant = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, null), "#79747E");
 
-        Bitmap bitmap = Bitmap.createBitmap(BITMAP_W, BITMAP_H, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(bitmapW, bitmapH, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
 
         Calendar today = Calendar.getInstance();
@@ -163,16 +199,16 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         // Calendar.DAY_OF_WEEK : dimanche=1..samedi=7 ; on veut lundi=0..dimanche=6.
         int firstWeekday = (firstOfMonth.get(Calendar.DAY_OF_WEEK) + 5) % 7;
 
-        float weekdayRowHeight = BITMAP_H * 0.07f;
+        float weekdayRowHeight = bitmapH * 0.07f;
         float gridTop = weekdayRowHeight;
-        float gridHeight = BITMAP_H - gridTop;
+        float gridHeight = bitmapH - gridTop;
         int rows = (int) Math.ceil((firstWeekday + daysInMonth) / 7.0);
-        float cellW = BITMAP_W / 7f;
+        float cellW = bitmapW / 7f;
         float cellH = gridHeight / rows;
 
         Paint weekdayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         weekdayPaint.setColor(onSurfaceVariant);
-        weekdayPaint.setTextSize(BITMAP_H * 0.045f);
+        weekdayPaint.setTextSize(bitmapH * 0.045f);
         weekdayPaint.setTextAlign(Paint.Align.CENTER);
         String[] weekdays = {"L", "M", "M", "J", "V", "S", "D"};
         for (int i = 0; i < 7; i++) {
