@@ -67,6 +67,22 @@ Wenn, toute évolution future de ce schéma s'ajoutera en fin de fichier comme
 bloc `alter table ... add column if not exists ...` séparé — jamais rejouer
 tout le fichier sur un projet déjà déployé.
 
+### Lien magique de connexion — étape manuelle indispensable
+
+Orbit et Wenn partagent le même projet Supabase, donc le même "Site URL" par
+défaut (celui de Wenn, `https://wenn-five.vercel.app`). Sans configuration
+supplémentaire, le lien magique envoyé par e-mail depuis Orbit rouvre donc
+**l'app Wenn** (via son App Link Android) au lieu d'Orbit.
+
+Pour corriger ça, Orbit envoie `io.karelisio.orbit://login-callback` comme
+`emailRedirectTo` sur mobile (voir `src/context/AuthContext.tsx` +
+`src/lib/deepLink.ts` + le schéma déclaré dans
+`android/app/src/main/AndroidManifest.xml`) — mais Supabase n'accepte un
+`emailRedirectTo` que s'il figure dans sa liste blanche. **Étape à faire une
+fois, dans le dashboard Supabase :** Authentication → URL Configuration →
+Redirect URLs → ajouter `io.karelisio.orbit://login-callback`. Ça n'affecte
+en rien la configuration existante de Wenn (liste additive).
+
 ### Variables d'environnement
 
 Copie `.env.example` en `.env`. Les valeurs par défaut pointent déjà vers le

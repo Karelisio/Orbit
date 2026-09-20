@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { NATIVE_AUTH_REDIRECT_URL } from "../lib/deepLink";
 import type { Profile } from "../types";
 
 interface AuthContextValue {
@@ -45,9 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signInWithMagicLink(email: string) {
+    // Sur mobile, il faut un lien qu'Android peut router directement vers Orbit
+    // (voir lib/deepLink.ts) — sinon Supabase retombe sur son "Site URL" par
+    // défaut, celui de Wenn, et le lien magique rouvre Wenn au lieu d'Orbit.
+    const emailRedirectTo = Capacitor.isNativePlatform() ? NATIVE_AUTH_REDIRECT_URL : window.location.origin;
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo },
     });
     return { error: error?.message ?? null };
   }

@@ -6,9 +6,11 @@ import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeModeProvider } from "./context/ThemeModeContext";
 import { applyThemeFromSeedColor, DEFAULT_SEED_COLOR } from "./lib/materialYou";
+import { initDeepLinks } from "./lib/deepLink";
 import "./styles/global.css";
 
 applyThemeFromSeedColor(DEFAULT_SEED_COLOR);
+initDeepLinks();
 
 if (Capacitor.isNativePlatform()) {
   StatusBar.hide().catch(() => {

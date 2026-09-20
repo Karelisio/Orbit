@@ -22,6 +22,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!--
+              Lien magique de connexion : Orbit et Wenn partagent le même projet
+              Supabase, donc le même "Site URL" par défaut (celui de Wenn,
+              https://wenn-five.vercel.app) — sans ce schéma personnalisé, le
+              lien reçu par e-mail ouvrait toujours l'app Wenn. En passant
+              emailRedirectTo="io.karelisio.orbit://login-callback" (voir
+              AuthContext.tsx) et en l'ajoutant aux Redirect URLs autorisées
+              dans Supabase (Authentication > URL Configuration), Android route
+              ce lien directement vers Orbit à la place.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.karelisio.orbit" android:host="login-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -38,4 +55,7 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>
