@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.15 — 2026-09-20
 - Le calendrier affiche maintenant aussi les règles prédites (pas seulement celles déjà enregistrées dans Wenn), y compris sur les mois suivants.
 
 ## v1.0.14 — 2026-09-20
