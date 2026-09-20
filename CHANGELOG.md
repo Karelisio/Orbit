@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Le calendrier affiche maintenant aussi les règles prédites (pas seulement celles déjà enregistrées dans Wenn), y compris sur les mois suivants.
 
 ## v1.0.14 — 2026-09-20
 - Corrige la bande sombre qui apparaissait sous la barre d'état sur certains appareils (le fond derrière l'horloge/les icônes système ne correspondait pas au reste de l'en-tête), et laisse un peu plus d'air en haut de l'écran.
