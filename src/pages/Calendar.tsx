@@ -18,16 +18,24 @@ import { fr } from "date-fns/locale";
 import { useEvents } from "../hooks/useEvents";
 import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences } from "../context/PreferencesContext";
+import { useCouple } from "../context/CoupleContext";
 import EventSheet from "../components/EventSheet";
-import type { OrbitEvent } from "../types";
+import { eventDisplayColor, type OrbitEvent } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
-const FALLBACK_EVENT_COLOR = "#79747e";
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMM", { locale: fr }));
+
+function eventTimeRange(event: OrbitEvent): string {
+  if (event.all_day) return "Toute la journée";
+  const start = format(new Date(event.starts_at), "HH:mm");
+  if (!event.ends_at) return start;
+  return `${start} – ${format(new Date(event.ends_at), "HH:mm")}`;
+}
 
 export default function Calendar() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
   const { showPeriodInCalendar } = usePreferences();
+  const { couple } = useCouple();
   const [month, setMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [sheet, setSheet] = useState<"none" | "new" | OrbitEvent>("none");
@@ -156,7 +164,7 @@ export default function Calendar() {
                 <span className="calendar-day-dots">
                   {isPeriodDay && <span className="dot" style={{ background: "#b3261e" }} title="Règles" />}
                   {dayEvents.slice(0, isPeriodDay ? 2 : 3).map((e) => (
-                    <span key={e.id} className="dot" style={{ background: e.color ?? FALLBACK_EVENT_COLOR }} />
+                    <span key={e.id} className="dot" style={{ background: eventDisplayColor(e, couple) }} />
                   ))}
                 </span>
               )}
@@ -180,11 +188,11 @@ export default function Calendar() {
           <div className="list">
             {selectedEvents.map((event) => (
               <button key={event.id} className="list-item" style={{ textAlign: "left", cursor: "pointer" }} onClick={() => setSheet(event)}>
-                <span className="dot" style={{ background: event.color ?? FALLBACK_EVENT_COLOR }} />
+                <span className="dot" style={{ background: eventDisplayColor(event, couple) }} />
                 <div style={{ flex: 1 }}>
                   <p style={{ margin: 0, fontWeight: 600 }}>{event.title}</p>
                   <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)" }}>
-                    {event.all_day ? "Toute la journée" : format(new Date(event.starts_at), "HH:mm")} · {event.category}
+                    {eventTimeRange(event)} · {event.category}
                   </p>
                 </div>
               </button>

@@ -47,6 +47,23 @@ export interface OrbitEventCategory {
   created_at: string;
 }
 
+/**
+ * Couleurs fixes par rôle dans le couple (pas par "moi/partenaire" relatif
+ * au téléphone qui regarde) : les deux appareils affichent donc toujours la
+ * même couleur pour la même personne. Un événement "Ensemble" garde la
+ * couleur de sa catégorie (voir eventDisplayColor).
+ */
+export const OWNER_EVENT_COLOR = "#6750a4";
+export const PARTNER_EVENT_COLOR = "#006874";
+export const FALLBACK_EVENT_COLOR = "#79747e";
+
+/** Couleur d'affichage d'un événement : celle de la personne assignée si présente, sinon celle de sa catégorie. */
+export function eventDisplayColor(event: Pick<OrbitEvent, "assigned_to" | "color">, couple: Couple | null): string {
+  if (couple && event.assigned_to === couple.owner_id) return OWNER_EVENT_COLOR;
+  if (couple && event.assigned_to && event.assigned_to === couple.partner_id) return PARTNER_EVENT_COLOR;
+  return event.color ?? FALLBACK_EVENT_COLOR;
+}
+
 export const REMINDER_OPTIONS = [
   { minutes: 5, label: "5 min avant" },
   { minutes: 15, label: "15 min avant" },

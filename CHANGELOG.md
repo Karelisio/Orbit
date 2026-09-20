@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Ajout d'une heure de fin optionnelle sur les événements du calendrier (affichée en plage "début–fin").
+- La couleur d'un événement suit maintenant la personne assignée (toi et ton/ta partenaire avez chacun une couleur fixe) plutôt que la catégorie, quand il n'est pas assigné "Ensemble".
 
 ## v1.0.10 — 2026-09-20
 - Corrige l'ajout de tâche qui échouait silencieusement (l'erreur s'affiche maintenant si l'enregistrement échoue).

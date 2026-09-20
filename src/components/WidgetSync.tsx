@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { differenceInCalendarDays, format, isSameMonth } from "date-fns";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
+import { useCouple } from "../context/CoupleContext";
 import { syncWidgets } from "../lib/widgetSync";
+import { eventDisplayColor } from "../types";
 
 function eventTimeLabel(startsAt: string, allDay: boolean): string {
   const date = new Date(startsAt);
@@ -23,6 +25,7 @@ function sanitizeForWidget(text: string): string {
 export default function WidgetSync() {
   const { events } = useEvents();
   const { tasks } = useTasks();
+  const { couple } = useCouple();
 
   useEffect(() => {
     const now = new Date();
@@ -38,7 +41,7 @@ export default function WidgetSync() {
       if (!isSameMonth(d, now)) continue;
       const day = d.getDate();
       if (!byDay.has(day)) {
-        byDay.set(day, { title: sanitizeForWidget(e.title), color: (e.color ?? "#7D5260").replace("#", "") });
+        byDay.set(day, { title: sanitizeForWidget(e.title), color: eventDisplayColor(e, couple).replace("#", "") });
       }
     }
     const eventsThisMonth = Array.from(byDay.entries())
@@ -52,7 +55,7 @@ export default function WidgetSync() {
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsThisMonth,
     });
-  }, [events, tasks]);
+  }, [events, tasks, couple]);
 
   return null;
 }

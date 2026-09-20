@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { addHours } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useEventCategories } from "../hooks/useEventCategories";
@@ -33,6 +34,8 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
   const [description, setDescription] = useState(event?.description ?? "");
   const [allDay, setAllDay] = useState(event?.all_day ?? false);
   const [startsAt, setStartsAt] = useState(toLocalInput(event?.starts_at ?? (initialDate ? `${initialDate}T09:00` : null)));
+  const [hasEnd, setHasEnd] = useState(Boolean(event?.ends_at));
+  const [endsAt, setEndsAt] = useState(toLocalInput(event?.ends_at ?? null));
   const [reminders, setReminders] = useState<number[]>(event?.reminder_minutes_before ?? []);
   const [reminderAmount, setReminderAmount] = useState(10);
   const [reminderUnit, setReminderUnit] = useState<(typeof REMINDER_UNIT_OPTIONS)[number]["unit"]>("minutes");
@@ -41,6 +44,13 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
   const [newCategoryColor, setNewCategoryColor] = useState(EVENT_CATEGORY_COLOR_PALETTE[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleHasEnd(checked: boolean) {
+    setHasEnd(checked);
+    if (checked && !endsAt && startsAt) {
+      setEndsAt(toLocalInput(addHours(new Date(startsAt), 1).toISOString()));
+    }
+  }
 
   function toggleReminder(minutes: number) {
     setReminders((prev) => (prev.includes(minutes) ? prev.filter((m) => m !== minutes) : [...prev, minutes]));
@@ -68,6 +78,10 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
       setError("Titre et date sont obligatoires");
       return;
     }
+    if (hasEnd && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+      setError("La fin doit être après le début");
+      return;
+    }
     setSaving(true);
     setError(null);
     const selectedColor = categories.find((c) => c.name === category)?.color ?? null;
@@ -78,7 +92,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
       category,
       color: selectedColor,
       starts_at: new Date(startsAt).toISOString(),
-      ends_at: null,
+      ends_at: hasEnd && endsAt ? new Date(endsAt).toISOString() : null,
       all_day: allDay,
       reminder_minutes_before: reminders,
       assigned_to: assignedTo,
@@ -100,6 +114,11 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} id="all-day" />
             <label htmlFor="all-day">Toute la journée</label>
           </div>
+          <div className="checkbox-row">
+            <input type="checkbox" checked={hasEnd} onChange={(e) => toggleHasEnd(e.target.checked)} id="has-end" />
+            <label htmlFor="has-end">Ajouter une heure de fin</label>
+          </div>
+          {hasEnd && <DateTimeField value={endsAt} onChange={setEndsAt} />}
           <input className="input" placeholder="Lieu (optionnel)" value={location} onChange={(e) => setLocation(e.target.value)} />
           <textarea
             className="input"

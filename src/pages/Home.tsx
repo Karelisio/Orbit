@@ -6,13 +6,14 @@ import CycleWidget from "../components/CycleWidget";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { usePreferences } from "../context/PreferencesContext";
-
-const FALLBACK_EVENT_COLOR = "#79747e";
+import { useCouple } from "../context/CoupleContext";
+import { eventDisplayColor } from "../types";
 
 export default function Home() {
   const { events } = useEvents();
   const { tasks, toggleTask } = useTasks();
   const { homeSections } = usePreferences();
+  const { couple } = useCouple();
 
   const upcomingEvents = useMemo(() => {
     const now = Date.now();
@@ -42,7 +43,7 @@ export default function Home() {
             ) : (
               <div className="list">
                 {upcomingEvents.map((event) => (
-                  <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={event.color ?? FALLBACK_EVENT_COLOR} />
+                  <CountdownRow key={event.id} title={event.title} startsAt={event.starts_at} color={eventDisplayColor(event, couple)} />
                 ))}
               </div>
             )}
