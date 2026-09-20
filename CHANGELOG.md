@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.9 — 2026-09-20
 - Récurrence des tâches à intervalle libre (tous les X jours/semaines/mois, plus limité aux presets fixes).
 - « Ensemble depuis » affiche maintenant années, mois et jours (plus seulement un nombre de jours).
 - Corrige le bug d'affichage cassé en créant/modifiant un événement (date/heure) dans le calendrier.
