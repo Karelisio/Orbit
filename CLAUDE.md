@@ -102,18 +102,32 @@ Le fond en dégradé des widgets est monté en **deux couches** par
 `OrbitWidgetTheme.applyTileBackground()`, sur une `ImageView` dédiée
 (`widget_bg`) : une base unie (`widget_background_solid`) teintée avec le
 `primary-container` poussé par l'app, plus un voile en dégradé translucide
-(`widget_sheen_light/dark`) posé dessus en image. Deux couches parce qu'un
-`GradientDrawable` multi-stops ne peut pas être teint (le tint l'aplatit en
-une couleur unie) — et **ne jamais revenir à `@android:color/system_accent1_*`** :
-cette palette suit le thème du constructeur (HyperOS…) et divergeait
-visiblement de celle que l'app tire du fond d'écran (widget marron, app
-violette). Clair/sombre se décide en code (`isDarkTheme()`, luminance de la
-couleur de texte poussée par l'app), jamais par la résolution jour/nuit
-d'Android, qui suit le thème système et non celui choisi dans l'app.
+(`widget_sheen`, variante `drawable-night/`) posé dessus en image. Deux
+couches parce qu'un `GradientDrawable` multi-stops ne peut pas être teint (le
+tint l'aplatit en une couleur unie) — et **ne jamais revenir à
+`@android:color/system_accent1_*`** : cette palette suit le thème du
+constructeur (HyperOS…) et divergeait visiblement de celle que l'app tire du
+fond d'écran (widget marron, app violette).
+
+**Clair/sombre d'un widget = mode nuit du lanceur, pas le thème choisi dans
+Orbit.** L'app pousse la palette dans ses DEUX variantes (`WidgetSync.tsx` →
+`widgetPalettesFromSeed()`, clés suffixées `_dark`), et chaque couleur est
+posée avec les deux valeurs à la fois : `RemoteViews.setColorInt(vue,
+méthode, clair, sombre)` et `setColorStateList(vue, méthode, clair, sombre)`
+(API 31+), plus les qualificatifs `drawable-night/` pour le voile. Android
+choisit alors lui-même **et refait ce choix au basculement**, sans que l'app
+tourne — sinon un widget reste figé sur le mode actif au dernier lancement
+de l'app. Fond, texte et pastilles viennent donc tous de la même décision :
+jamais de widget mi-clair mi-sombre (le bug d'illisibilité d'origine venait
+précisément de deux sources différentes). Un changement de **fond d'écran**
+reste le seul cas qui demande d'ouvrir l'app une fois : la palette est
+calculée en JS par `material-color-utilities`, impossible à refaire côté
+natif sans réimplémenter tout l'algorithme M3.
 
 Les éléments à couleur unie (pastille du jour, pastille d'événement,
-quadrillage) sont teintés via `OrbitWidgetTheme.tintBackground()`
-(`setBackgroundTintList`, API 31+ seulement) — mais un `<shape>` sans
+quadrillage) sont teintés via les helpers de rôle de `OrbitWidgetTheme`
+(`tintPrimary()`, `textOnSurface()`…, `setBackgroundTintList`, API 31+
+seulement) — mais un `<shape>` sans
 `<solid>` (contour seul) se remplit entièrement d'une couleur opaque par
 défaut dès qu'un tint lui est appliqué (bug connu de `GradientDrawable`) :
 toujours donner un `<solid>` explicite, même très translucide, à un drawable

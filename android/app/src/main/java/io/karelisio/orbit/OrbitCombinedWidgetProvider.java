@@ -56,11 +56,10 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
         }
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
-        int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
         theme.applyTileBackground(views, R.id.widget_bg);
-        views.setTextColor(R.id.widget_combined_event, onPrimaryContainer);
-        views.setTextColor(R.id.widget_combined_tasks, onPrimaryContainer);
-        views.setTextColor(R.id.widget_combined_journal, onPrimaryContainer);
+        theme.textOnPrimaryContainer(views, R.id.widget_combined_event);
+        theme.textOnPrimaryContainer(views, R.id.widget_combined_tasks);
+        theme.textOnPrimaryContainer(views, R.id.widget_combined_journal);
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);

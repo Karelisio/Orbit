@@ -18,6 +18,14 @@ final class OrbitWidgetPrefs {
     static final String KEY_JOURNAL_AUTHOR_LABEL = "journal_author_label";
     static final String KEY_JOURNAL_TIME_LABEL = "journal_time_label";
 
+    /**
+     * Suffixe de la variante sombre de chaque couleur de palette ci-dessous :
+     * l'app pousse les deux variantes d'un coup, et c'est Android qui choisit
+     * selon le mode nuit du lanceur (voir OrbitWidgetTheme). Sans les deux, un
+     * widget resterait figé dans le mode actif au dernier lancement de l'app.
+     */
+    static final String DARK_SUFFIX = "_dark";
+
     static final String KEY_COLOR_PRIMARY = "color_primary";
     static final String KEY_COLOR_ON_PRIMARY = "color_on_primary";
     static final String KEY_COLOR_PRIMARY_CONTAINER = "color_primary_container";

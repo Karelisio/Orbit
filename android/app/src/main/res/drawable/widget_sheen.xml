@@ -4,6 +4,9 @@
   dégradé du fond de l'app (.app-shell : primary-container -> background).
   Un dégradé ne peut pas être teinté — un tint l'aplatirait en une seule
   couleur unie — d'où cette séparation base teintée / voile fixe.
+
+  Variante sombre dans drawable-night/ : Android la re-résout tout seul quand
+  le téléphone bascule en mode nuit, sans que l'app ait à tourner.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient

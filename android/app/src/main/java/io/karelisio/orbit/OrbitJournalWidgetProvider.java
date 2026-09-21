@@ -45,12 +45,10 @@ public class OrbitJournalWidgetProvider extends AppWidgetProvider {
         }
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
-        int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
-        int onSurfaceVariant = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E");
         theme.applyTileBackground(views, R.id.widget_bg);
-        views.setTextColor(R.id.widget_journal_title, onPrimaryContainer);
-        views.setTextColor(R.id.widget_journal_content, onPrimaryContainer);
-        views.setTextColor(R.id.widget_journal_footer, onSurfaceVariant);
+        theme.textOnPrimaryContainer(views, R.id.widget_journal_title);
+        theme.textOnPrimaryContainer(views, R.id.widget_journal_content);
+        theme.textOnSurfaceVariant(views, R.id.widget_journal_footer);
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);

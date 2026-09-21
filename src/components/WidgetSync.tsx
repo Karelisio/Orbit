@@ -49,7 +49,7 @@ export default function WidgetSync() {
   const { entries: journalEntries } = useJournal();
   const { couple, partnerId } = useCouple();
   const { showPeriodInWidget } = usePreferences();
-  const { themeVersion } = useThemeMode();
+  const { themeVersion, seedColor } = useThemeMode();
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -118,8 +118,9 @@ export default function WidgetSync() {
       journalContent: latestEntry ? sanitizeForWidget(latestEntry.content, 90) : null,
       journalAuthorLabel,
       journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,
+      seedColor,
     });
-  }, [events, tasks, journalEntries, couple, partnerId, user, periodDates, themeVersion]);
+  }, [events, tasks, journalEntries, couple, partnerId, user, periodDates, themeVersion, seedColor]);
 
   return null;
 }

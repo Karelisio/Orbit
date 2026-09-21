@@ -62,6 +62,18 @@ public class WidgetDataPlugin extends Plugin {
         putColorIfPresent(call, editor, "onSurfaceVariantColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT);
         putColorIfPresent(call, editor, "tertiaryColor", OrbitWidgetPrefs.KEY_COLOR_TERTIARY);
 
+        // Même palette en variante sombre : les widgets reçoivent les deux et
+        // laissent Android trancher selon le mode nuit du lanceur, de sorte
+        // qu'une bascule clair/sombre les rattrape sans lancer l'app.
+        String dark = OrbitWidgetPrefs.DARK_SUFFIX;
+        putColorIfPresent(call, editor, "darkPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY + dark);
+        putColorIfPresent(call, editor, "darkOnPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY + dark);
+        putColorIfPresent(call, editor, "darkPrimaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER + dark);
+        putColorIfPresent(call, editor, "darkOnPrimaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER + dark);
+        putColorIfPresent(call, editor, "darkOnSurfaceColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE + dark);
+        putColorIfPresent(call, editor, "darkOnSurfaceVariantColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT + dark);
+        putColorIfPresent(call, editor, "darkTertiaryColor", OrbitWidgetPrefs.KEY_COLOR_TERTIARY + dark);
+
         editor.apply();
 
         // Le rendu d'un widget est isolé : il tourne dans le processus de

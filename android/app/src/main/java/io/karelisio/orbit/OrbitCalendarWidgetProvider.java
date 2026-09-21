@@ -115,11 +115,6 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
-        int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
-        int onSurface = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, "#1C1B1F");
-        int onSurfaceVariant = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E");
-        int primary = theme.color(OrbitWidgetPrefs.KEY_COLOR_PRIMARY, "#6750A4");
-        int onPrimary = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY, "#FFFFFF");
 
         Calendar shownMonth = Calendar.getInstance();
         shownMonth.add(Calendar.MONTH, offset);
@@ -134,14 +129,14 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         theme.applyTileBackground(views, R.id.widget_bg);
 
         views.setTextViewText(R.id.widget_cal_month, monthLabel);
-        views.setTextColor(R.id.widget_cal_month, onPrimaryContainer);
-        views.setTextColor(R.id.widget_cal_prev, onPrimaryContainer);
-        views.setTextColor(R.id.widget_cal_next, onPrimaryContainer);
+        theme.textOnPrimaryContainer(views, R.id.widget_cal_month);
+        theme.textOnPrimaryContainer(views, R.id.widget_cal_prev);
+        theme.textOnPrimaryContainer(views, R.id.widget_cal_next);
 
         String todayLabel = new SimpleDateFormat("EEEE d MMMM", Locale.FRENCH).format(Calendar.getInstance().getTime());
         todayLabel = todayLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + todayLabel.substring(1);
         views.setTextViewText(R.id.widget_cal_subtitle, "Aujourd'hui : " + todayLabel);
-        views.setTextColor(R.id.widget_cal_subtitle, onSurfaceVariant);
+        theme.textOnSurfaceVariant(views, R.id.widget_cal_subtitle);
         views.setOnClickPendingIntent(R.id.widget_cal_prev, navIntent(context, appWidgetId, ACTION_PREV_MONTH));
         views.setOnClickPendingIntent(R.id.widget_cal_next, navIntent(context, appWidgetId, ACTION_NEXT_MONTH));
         // Clic sur la tuile entière (et pas seulement sur la grille) : les
@@ -152,7 +147,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         for (String weekday : WEEKDAYS) {
             RemoteViews label = new RemoteViews(context.getPackageName(), R.layout.widget_calendar_weekday);
             label.setTextViewText(R.id.widget_weekday_label, weekday);
-            label.setTextColor(R.id.widget_weekday_label, onSurfaceVariant);
+            theme.textOnSurfaceVariant(label, R.id.widget_weekday_label);
             views.addView(R.id.widget_cal_weekdays, label);
         }
 
@@ -189,16 +184,16 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                 // Quadrillage discret : un contour translucide par case, teinté
                 // à la couleur du thème (voir widget_cell_grid.xml).
                 cell.setInt(R.id.widget_cell_root, "setBackgroundResource", R.drawable.widget_cell_grid);
-                theme.tintBackground(cell, R.id.widget_cell_root, onSurfaceVariant);
+                theme.tintOnSurfaceVariant(cell, R.id.widget_cell_root);
                 cell.setOnClickPendingIntent(R.id.widget_cell_root, dayIntent(context, appWidgetId, shownMonth, day));
 
                 cell.setTextViewText(R.id.widget_cell_day, String.valueOf(day));
                 if (isCurrentMonth && day == todayDay) {
                     cell.setInt(R.id.widget_cell_day, "setBackgroundResource", R.drawable.widget_today_circle);
-                    theme.tintBackground(cell, R.id.widget_cell_day, primary);
-                    cell.setTextColor(R.id.widget_cell_day, onPrimary);
+                    theme.tintPrimary(cell, R.id.widget_cell_day);
+                    theme.textOnPrimary(cell, R.id.widget_cell_day);
                 } else {
-                    cell.setTextColor(R.id.widget_cell_day, onSurface);
+                    theme.textOnSurface(cell, R.id.widget_cell_day);
                 }
 
                 cell.setViewVisibility(R.id.widget_cell_period_dot, periodDays.contains(day) ? View.VISIBLE : View.GONE);

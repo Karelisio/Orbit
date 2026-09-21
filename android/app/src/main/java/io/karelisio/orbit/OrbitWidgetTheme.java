@@ -9,11 +9,26 @@ import android.widget.RemoteViews;
 /**
  * Couleurs Material You des widgets, poussées par l'app (voir WidgetSync.tsx).
  *
- * Le fond de la tuile est construit en deux couches par applyTileBackground()
- * à partir de cette même palette, pour qu'il suive exactement les couleurs de
- * l'app. Les couleurs de texte, elles, ne sont dynamiques qu'à partir
- * d'Android 12 (RemoteViews.setColorStateList) ; en dessous on garde les
- * couleurs statiques d'origine, assorties au fond clair statique.
+ * L'app pousse la palette en DEUX variantes, claire et sombre (voir
+ * OrbitWidgetPrefs.DARK_SUFFIX), et chaque couleur est posée ici avec les deux
+ * valeurs à la fois : à partir d'Android 12, RemoteViews sait choisir selon le
+ * mode nuit du lanceur, et refait ce choix tout seul quand le téléphone
+ * bascule. Un widget suit donc le passage clair/sombre sans que l'app ait
+ * besoin de tourner — avant, il restait figé sur le mode actif au dernier
+ * lancement de l'app, parfois pendant des heures.
+ *
+ * C'est donc le mode nuit du LANCEUR qui tranche, et non le thème choisi dans
+ * Orbit (Réglages > Thème) : fond, texte et pastilles viennent tous de cette
+ * même décision, donc restent toujours cohérents entre eux — c'est ce qui
+ * compte, un widget mi-clair mi-sombre étant illisible. En dessous
+ * d'Android 12, rien de tout cela n'existe : on garde les couleurs statiques
+ * d'origine, assorties au fond clair statique.
+ *
+ * La teinte (couleur source) vient toujours de l'app, elle : la palette
+ * système d'Android (@android:color/system_accent1_*) suit le thème du
+ * constructeur et pouvait diverger visiblement de celle qu'Orbit tire du fond
+ * d'écran. Changer de fond d'écran reste le seul cas qui demande d'ouvrir
+ * l'app une fois, le temps qu'elle recalcule la palette.
  */
 final class OrbitWidgetTheme {
 
@@ -29,30 +44,87 @@ final class OrbitWidgetTheme {
         return new OrbitWidgetTheme(prefs, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S);
     }
 
-    /** Couleur de la palette de l'app, ou la couleur statique d'origine si on ne peut pas teinter le fond. */
-    int color(String prefKey, String staticFallback) {
-        if (!dynamic) return parseColorOr(staticFallback, staticFallback);
-        return parseColorOr(prefs.getString(prefKey, null), staticFallback);
+    /** Variante claire d'une couleur de la palette (ou la couleur statique d'origine). */
+    private int color(String prefKey, String lightFallback) {
+        if (!dynamic) return parseColorOr(lightFallback, lightFallback);
+        return parseColorOr(prefs.getString(prefKey, null), lightFallback);
     }
 
-    /** Teinte le fond d'une vue (pastille du jour, pastille d'événement, quadrillage...). */
+    /** Variante sombre de la même couleur. */
+    private int darkColor(String prefKey, String darkFallback) {
+        return parseColorOr(prefs.getString(prefKey + OrbitWidgetPrefs.DARK_SUFFIX, null), darkFallback);
+    }
+
+    // Rôles Material 3 utilisés par les widgets. Les replis en dur sont les
+    // couleurs de base M3 : ils ne servent qu'avant le premier lancement de
+    // l'app (ou en dessous d'Android 12), le temps qu'elle pousse sa palette.
+
+    void textOnPrimaryContainer(RemoteViews views, int viewId) {
+        setTextColor(views, viewId, OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D", "#EADDFF");
+    }
+
+    void textOnSurface(RemoteViews views, int viewId) {
+        setTextColor(views, viewId, OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, "#1C1B1F", "#E6E1E5");
+    }
+
+    void textOnSurfaceVariant(RemoteViews views, int viewId) {
+        setTextColor(views, viewId, OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E", "#CAC4D0");
+    }
+
+    void textOnPrimary(RemoteViews views, int viewId) {
+        setTextColor(views, viewId, OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY, "#FFFFFF", "#381E72");
+    }
+
+    void tintPrimary(RemoteViews views, int viewId) {
+        tintFromPalette(views, viewId, OrbitWidgetPrefs.KEY_COLOR_PRIMARY, "#6750A4", "#D0BCFF");
+    }
+
+    void tintOnSurfaceVariant(RemoteViews views, int viewId) {
+        tintFromPalette(views, viewId, OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E", "#CAC4D0");
+    }
+
+    /** Couleur de texte, dans ses deux variantes : Android choisit selon le mode nuit. */
+    private void setTextColor(RemoteViews views, int viewId, String prefKey, String lightFallback, String darkFallback) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            views.setColorInt(viewId, "setTextColor", color(prefKey, lightFallback), darkColor(prefKey, darkFallback));
+        } else {
+            views.setTextColor(viewId, color(prefKey, lightFallback));
+        }
+    }
+
+    /** Teinte le fond d'une vue avec une couleur de la palette, dans ses deux variantes. */
+    private void tintFromPalette(RemoteViews views, int viewId, String prefKey, String lightFallback, String darkFallback) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+        views.setColorStateList(
+            viewId,
+            "setBackgroundTintList",
+            ColorStateList.valueOf(color(prefKey, lightFallback)),
+            ColorStateList.valueOf(darkColor(prefKey, darkFallback))
+        );
+    }
+
+    /**
+     * Teinte le fond d'une vue avec une couleur qui ne dépend pas du thème
+     * (pastille d'un événement : sa couleur vient de la personne assignée).
+     */
     void tintBackground(RemoteViews views, int viewId, int color) {
         // setColorStateList n'existe qu'à partir d'Android 12 (API 31) ; en
         // dessous, on garde les couleurs statiques des drawables.
-        if (!dynamic) return;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
         views.setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color));
     }
 
     /**
-     * Pose le fond de la tuile sur une ImageView dédiée, en deux couches :
-     * une base unie teintée avec le primary-container de l'app, et un voile
-     * en dégradé posé dessus en image pour retrouver le dégradé du fond de
-     * l'app. Deux couches sont nécessaires parce qu'un dégradé ne peut pas
-     * être teinté (le tint l'aplatirait en une couleur unie) — or la couleur
-     * doit venir de l'app : la palette système Android
-     * (@android:color/system_accent1_*), utilisée jusqu'ici, suit le thème du
-     * constructeur et pouvait diverger visiblement de la palette que l'app
-     * tire du fond d'écran.
+     * Pose le fond de la tuile sur une ImageView dédiée, en deux couches : une
+     * base unie teintée au primary-container de l'app, et un voile en dégradé
+     * posé dessus en image pour retrouver le dégradé du fond de l'app. Deux
+     * couches parce qu'un dégradé ne peut pas être teinté — le tint
+     * l'aplatirait en une couleur unie — alors que la couleur, elle, doit
+     * venir de l'app.
+     *
+     * Le voile vient de @drawable/widget_sheen, qui a une variante
+     * drawable-night/ : Android la re-résout tout seul au basculement du mode
+     * nuit, comme les couleurs ci-dessus.
      *
      * L'ImageView doit être une vue dédiée, jamais celle qui porte un clic :
      * mélanger fond et clic sur la même vue a déjà fait perdre le clic précis
@@ -60,22 +132,8 @@ final class OrbitWidgetTheme {
      */
     void applyTileBackground(RemoteViews views, int viewId) {
         views.setInt(viewId, "setBackgroundResource", R.drawable.widget_background_solid);
-        tintBackground(views, viewId, color(OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER, "#EADDFF"));
-        views.setImageViewResource(viewId, isDarkTheme() ? R.drawable.widget_sheen_dark : R.drawable.widget_sheen_light);
-    }
-
-    /**
-     * Clair ou sombre déduit de la MÊME donnée que la couleur du texte, jamais
-     * de la résolution jour/nuit d'Android : le thème système du téléphone peut
-     * différer du thème choisi dans l'app (Réglages > Thème), et c'est ce
-     * dernier qui colore le texte. On lit donc la luminance de onSurfaceColor
-     * (déjà utilisée pour le texte) : claire = thème sombre.
-     */
-    boolean isDarkTheme() {
-        if (!dynamic) return false;
-        int onSurface = color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, "#1C1B1F");
-        double luma = (0.299 * Color.red(onSurface) + 0.587 * Color.green(onSurface) + 0.114 * Color.blue(onSurface)) / 255.0;
-        return luma > 0.5;
+        tintFromPalette(views, viewId, OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER, "#EADDFF", "#4F378B");
+        views.setImageViewResource(viewId, R.drawable.widget_sheen);
     }
 
     /** Parse une couleur "#rrggbb", en retombant sur `fallbackHex` si elle est absente ou invalide. */

@@ -39,11 +39,10 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_tasks_next, count == 0 ? "Tout est fait ✨" : nextTaskTitle);
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
-        int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
         theme.applyTileBackground(views, R.id.widget_bg);
-        views.setTextColor(R.id.widget_tasks_count, onPrimaryContainer);
-        views.setTextColor(R.id.widget_tasks_label, onPrimaryContainer);
-        views.setTextColor(R.id.widget_tasks_next, onPrimaryContainer);
+        theme.textOnPrimaryContainer(views, R.id.widget_tasks_count);
+        theme.textOnPrimaryContainer(views, R.id.widget_tasks_label);
+        theme.textOnPrimaryContainer(views, R.id.widget_tasks_next);
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);

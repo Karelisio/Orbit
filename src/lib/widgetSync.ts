@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { widgetPalettesFromSeed, type WidgetPalette } from "./materialYou";
 
 interface WidgetDataPlugin {
   update(data: {
@@ -18,23 +19,44 @@ interface WidgetDataPlugin {
     onSurfaceColor?: string;
     onSurfaceVariantColor?: string;
     tertiaryColor?: string;
+    darkPrimaryColor?: string;
+    darkOnPrimaryColor?: string;
+    darkPrimaryContainerColor?: string;
+    darkOnPrimaryContainerColor?: string;
+    darkOnSurfaceColor?: string;
+    darkOnSurfaceVariantColor?: string;
+    darkTertiaryColor?: string;
   }): Promise<void>;
 }
 
 const WidgetData = registerPlugin<WidgetDataPlugin>("WidgetData");
 
-/** Couleurs Material You courantes (variables CSS --md-sys-color-*), pour thémer les widgets natifs. */
-function currentThemeColors() {
-  const style = getComputedStyle(document.documentElement);
-  const read = (name: string) => style.getPropertyValue(name).trim() || undefined;
+/**
+ * Les deux palettes (claire et sombre) de la couleur source courante. On
+ * pousse les deux plutôt que la seule palette affichée : les widgets peuvent
+ * alors suivre le mode nuit du téléphone d'eux-mêmes, y compris quand il
+ * bascule pendant que l'app est fermée (voir OrbitWidgetTheme.java).
+ */
+function themeColorsForWidgets(seedColor: string) {
+  const { light, dark } = widgetPalettesFromSeed(seedColor);
+  const prefixDark = (palette: WidgetPalette) => ({
+    darkPrimaryColor: palette.primary,
+    darkOnPrimaryColor: palette.onPrimary,
+    darkPrimaryContainerColor: palette.primaryContainer,
+    darkOnPrimaryContainerColor: palette.onPrimaryContainer,
+    darkOnSurfaceColor: palette.onSurface,
+    darkOnSurfaceVariantColor: palette.onSurfaceVariant,
+    darkTertiaryColor: palette.tertiary,
+  });
   return {
-    primaryColor: read("--md-sys-color-primary"),
-    onPrimaryColor: read("--md-sys-color-on-primary"),
-    primaryContainerColor: read("--md-sys-color-primary-container"),
-    onPrimaryContainerColor: read("--md-sys-color-on-primary-container"),
-    onSurfaceColor: read("--md-sys-color-on-surface"),
-    onSurfaceVariantColor: read("--md-sys-color-on-surface-variant"),
-    tertiaryColor: read("--md-sys-color-tertiary"),
+    primaryColor: light.primary,
+    onPrimaryColor: light.onPrimary,
+    primaryContainerColor: light.primaryContainer,
+    onPrimaryContainerColor: light.onPrimaryContainer,
+    onSurfaceColor: light.onSurface,
+    onSurfaceVariantColor: light.onSurfaceVariant,
+    tertiaryColor: light.tertiary,
+    ...prefixDark(dark),
   };
 }
 
@@ -51,6 +73,8 @@ export async function syncWidgets(data: {
   journalContent: string | null;
   journalAuthorLabel: string | null;
   journalTimeLabel: string | null;
+  /** Couleur source du thème courant (voir ThemeModeContext.seedColor). */
+  seedColor: string;
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -64,7 +88,7 @@ export async function syncWidgets(data: {
       journalContent: data.journalContent ?? undefined,
       journalAuthorLabel: data.journalAuthorLabel ?? undefined,
       journalTimeLabel: data.journalTimeLabel ?? undefined,
-      ...currentThemeColors(),
+      ...themeColorsForWidgets(data.seedColor),
     });
   } catch {
     // plateforme sans widgets (ou plugin indisponible) : tant pis

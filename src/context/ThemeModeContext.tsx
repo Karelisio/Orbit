@@ -18,6 +18,13 @@ interface ThemeModeContextValue {
    * rien ne le lui indique (voir CHANGELOG : widget illisible en sombre).
    */
   themeVersion: number;
+  /**
+   * Couleur source effectivement retenue (image de thème, fond d'écran, ou
+   * repli). WidgetSync.tsx en dérive les palettes claire ET sombre à pousser
+   * aux widgets, ce que les variables CSS ne permettent pas : elles ne
+   * contiennent que le mode actuellement affiché.
+   */
+  seedColor: string;
 }
 
 const ThemeModeContext = createContext<ThemeModeContextValue | undefined>(undefined);
@@ -31,6 +38,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const { user, profile, refreshProfile } = useAuth();
   const [mode, setModeState] = useState<ThemeMode>(() => (localStorage.getItem("orbit-theme-mode") as ThemeMode) || "system");
   const [themeVersion, setThemeVersion] = useState(0);
+  const [seedColor, setSeedColor] = useState(DEFAULT_SEED_COLOR);
 
   function setMode(next: ThemeMode) {
     setModeState(next);
@@ -42,7 +50,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     try {
       if (profile?.theme_image_url) {
         try {
-          await applyThemeFromImageUrl(profile.theme_image_url, dark);
+          setSeedColor(await applyThemeFromImageUrl(profile.theme_image_url, dark));
           return;
         } catch {
           // image invalide/inaccessible : on retombe sur la couleur de secours ci-dessous
@@ -52,10 +60,13 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
         const wallpaperColor = await getWallpaperSeedColor();
         if (wallpaperColor) {
           applyThemeFromSeedColor(wallpaperColor, dark);
+          setSeedColor(wallpaperColor);
           return;
         }
       }
-      applyThemeFromSeedColor(profile?.theme_seed_color ?? DEFAULT_SEED_COLOR, dark);
+      const fallbackSeed = profile?.theme_seed_color ?? DEFAULT_SEED_COLOR;
+      applyThemeFromSeedColor(fallbackSeed, dark);
+      setSeedColor(fallbackSeed);
     } finally {
       // Les variables CSS ne sont posées qu'ici (fin réelle de l'application,
       // pas au déclenchement) : c'est le seul moment sûr pour dire à
@@ -85,7 +96,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     await refreshProfile();
   }
 
-  return <ThemeModeContext.Provider value={{ mode, setMode, setThemeImageUrl, themeVersion }}>{children}</ThemeModeContext.Provider>;
+  return <ThemeModeContext.Provider value={{ mode, setMode, setThemeImageUrl, themeVersion, seedColor }}>{children}</ThemeModeContext.Provider>;
 }
 
 export function useThemeMode() {
