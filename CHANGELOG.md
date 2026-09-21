@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.25 — 2026-09-21
 - Widgets Fusion et Journal : marge de sécurité supplémentaire en bas (toujours coupés sur certains téléphones malgré le fix précédent).
 
 ## v1.0.24 — 2026-09-21
