@@ -45,7 +45,12 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId);
+            // onUpdate tourne dans le processus de l'app : une erreur de rendu
+            // non rattrapée la fermerait entièrement.
+            try {
+                updateWidget(context, appWidgetManager, appWidgetId);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
@@ -83,7 +88,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         try {
             appWidgetManager.updateAppWidget(appWidgetId, buildViews(context, appWidgetId));
-        } catch (Exception e) {
+        } catch (Throwable e) {
             // Un widget qui n'a pas pu être rendu reste affiché tel quel et,
             // surtout, sans action au clic : on pousse au minimum une tuile
             // qui ouvre l'app plutôt que de laisser une carte morte.
@@ -92,7 +97,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                 fallback.setTextViewText(R.id.widget_cal_month, "Orbit");
                 fallback.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
                 appWidgetManager.updateAppWidget(appWidgetId, fallback);
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
                 // plus rien à tenter
             }
         }
@@ -244,7 +249,10 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         ComponentName component = new ComponentName(context, OrbitCalendarWidgetProvider.class);
         int[] ids = manager.getAppWidgetIds(component);
         for (int id : ids) {
-            updateWidget(context, manager, id);
+            try {
+                updateWidget(context, manager, id);
+            } catch (Throwable ignored) {
+            }
         }
     }
 }

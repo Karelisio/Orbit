@@ -18,7 +18,12 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId);
+            // onUpdate tourne dans le processus de l'app : une erreur de rendu
+            // non rattrapée la fermerait entièrement.
+            try {
+                updateWidget(context, appWidgetManager, appWidgetId);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
@@ -68,7 +73,10 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
         ComponentName component = new ComponentName(context, OrbitCombinedWidgetProvider.class);
         int[] ids = manager.getAppWidgetIds(component);
         for (int id : ids) {
-            updateWidget(context, manager, id);
+            try {
+                updateWidget(context, manager, id);
+            } catch (Throwable ignored) {
+            }
         }
     }
 }

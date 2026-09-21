@@ -8,6 +8,7 @@ import DateField from "../components/DateField";
 import { supabase } from "../lib/supabase";
 import { requestNotificationPermission } from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
+import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
 
 const HOME_SECTION_LABELS: Record<keyof HomeSectionsVisibility, string> = {
   together: "Compteur jours ensemble",
@@ -96,6 +97,68 @@ function UpdateCard() {
         <p style={{ fontSize: 13, marginTop: 10 }}>Tu as déjà la dernière version ✅</p>
       )}
       {error && <p style={{ fontSize: 13, marginTop: 10, color: "var(--md-sys-color-error)" }}>{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Affiche la dernière fermeture brutale enregistrée côté natif. Sans accès au
+ * logcat de l'appareil, c'est le seul moyen de diagnostiquer une app qui « se
+ * ferme toute seule » : la carte n'apparaît que s'il y a quelque chose à
+ * signaler.
+ */
+function CrashCard() {
+  const [crash, setCrash] = useState<CrashReport | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    getLastCrash().then(setCrash);
+  }, []);
+
+  if (!crash) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Dernière fermeture inattendue</h3>
+      <p style={{ marginTop: 0, fontSize: 13 }}>
+        L'app s'est fermée seule{crash.when ? ` le ${crash.when}` : ""}. Copie ce
+        rapport et envoie-le pour qu'on corrige le problème.
+      </p>
+      <pre
+        style={{
+          fontSize: 11,
+          maxHeight: 160,
+          overflow: "auto",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          background: "var(--md-sys-color-surface-variant)",
+          color: "var(--md-sys-color-on-surface-variant)",
+          padding: 8,
+          borderRadius: 8,
+        }}
+      >
+        {crash.trace}
+      </pre>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            navigator.clipboard?.writeText(crash.trace);
+            setCopied(true);
+          }}
+        >
+          {copied ? "Copié ✅" : "Copier"}
+        </button>
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            clearLastCrash();
+            setCrash(null);
+          }}
+        >
+          Effacer
+        </button>
+      </div>
     </div>
   );
 }
@@ -232,6 +295,7 @@ export default function Settings() {
         {notifStatus && <p style={{ fontSize: 13, marginTop: 10 }}>{notifStatus}</p>}
       </div>
 
+      <CrashCard />
       <UpdateCard />
 
       <div className="card" style={{ marginBottom: 16 }}>

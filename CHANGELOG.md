@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- L'app ne peut plus se fermer toute seule à cause d'un widget : le rafraîchissement des widgets tourne dans le processus de l'app, et une erreur d'affichage y emportait l'app entière. Il est maintenant isolé — au pire un widget n'est pas rafraîchi tout de suite.
+- Si l'app se ferme malgré tout de façon inattendue, Réglages affiche au redémarrage un rapport à copier/envoyer (jusque-là, la fermeture ne laissait aucune trace).
 
 ## v1.0.17 — 2026-09-21
 - Widget calendrier vide et qui n'ouvrait plus l'app : agrandi, il dépassait la taille d'image autorisée pour un widget et Android refusait alors tout l'affichage. La grille est désormais faite de vraies cases, sans image géante.

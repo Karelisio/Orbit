@@ -51,10 +51,27 @@ public class WidgetDataPlugin extends Plugin {
 
         editor.apply();
 
-        OrbitCalendarWidgetProvider.refreshAll(context);
-        OrbitTasksWidgetProvider.refreshAll(context);
-        OrbitCombinedWidgetProvider.refreshAll(context);
+        // Le rendu d'un widget est isolé : il tourne dans le processus de
+        // l'app, et une erreur ici (RemoteViews trop lourdes, mémoire...)
+        // fermerait l'app entière. Les données sont déjà enregistrées, un
+        // widget non rafraîchi se rattrapera au cycle suivant.
+        refreshQuietly(context);
         call.resolve();
+    }
+
+    private static void refreshQuietly(Context context) {
+        try {
+            OrbitCalendarWidgetProvider.refreshAll(context);
+        } catch (Throwable ignored) {
+        }
+        try {
+            OrbitTasksWidgetProvider.refreshAll(context);
+        } catch (Throwable ignored) {
+        }
+        try {
+            OrbitCombinedWidgetProvider.refreshAll(context);
+        } catch (Throwable ignored) {
+        }
     }
 
     /** Couleur Material You optionnelle (hex "#rrggbb") envoyée depuis le thème JS courant. */
