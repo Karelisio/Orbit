@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.30 — 2026-09-21
 - Les widgets suivent maintenant le passage clair/sombre du téléphone tout seuls, même app fermée : ils restaient jusqu'ici figés sur le thème actif au dernier lancement d'Orbit, et il fallait ouvrir l'app pour qu'ils se remettent à jour.
 
 ## v1.0.29 — 2026-09-21
