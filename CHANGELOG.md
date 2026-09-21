@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.20 — 2026-09-21
 - Corrige les cases du widget calendrier qui s'affichaient noires/marron au lieu du quadrillage discret prévu.
 - Dégradé du widget calendrier : le blanc n'apparaît plus qu'à la toute fin, moins présent qu'avant.
 - Le widget calendrier affiche maintenant jusqu'à 2 événements empilés par jour, au lieu d'un seul.
