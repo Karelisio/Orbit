@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.23 — 2026-09-21
 - Widgets Fusion et Journal : redevenus redimensionnables (une taille minimale trop stricte les bloquait à leur taille par défaut), et plafonnés pour ne plus être proposés en trop grand par défaut.
 
 ## v1.0.22 — 2026-09-21
