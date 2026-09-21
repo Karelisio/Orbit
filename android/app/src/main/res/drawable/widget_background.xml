@@ -4,11 +4,14 @@
   .app-shell dans global.css : primary-container -> background). Sur Android
   12+, drawable-v31/ prend le dessus avec les vraies teintes dynamiques du
   système ; ce dégradé statique reste le repli pour les appareils plus anciens.
+  centerColor = startColor pour garder la teinte sur toute la première
+  moitié : le blanc de endColor n'apparaît que dans le dernier tiers.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient
         android:angle="270"
         android:startColor="#EADDFF"
+        android:centerColor="#EADDFF"
         android:endColor="#F7F2FA" />
     <corners android:radius="24dp" />
 </shape>

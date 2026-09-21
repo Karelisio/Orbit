@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Quadrillage discret entre les jours du mois : un simple contour très
-  translucide par case. Teinté à la couleur "on-surface-variant" du thème sur
-  Android 12+ (le tramage SRC_IN de la teinte conserve la transparence
-  d'origine du contour, seule sa teinte change) ; en dessous, ce gris
-  translucide fixe reste tel quel.
+  Quadrillage discret entre les jours du mois : un contour très translucide
+  par case, avec un fond tout aussi translucide. Teinté à la couleur
+  "on-surface-variant" du thème sur Android 12+ (le tramage SRC_IN de la
+  teinte conserve la transparence d'origine, seule sa teinte change) ; en
+  dessous, ce gris translucide fixe reste tel quel.
+
+  Le <solid> est obligatoire même en dessous du seuil de visibilité voulu :
+  un <shape> avec seulement un <stroke> (pas de <solid>) se remplit tout
+  entier d'une couleur opaque par défaut dès qu'on lui applique un tint
+  (bug connu de GradientDrawable, où la seule présence d'un tint filter
+  active son fill interne) — d'où une case pleine noire/marron au lieu d'un
+  simple contour discret.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#148A8A8A" />
     <stroke android:width="0.5dp" android:color="#268A8A8A" />
     <corners android:radius="4dp" />
 </shape>

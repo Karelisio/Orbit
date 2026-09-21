@@ -6,7 +6,7 @@ import { useThemeMode } from "../context/ThemeModeContext";
 import { usePreferences, type HomeSectionsVisibility, type NavTab, NAV_TAB_LABELS } from "../context/PreferencesContext";
 import DateField from "../components/DateField";
 import { supabase } from "../lib/supabase";
-import { requestNotificationPermission } from "../lib/notifications";
+import { isExactAlarmGranted, openExactAlarmSettings, requestNotificationPermission } from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
 import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
 
@@ -97,6 +97,40 @@ function UpdateCard() {
         <p style={{ fontSize: 13, marginTop: 10 }}>Tu as déjà la dernière version ✅</p>
       )}
       {error && <p style={{ fontSize: 13, marginTop: 10, color: "var(--md-sys-color-error)" }}>{error}</p>}
+    </div>
+  );
+}
+
+/**
+ * Sans ce réglage système accordé, les rappels d'événements sont programmés
+ * en alarme inexacte et peuvent ne sonner que quand l'app est rouverte (voir
+ * isExactAlarmGranted dans lib/notifications.ts). N'apparaît que si le
+ * réglage manque, et disparaît une fois accordé.
+ */
+function ExactAlarmCard() {
+  const [granted, setGranted] = useState(true);
+
+  useEffect(() => {
+    isExactAlarmGranted().then(setGranted);
+  }, []);
+
+  if (granted) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 className="section-title">Rappels d'événements</h3>
+      <p style={{ marginTop: 0, fontSize: 13 }}>
+        Pour que les rappels sonnent même si Orbit n'est pas ouverte, autorise "Alarmes et rappels" dans les réglages
+        système.
+      </p>
+      <button
+        className="btn btn-primary"
+        onClick={async () => {
+          if (await openExactAlarmSettings()) setGranted(true);
+        }}
+      >
+        Autoriser
+      </button>
     </div>
   );
 }
@@ -304,6 +338,7 @@ export default function Settings() {
         {notifStatus && <p style={{ fontSize: 13, marginTop: 10 }}>{notifStatus}</p>}
       </div>
 
+      <ExactAlarmCard />
       <CrashCard />
       <UpdateCard />
 

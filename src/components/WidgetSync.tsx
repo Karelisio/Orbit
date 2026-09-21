@@ -48,23 +48,29 @@ export default function WidgetSync() {
     const nextEvent = upcoming[0] ?? null;
     const pendingTasks = tasks.filter((t) => !t.done);
 
-    // Un seul événement (le premier) affiché par jour du mois en cours, avec
-    // son titre et sa couleur, pour dessiner de vraies pastilles colorées sur
-    // le widget calendrier plutôt qu'un simple point. Un événement récurrent
-    // chaque année compte pour n'importe quel jour du mois affiché qui
-    // correspond, quelle que soit l'année de sa création.
+    // Événements du jour affichés en pastilles empilées sur le widget
+    // calendrier, jusqu'à 2 par jour (au-delà, la case n'a plus la place :
+    // silencieusement tronqué, comme le titre l'est déjà à 18 caractères).
+    // Le format CSV "jour:titre:couleur;..." supporte nativement plusieurs
+    // entrées pour un même jour, pas besoin d'un nouveau séparateur. Un
+    // événement récurrent chaque année compte pour n'importe quel jour du
+    // mois affiché qui correspond, quelle que soit l'année de sa création.
+    const MAX_EVENTS_PER_DAY = 2;
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const byDay = new Map<number, { title: string; color: string }>();
+    const entries: string[] = [];
     for (let day = 1; day <= daysInMonth; day++) {
       const dayDate = new Date(now.getFullYear(), now.getMonth(), day);
-      const match = events.find((e) => eventOccursOnDay(e, dayDate));
-      if (match) {
-        byDay.set(day, { title: sanitizeForWidget(match.title), color: eventDisplayColor(match, couple).replace("#", "") });
+      const matches = events
+        .filter((e) => eventOccursOnDay(e, dayDate))
+        .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
+        .slice(0, MAX_EVENTS_PER_DAY);
+      for (const match of matches) {
+        const title = sanitizeForWidget(match.title);
+        const color = eventDisplayColor(match, couple).replace("#", "");
+        entries.push(`${day}:${title}:${color}`);
       }
     }
-    const eventsThisMonth = Array.from(byDay.entries())
-      .map(([day, { title, color }]) => `${day}:${title}:${color}`)
-      .join(";");
+    const eventsThisMonth = entries.join(";");
 
     // Jours de règles (déjà enregistrées ou prédites, voir useCyclePeriodDays)
     // du mois affiché sur le widget, désactivable dans Réglages.

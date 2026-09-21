@@ -22,6 +22,35 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return result.display === "granted";
 }
 
+/**
+ * Sur Android 12+, déclarer SCHEDULE_EXACT_ALARM dans le manifeste ne suffit
+ * plus : l'utilisatrice doit en plus accorder le réglage système "Alarmes et
+ * rappels" (Settings > Apps > Orbit > Alarmes et rappels). Sans ça, un
+ * rappel est programmé en alarme inexacte, que Doze/App Standby peut
+ * reporter arbitrairement — d'où des rappels qui ne sonnent que si l'app est
+ * rouverte entre-temps.
+ */
+export async function isExactAlarmGranted(): Promise<boolean> {
+  if (Capacitor.getPlatform() !== "android") return true;
+  try {
+    const { exact_alarm } = await LocalNotifications.checkExactNotificationSetting();
+    return exact_alarm === "granted";
+  } catch {
+    return true;
+  }
+}
+
+/** Ouvre l'écran système "Alarmes et rappels" pour Orbit. */
+export async function openExactAlarmSettings(): Promise<boolean> {
+  if (Capacitor.getPlatform() !== "android") return true;
+  try {
+    const { exact_alarm } = await LocalNotifications.changeExactNotificationSetting();
+    return exact_alarm === "granted";
+  } catch {
+    return false;
+  }
+}
+
 export async function cancelEventNotifications(event: Pick<OrbitEvent, "id" | "reminder_minutes_before">): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   const ids = event.reminder_minutes_before.map((m) => ({ id: notificationId(event.id, m) }));

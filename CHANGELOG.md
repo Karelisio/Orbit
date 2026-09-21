@@ -7,6 +7,11 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Corrige les cases du widget calendrier qui s'affichaient noires/marron au lieu du quadrillage discret prévu.
+- Dégradé du widget calendrier : le blanc n'apparaît plus qu'à la toute fin, moins présent qu'avant.
+- Le widget calendrier affiche maintenant jusqu'à 2 événements empilés par jour, au lieu d'un seul.
+- Un réglage propose d'autoriser "Alarmes et rappels" si besoin, pour que les rappels d'événements sonnent même app fermée (avant, ils pouvaient attendre la réouverture de l'app).
+- L'icône de notification est maintenant celle d'Orbit, plus une icône générique.
 
 ## v1.0.19 — 2026-09-21
 - Taper sur un jour du widget calendrier ouvre maintenant l'app directement sur ce jour, au lieu de l'accueil.

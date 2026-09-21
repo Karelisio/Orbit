@@ -15,8 +15,10 @@ import android.widget.RemoteViews;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -154,7 +156,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
         // Les événements et les jours de règles ne sont calculés côté app que
         // pour le mois réel en cours.
-        Map<Integer, DayEvent> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
+        Map<Integer, List<DayEvent>> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
         Set<Integer> periodDays = offset == 0 ? parseDayList(periodDaysCsv) : new HashSet<>();
 
         Calendar today = Calendar.getInstance();
@@ -178,7 +180,6 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
                 if (day < 1 || day > daysInMonth) {
                     cell.setTextViewText(R.id.widget_cell_day, "");
-                    cell.setViewVisibility(R.id.widget_cell_event, View.GONE);
                     weekRow.addView(R.id.widget_cal_week, cell);
                     continue;
                 }
@@ -200,13 +201,15 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
                 cell.setViewVisibility(R.id.widget_cell_period_dot, periodDays.contains(day) ? View.VISIBLE : View.GONE);
 
-                DayEvent event = events.get(day);
-                if (event == null) {
-                    cell.setViewVisibility(R.id.widget_cell_event, View.GONE);
-                } else {
-                    cell.setViewVisibility(R.id.widget_cell_event, View.VISIBLE);
-                    cell.setTextViewText(R.id.widget_cell_event, event.title);
-                    theme.tintBackground(cell, R.id.widget_cell_event, event.color);
+                cell.removeAllViews(R.id.widget_cell_events);
+                List<DayEvent> dayEvents = events.get(day);
+                if (dayEvents != null) {
+                    for (DayEvent event : dayEvents) {
+                        RemoteViews chip = new RemoteViews(context.getPackageName(), R.layout.widget_calendar_event_chip);
+                        chip.setTextViewText(R.id.widget_cell_event_chip, event.title);
+                        theme.tintBackground(chip, R.id.widget_cell_event_chip, event.color);
+                        cell.addView(R.id.widget_cell_events, chip);
+                    }
                 }
 
                 weekRow.addView(R.id.widget_cal_week, cell);
@@ -228,9 +231,14 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    /** Format : "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." (voir WidgetSync.tsx). */
-    private static Map<Integer, DayEvent> parseEvents(String csv) {
-        Map<Integer, DayEvent> map = new HashMap<>();
+    /**
+     * Format : "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." (voir
+     * WidgetSync.tsx). Plusieurs entrées peuvent partager le même jour
+     * (jusqu'à 2, plafonnées côté JS) : chacune devient une pastille
+     * empilée dans la case.
+     */
+    private static Map<Integer, List<DayEvent>> parseEvents(String csv) {
+        Map<Integer, List<DayEvent>> map = new HashMap<>();
         if (TextUtils.isEmpty(csv)) return map;
         for (String entry : csv.split(";")) {
             String[] fields = entry.split(":", 3);
@@ -238,7 +246,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             try {
                 int day = Integer.parseInt(fields[0].trim());
                 int color = OrbitWidgetTheme.parseColorOr("#" + fields[2].trim(), "#7D5260");
-                map.put(day, new DayEvent(fields[1], color));
+                map.computeIfAbsent(day, k -> new ArrayList<>()).add(new DayEvent(fields[1], color));
             } catch (NumberFormatException ignored) {
                 // entrée invalide : on l'ignore simplement
             }

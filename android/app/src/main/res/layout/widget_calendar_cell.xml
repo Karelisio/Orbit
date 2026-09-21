@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Une case de jour : le numéro, un petit point pour les règles (Wenn,
-     désactivable), et sous eux la pastille du premier événement du jour
-     (masquée s'il n'y en a pas). Le fond en quadrillage discret marque la
-     limite de la case ; le clic ouvre l'app sur ce jour précis. -->
+     désactivable), et sous eux les pastilles des événements du jour (jusqu'à
+     2, empilées, voir widget_calendar_event_chip.xml et WidgetSync.tsx —
+     ajoutées dynamiquement dans widget_cell_events, vide/absent s'il n'y en
+     a pas). Le fond en quadrillage discret marque la limite de la case ; le
+     clic ouvre l'app sur ce jour précis. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_cell_root"
     android:layout_width="0dp"
@@ -30,18 +32,9 @@
         android:background="@drawable/widget_period_dot"
         android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/widget_cell_event"
+    <LinearLayout
+        android:id="@+id/widget_cell_events"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="1dp"
-        android:background="@drawable/widget_event_chip"
-        android:gravity="center"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:paddingLeft="2dp"
-        android:paddingRight="2dp"
-        android:textColor="#FFFFFF"
-        android:textSize="9sp"
-        android:visibility="gone" />
+        android:orientation="vertical" />
 </LinearLayout>
