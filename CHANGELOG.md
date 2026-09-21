@@ -7,6 +7,9 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Widgets Tâches, Fusion et Journal : la taille du texte s'adapte maintenant à la hauteur réellement accordée par le lanceur, au lieu de rester minuscule dans une tuile plus grande que le minimum.
+- Tâches : ajout d'un bouton ✏️ pour modifier une tâche existante (titre, assignation, échéance, récurrence) — jusqu'ici seules la coche et la suppression étaient possibles.
+- Supprime le menu de sélection de texte qui apparaissait au long appui sur une tâche (comportement natif involontaire, pris pour un bug) : l'édition passe maintenant par le bouton ✏️.
 
 ## v1.0.30 — 2026-09-21
 - Les widgets suivent maintenant le passage clair/sombre du téléphone tout seuls, même app fermée : ils restaient jusqu'ici figés sur le thème actif au dernier lancement d'Orbit, et il fallait ouvrir l'app pour qu'ils se remettent à jour.

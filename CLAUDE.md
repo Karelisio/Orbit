@@ -146,6 +146,20 @@ Ne jamais mettre de `maxResizeWidth`/`maxResizeHeight` en dessous de la
 taille réellement posée : le lanceur n'a alors aucune plage valide et
 désactive complètement les poignées de redimensionnement.
 
+**Police adaptative (Tâches, Fusion, Journal)** : les tailles `sp` en dur
+dans les layouts sont calées pour la hauteur minimale (1 ligne). Comme un
+lanceur peut accorder une tuile bien plus haute (grille plus grossière, ou
+redimensionnement à la main), `OrbitWidgetTheme.heightScale()` compare la
+hauteur réellement accordée (`AppWidgetManager.getAppWidgetOptions()` →
+`OPTION_APPWIDGET_MIN_HEIGHT`) à cette hauteur minimale déclarée dans le
+`_info.xml`, et `scaleText()` multiplie chaque taille de base par ce
+facteur (`RemoteViews.setTextViewTextSize`, plafonné à ×1.6 pour ne pas
+déborder). Ces trois providers implémentent aussi
+`onAppWidgetOptionsChanged()` (rappelle simplement `updateWidget()`) pour
+réappliquer l'échelle en direct pendant un redimensionnement, pas
+seulement à la prochaine donnée poussée. Le widget Calendrier n'est pas
+concerné : sa grille a une structure différente (cases fixes).
+
 Tap sur une case du widget calendrier → ouvre directement l'app sur ce jour
 via le schéma personnalisé `io.karelisio.orbit://calendar?date=...` (voir
 `deepLink.ts` + intent-filter dédié dans `AndroidManifest.xml`, même

@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.widget.RemoteViews;
 
 /**
@@ -44,8 +45,30 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
         theme.textOnPrimaryContainer(views, R.id.widget_tasks_label);
         theme.textOnPrimaryContainer(views, R.id.widget_tasks_next);
 
+        // minHeight de widget_tasks_info.xml : la police grandit avec la
+        // tuile si le lanceur en accorde plus que ce minimum.
+        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 60);
+        theme.scaleText(views, R.id.widget_tasks_count, 28f, scale);
+        theme.scaleText(views, R.id.widget_tasks_label, 12f, scale);
+        theme.scaleText(views, R.id.widget_tasks_next, 11f, scale);
+
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    @Override
+    public void onAppWidgetOptionsChanged(
+        Context context,
+        AppWidgetManager appWidgetManager,
+        int appWidgetId,
+        Bundle newOptions
+    ) {
+        // Redimensionnement à la main : la police doit se réajuster tout de
+        // suite, pas seulement à la prochaine mise à jour de données.
+        try {
+            updateWidget(context, appWidgetManager, appWidgetId);
+        } catch (Throwable ignored) {
+        }
     }
 
     static PendingIntent openAppIntent(Context context, int appWidgetId) {

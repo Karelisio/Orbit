@@ -5,12 +5,14 @@ import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useTasks } from "../hooks/useTasks";
 import DateField from "../components/DateField";
-import { TASK_RECURRENCE_OPTIONS, TASK_RECURRENCE_UNIT_LABELS, taskRecurrenceLabel, type TaskRecurrence } from "../types";
+import TaskSheet from "../components/TaskSheet";
+import { TASK_RECURRENCE_OPTIONS, TASK_RECURRENCE_UNIT_LABELS, taskRecurrenceLabel, type OrbitTask, type TaskRecurrence } from "../types";
 
 export default function Tasks() {
   const { user } = useAuth();
   const { partnerId } = useCouple();
-  const { tasks, addTask, toggleTask, deleteTask } = useTasks();
+  const { tasks, addTask, updateTask, toggleTask, deleteTask } = useTasks();
+  const [editing, setEditing] = useState<OrbitTask | null>(null);
   const [title, setTitle] = useState("");
   const [assignee, setAssignee] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState("");
@@ -118,7 +120,14 @@ export default function Tasks() {
         <>
           <div className="list" style={{ marginBottom: 20 }}>
             {pending.map((task) => (
-              <TaskRow key={task.id} task={task} isMe={task.assigned_to === user?.id} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task.id)} />
+              <TaskRow
+                key={task.id}
+                task={task}
+                isMe={task.assigned_to === user?.id}
+                onToggle={() => toggleTask(task)}
+                onEdit={() => setEditing(task)}
+                onDelete={() => deleteTask(task.id)}
+              />
             ))}
           </div>
 
@@ -127,12 +136,31 @@ export default function Tasks() {
               <p className="section-title">Terminées</p>
               <div className="list">
                 {done.map((task) => (
-                  <TaskRow key={task.id} task={task} isMe={task.assigned_to === user?.id} onToggle={() => toggleTask(task)} onDelete={() => deleteTask(task.id)} />
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    isMe={task.assigned_to === user?.id}
+                    onToggle={() => toggleTask(task)}
+                    onEdit={() => setEditing(task)}
+                    onDelete={() => deleteTask(task.id)}
+                  />
                 ))}
               </div>
             </>
           )}
         </>
+      )}
+
+      {editing && (
+        <TaskSheet
+          task={editing}
+          onSave={(fields) => updateTask(editing.id, fields)}
+          onDelete={() => {
+            deleteTask(editing.id);
+            setEditing(null);
+          }}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );
@@ -142,11 +170,13 @@ function TaskRow({
   task,
   isMe,
   onToggle,
+  onEdit,
   onDelete,
 }: {
-  task: import("../types").OrbitTask;
+  task: OrbitTask;
   isMe: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const isRecurring = task.recurrence !== "none";
@@ -171,6 +201,9 @@ function TaskRow({
           )}
         </span>
       </label>
+      <button className="btn-icon" onClick={onEdit} aria-label="Modifier">
+        ✏️
+      </button>
       <button className="btn-icon" onClick={onDelete} aria-label="Supprimer">
         🗑️
       </button>

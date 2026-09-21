@@ -5,6 +5,14 @@ import { supabase } from "../lib/supabase";
 import { useRealtimeCollection } from "./useRealtimeCollection";
 import type { OrbitTask, TaskRecurrence } from "../types";
 
+export type NewTask = {
+  title: string;
+  assignedTo: string | null;
+  dueDate: string | null;
+  recurrence: TaskRecurrence;
+  recurrenceInterval: number;
+};
+
 function nextDueDate(fromDate: string | null, recurrence: TaskRecurrence, interval: number): string {
   const base = fromDate ? new Date(fromDate) : new Date();
   switch (recurrence) {
@@ -35,13 +43,7 @@ export function useTasks() {
   // Ajout optimiste : sans ça, l'app (et le widget, qui réagit au même état
   // `tasks`) n'affichaient la nouvelle tâche qu'au retour de l'écho temps
   // réel Supabase, avec un délai réseau perceptible.
-  async function addTask(fields: {
-    title: string;
-    assignedTo: string | null;
-    dueDate: string | null;
-    recurrence: TaskRecurrence;
-    recurrenceInterval: number;
-  }) {
+  async function addTask(fields: NewTask) {
     if (!couple || !user) return { error: "Aucun couple lié" };
     const { data, error } = await supabase
       .from("orbit_tasks")
@@ -59,6 +61,25 @@ export function useTasks() {
     if (error) return { error: error.message };
     const created = data as OrbitTask;
     setRows((prev) => (prev.some((t) => t.id === created.id) ? prev : [...prev, created].sort(sortTasks)));
+    return { error: null };
+  }
+
+  async function updateTask(id: string, fields: Partial<NewTask>) {
+    const { data, error } = await supabase
+      .from("orbit_tasks")
+      .update({
+        ...(fields.title !== undefined && { title: fields.title }),
+        ...(fields.assignedTo !== undefined && { assigned_to: fields.assignedTo }),
+        ...(fields.dueDate !== undefined && { due_date: fields.dueDate }),
+        ...(fields.recurrence !== undefined && { recurrence: fields.recurrence }),
+        ...(fields.recurrenceInterval !== undefined && { recurrence_interval: fields.recurrenceInterval }),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) return { error: error.message };
+    const updated = data as OrbitTask;
+    setRows((prev) => prev.map((t) => (t.id === id ? updated : t)).sort(sortTasks));
     return { error: null };
   }
 
@@ -89,5 +110,5 @@ export function useTasks() {
     return { error: error?.message ?? null };
   }
 
-  return { tasks: rows, loading, addTask, toggleTask, deleteTask };
+  return { tasks: rows, loading, addTask, updateTask, toggleTask, deleteTask };
 }

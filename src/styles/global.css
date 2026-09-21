@@ -391,6 +391,15 @@ textarea.input {
   accent-color: var(--md-sys-color-primary);
 }
 
+/* Sans ça, un appui long sur le texte d'une tâche déclenche le menu de
+   sélection natif de la WebView (perçu comme un bug) au lieu de ne rien
+   faire — l'édition passe maintenant par un bouton dédié. */
+.checkbox-row span {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 .done-text {
   text-decoration: line-through;
   opacity: 0.55;

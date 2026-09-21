@@ -1,9 +1,12 @@
 package io.karelisio.orbit;
 
+import android.appwidget.AppWidgetManager;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Build;
+import android.os.Bundle;
+import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 /**
@@ -134,6 +137,28 @@ final class OrbitWidgetTheme {
         views.setInt(viewId, "setBackgroundResource", R.drawable.widget_background_solid);
         tintFromPalette(views, viewId, OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER, "#EADDFF", "#4F378B");
         views.setImageViewResource(viewId, R.drawable.widget_sheen);
+    }
+
+    /**
+     * Échelle de police selon la hauteur réellement accordée par le lanceur,
+     * par rapport à la hauteur minimale déclarée dans le `_info.xml` du
+     * widget (sa taille à 1 ligne). Les tailles de police en dur dans les
+     * layouts sont calées pour cette hauteur minimale ; un lanceur qui pose
+     * la tuile plus haute (grille plus grossière, ou redimensionnement à la
+     * main) laissait jusqu'ici le texte minuscule dans tout cet espace en
+     * plus. Ne réduit jamais sous la taille de base, et plafonne pour ne pas
+     * déborder sur une tuile démesurément haute.
+     */
+    static float heightScale(AppWidgetManager manager, int appWidgetId, int baselineHeightDp) {
+        Bundle options = manager.getAppWidgetOptions(appWidgetId);
+        int grantedDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, baselineHeightDp);
+        if (grantedDp <= baselineHeightDp) return 1f;
+        return Math.min(grantedDp / (float) baselineHeightDp, 1.6f);
+    }
+
+    /** Applique l'échelle de `heightScale()` à la taille de base (en sp) d'un texte. */
+    void scaleText(RemoteViews views, int viewId, float baseSp, float scale) {
+        views.setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, baseSp * scale);
     }
 
     /** Parse une couleur "#rrggbb", en retombant sur `fallbackHex` si elle est absente ou invalide. */
