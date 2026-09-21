@@ -1,26 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Grille construite en vraies vues (une par jour), plus en Bitmap dessiné :
+  un grand widget produisait un bitmap de plusieurs dizaines de Mo, au-delà
+  de la limite autorisée pour un widget — updateAppWidget() levait alors une
+  exception et la tuile restait vide et non cliquable. Les vues natives
+  restent nettes à toute taille et gardent un texte de taille constante.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/widget_background"
-    android:padding="6dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="6dp">
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/widget_cal_prev"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="34dp"
+            android:layout_height="30dp"
             android:gravity="center"
             android:text="‹"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
@@ -29,24 +35,32 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_cal_next"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="34dp"
+            android:layout_height="30dp"
             android:gravity="center"
             android:text="›"
-            android:textSize="18sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/widget_calendar_image"
+    <LinearLayout
+        android:id="@+id/widget_cal_weekdays"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal" />
+
+    <LinearLayout
+        android:id="@+id/widget_cal_grid"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:scaleType="fitCenter"
-        android:contentDescription="@string/widget_calendar_description" />
+        android:orientation="vertical" />
 </LinearLayout>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une case de jour : le numéro, et sous lui la pastille du premier
+     événement du jour (masquée s'il n'y en a pas). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:gravity="top|center_horizontal"
+    android:paddingLeft="1dp"
+    android:paddingRight="1dp">
+
+    <TextView
+        android:id="@+id/widget_cell_day"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/widget_cell_event"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:background="@drawable/widget_event_chip"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:paddingLeft="2dp"
+        android:paddingRight="2dp"
+        android:textColor="#FFFFFF"
+        android:textSize="9sp"
+        android:visibility="gone" />
+</LinearLayout>

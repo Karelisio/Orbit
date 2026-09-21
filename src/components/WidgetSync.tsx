@@ -16,9 +16,13 @@ function eventTimeLabel(startsAt: string, allDay: boolean): string {
   return format(date, "d MMM") + time;
 }
 
-/** Nettoie un titre d'événement pour l'encodage compact envoyé au widget natif. */
+/**
+ * Nettoie un titre d'événement pour l'encodage compact envoyé au widget natif.
+ * La troncature finale est laissée au widget (ellipse "…" selon la largeur
+ * réelle de la case) : on envoie juste de quoi remplir la pastille.
+ */
 function sanitizeForWidget(text: string): string {
-  return text.replace(/[:;]/g, " ").trim().slice(0, 14);
+  return text.replace(/[:;]/g, " ").trim().slice(0, 18);
 }
 
 /** Tient les widgets d'écran d'accueil Android à jour à chaque changement de données. */

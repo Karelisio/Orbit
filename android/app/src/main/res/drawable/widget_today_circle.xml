@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pastille du jour courant. Teintée à la couleur primaire du thème quand
+     c'est possible (Android 12+), sinon ce violet par défaut. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#6750A4" />
+</shape>

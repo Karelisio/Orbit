@@ -32,20 +32,25 @@ final class OrbitWidgetTheme {
 
     /** Couleur de la palette de l'app, ou la couleur statique d'origine si on ne peut pas teinter le fond. */
     int color(String prefKey, String staticFallback) {
-        if (!dynamic) return parse(staticFallback, staticFallback);
-        return parse(prefs.getString(prefKey, null), staticFallback);
+        if (!dynamic) return parseColorOr(staticFallback, staticFallback);
+        return parseColorOr(prefs.getString(prefKey, null), staticFallback);
     }
 
     /** Accorde le fond de la tuile aux couleurs de texte (Android 12+ uniquement). */
     void applyBackground(RemoteViews views, int rootViewId) {
-        // setColorStateList n'existe qu'à partir d'Android 12 (API 31) ; en
-        // dessous, `dynamic` est false et on n'arrive jamais ici.
-        if (!dynamic) return;
-        int container = color(OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER, "#EADDFF");
-        views.setColorStateList(rootViewId, "setBackgroundTintList", ColorStateList.valueOf(container));
+        tintBackground(views, rootViewId, color(OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER, "#EADDFF"));
     }
 
-    private static int parse(String hex, String fallbackHex) {
+    /** Teinte le fond d'une vue (pastille du jour, pastille d'événement...). */
+    void tintBackground(RemoteViews views, int viewId, int color) {
+        // setColorStateList n'existe qu'à partir d'Android 12 (API 31) ; en
+        // dessous, on garde les couleurs statiques des drawables.
+        if (!dynamic) return;
+        views.setColorStateList(viewId, "setBackgroundTintList", ColorStateList.valueOf(color));
+    }
+
+    /** Parse une couleur "#rrggbb", en retombant sur `fallbackHex` si elle est absente ou invalide. */
+    static int parseColorOr(String hex, String fallbackHex) {
         try {
             return Color.parseColor(hex != null ? hex : fallbackHex);
         } catch (IllegalArgumentException e) {
