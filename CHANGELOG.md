@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Widgets Fusion et Journal : redevenus redimensionnables (une taille minimale trop stricte les bloquait à leur taille par défaut), et plafonnés pour ne plus être proposés en trop grand par défaut.
 
 ## v1.0.22 — 2026-09-21
 - Corrige (pour de bon) le texte des widgets calendrier et Journal illisible en thème sombre : le fond suit maintenant la même donnée que la couleur du texte, au lieu du thème du téléphone qui pouvait différer du thème choisi dans l'app.
