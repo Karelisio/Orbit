@@ -8,6 +8,8 @@ la vide.
 
 ## Non publié
 - Les widgets suivent maintenant le passage clair/sombre du téléphone tout seuls, même app fermée : ils restaient jusqu'ici figés sur le thème actif au dernier lancement d'Orbit, et il fallait ouvrir l'app pour qu'ils se remettent à jour.
+
+## v1.0.29 — 2026-09-21
 - Les widgets reprennent enfin les couleurs de l'app (celles tirées du fond d'écran) : leur fond suivait en réalité la palette Material du téléphone, qui pouvait être complètement différente — d'où un widget marron sur une app violette.
 - Widgets Fusion et Journal : ils se posent maintenant sur une seule ligne de l'écran d'accueil, au lieu de réclamer deux ou trois lignes entières et de laisser un grand vide sous le texte.
 - Les widgets Fusion et Journal se redimensionnent à nouveau à la main : une limite de taille maximale plus petite que leur taille réelle désactivait carrément les poignées.
