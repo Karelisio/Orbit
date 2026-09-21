@@ -127,16 +127,11 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         monthLabel = monthLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + monthLabel.substring(1);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
-        // Choisi à partir de la même donnée que la couleur du texte
-        // (onSurfaceColor), jamais par la résolution jour/nuit d'Android :
-        // voir OrbitWidgetTheme.isDarkTheme(). Posé sur une ImageView dédiée
-        // (widget_cal_background), pas sur widget_root : cette dernière porte
-        // aussi le clic plein-tuile ET les cases de jour cliquables, et les
-        // deux ne doivent jamais partager la même vue (voir widget_calendar.xml).
-        views.setImageViewResource(
-            R.id.widget_cal_background,
-            theme.isDarkTheme() ? R.drawable.widget_background_dark : R.drawable.widget_background_light
-        );
+        // Posé sur une ImageView dédiée (widget_bg), pas sur widget_root :
+        // cette dernière porte aussi le clic plein-tuile ET les cases de jour
+        // cliquables, et les deux ne doivent jamais partager la même vue
+        // (voir widget_calendar.xml).
+        theme.applyTileBackground(views, R.id.widget_bg);
 
         views.setTextViewText(R.id.widget_cal_month, monthLabel);
         views.setTextColor(R.id.widget_cal_month, onPrimaryContainer);

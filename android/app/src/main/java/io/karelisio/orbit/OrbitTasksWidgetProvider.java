@@ -40,13 +40,7 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
         int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
-        // Choisi à partir de la même donnée que la couleur du texte, jamais
-        // par la résolution jour/nuit d'Android : voir OrbitWidgetTheme.isDarkTheme().
-        views.setInt(
-            R.id.widget_root,
-            "setBackgroundResource",
-            theme.isDarkTheme() ? R.drawable.widget_background_dark : R.drawable.widget_background_light
-        );
+        theme.applyTileBackground(views, R.id.widget_bg);
         views.setTextColor(R.id.widget_tasks_count, onPrimaryContainer);
         views.setTextColor(R.id.widget_tasks_label, onPrimaryContainer);
         views.setTextColor(R.id.widget_tasks_next, onPrimaryContainer);

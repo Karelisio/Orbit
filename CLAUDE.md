@@ -98,22 +98,53 @@ complément, `CrashLogPlugin` capture toute fermeture brutale malgré tout
 plugins) et l'affiche dans Réglages au redémarrage — c'est le seul moyen de
 diagnostiquer un crash sans accès à l'appareil.
 
-Le fond en dégradé Material You des widgets vient de ressources statiques
-(`drawable-v31/`/`drawable-night-v31/` avec les couleurs dynamiques système
-`@android:color/system_accent1_*`), **jamais d'un tint runtime** : teindre
-un `GradientDrawable` multi-stops l'aplatit en une seule couleur unie. Les
-éléments à couleur unie (pastille du jour, pastille d'événement, quadrillage)
-restent teintés dynamiquement via `OrbitWidgetTheme.tintBackground()`
+Le fond en dégradé des widgets est monté en **deux couches** par
+`OrbitWidgetTheme.applyTileBackground()`, sur une `ImageView` dédiée
+(`widget_bg`) : une base unie (`widget_background_solid`) teintée avec le
+`primary-container` poussé par l'app, plus un voile en dégradé translucide
+(`widget_sheen_light/dark`) posé dessus en image. Deux couches parce qu'un
+`GradientDrawable` multi-stops ne peut pas être teint (le tint l'aplatit en
+une couleur unie) — et **ne jamais revenir à `@android:color/system_accent1_*`** :
+cette palette suit le thème du constructeur (HyperOS…) et divergeait
+visiblement de celle que l'app tire du fond d'écran (widget marron, app
+violette). Clair/sombre se décide en code (`isDarkTheme()`, luminance de la
+couleur de texte poussée par l'app), jamais par la résolution jour/nuit
+d'Android, qui suit le thème système et non celui choisi dans l'app.
+
+Les éléments à couleur unie (pastille du jour, pastille d'événement,
+quadrillage) sont teintés via `OrbitWidgetTheme.tintBackground()`
 (`setBackgroundTintList`, API 31+ seulement) — mais un `<shape>` sans
 `<solid>` (contour seul) se remplit entièrement d'une couleur opaque par
 défaut dès qu'un tint lui est appliqué (bug connu de `GradientDrawable`) :
 toujours donner un `<solid>` explicite, même très translucide, à un drawable
 qu'on compte teindre.
 
+**Taille d'un widget** (`res/xml/widget_*_info.xml`) — deux règles se
+cumulent, et il faut que les DEUX disent la même chose :
+- `targetCellWidth`/`targetCellHeight` (Android 12+), ce que les lanceurs
+  récents utilisent en priorité ;
+- `minWidth`/`minHeight`, le repli, qu'Android convertit en cases avec
+  `70 × cases − 30` dp → **40dp = 1 ligne, 110dp = 2, 180dp = 3**. Une
+  valeur "raisonnable" comme 120dp réclame donc 3 lignes entières, d'où une
+  tuile énorme avec un grand vide sous le texte.
+
+Ne jamais mettre de `maxResizeWidth`/`maxResizeHeight` en dessous de la
+taille réellement posée : le lanceur n'a alors aucune plage valide et
+désactive complètement les poignées de redimensionnement.
+
 Tap sur une case du widget calendrier → ouvre directement l'app sur ce jour
 via le schéma personnalisé `io.karelisio.orbit://calendar?date=...` (voir
 `deepLink.ts` + intent-filter dédié dans `AndroidManifest.xml`, même
-mécanisme que le lien magique de connexion).
+mécanisme que le lien magique de connexion). Deux pièges déjà corrigés, à
+ne pas régresser :
+- le plugin `App` de Capacitor n'émet `appUrlOpen` que depuis
+  `onNewIntent`, donc **uniquement si l'app tournait déjà**. Un démarrage à
+  froid n'est visible que via `App.getLaunchUrl()` — `initDeepLinks()` doit
+  traiter les deux, sinon le lien est perdu et l'app s'ouvre sur l'accueil ;
+- `HashRouter` n'écoute que `popstate`, jamais `hashchange` : après une
+  affectation directe de `window.location.hash`, il faut un
+  `window.dispatchEvent(new PopStateEvent("popstate"))` manuel, sinon le
+  routeur ignore le changement quand l'app tourne déjà.
 
 ## Notifications (rappels d'événements)
 

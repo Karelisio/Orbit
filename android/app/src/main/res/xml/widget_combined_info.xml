@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Taille par défaut : une seule ligne de la grille du lanceur.
+
+  Deux règles se cumulent, et il faut que les DEUX disent "une ligne" :
+  - targetCellWidth/Height (Android 12+) : ce que les lanceurs récents
+    utilisent en priorité. C'est ce qui fait que le widget Tâches, lui,
+    s'est toujours posé sur une seule ligne.
+  - minWidth/minHeight (repli des lanceurs plus anciens) : Android y compte
+    en cases via 70 x cases - 30 dp. 40dp = 1 ligne, 110dp = 2, 180dp = 3.
+    Les 120dp d'avant réclamaient donc 3 lignes entières, d'où la tuile
+    beaucoup trop haute avec un grand vide sous le texte.
+
+  Pas de maxResizeWidth/Height : un plafond inférieur à la taille réellement
+  posée par le lanceur ne lui laisse aucune plage valide, et il désactive
+  alors purement et simplement les poignées de redimensionnement.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
-    android:minHeight="120dp"
+    android:minHeight="40dp"
     android:minResizeWidth="110dp"
-    android:minResizeHeight="70dp"
-    android:maxResizeWidth="320dp"
-    android:maxResizeHeight="150dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
     android:updatePeriodMillis="10800000"
     android:initialLayout="@layout/widget_combined"
     android:resizeMode="horizontal|vertical"

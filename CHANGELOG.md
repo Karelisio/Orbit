@@ -7,7 +7,10 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
-- Widgets Fusion et Journal : texte légèrement plus petit, et nouvelle tentative pour que la taille par défaut soit plus compacte sur les téléphones où elle restait trop grande.
+- Les widgets reprennent enfin les couleurs de l'app (celles tirées du fond d'écran) : leur fond suivait en réalité la palette Material du téléphone, qui pouvait être complètement différente — d'où un widget marron sur une app violette.
+- Widgets Fusion et Journal : ils se posent maintenant sur une seule ligne de l'écran d'accueil, au lieu de réclamer deux ou trois lignes entières et de laisser un grand vide sous le texte.
+- Les widgets Fusion et Journal se redimensionnent à nouveau à la main : une limite de taille maximale plus petite que leur taille réelle désactivait carrément les poignées.
+- Taper un jour du widget calendrier ouvre ce jour même quand l'app était complètement fermée (jusqu'ici le jour n'était pris en compte que si l'app tournait déjà en arrière-plan, sinon on retombait sur l'accueil).
 
 ## v1.0.27 — 2026-09-21
 - Corrige les bandes blanches sur les côtés de l'app sur les écrans plus larges que prévu (une limite de largeur héritée d'un rendu web, inutile dans l'appli installée).

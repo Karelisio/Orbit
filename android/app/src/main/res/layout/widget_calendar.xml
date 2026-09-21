@@ -7,8 +7,8 @@
   restent nettes à toute taille et gardent un texte de taille constante.
 
   widget_root est un FrameLayout (et non directement le LinearLayout de
-  contenu) pour séparer le fond (widget_cal_background, une simple ImageView
-  non cliquable) du clic plein-tuile : appliquer le fond en code sur la même
+  contenu) pour séparer le fond (widget_bg, une simple ImageView non
+  cliquable) du clic plein-tuile : appliquer le fond en code sur la même
   vue que celle qui porte à la fois le clic plein-tuile ET les cases de jour
   cliquables (voir OrbitCalendarWidgetProvider.java) a déjà fait perdre le
   clic précis sur un jour sur au moins un lanceur Android — les deux
@@ -20,7 +20,7 @@
     android:layout_height="match_parent">
 
     <ImageView
-        android:id="@+id/widget_cal_background"
+        android:id="@+id/widget_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"
