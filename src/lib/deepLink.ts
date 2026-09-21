@@ -20,7 +20,16 @@ export function initDeepLinks(): void {
       // ouvre l'app directement sur ce jour, plutôt que sur l'accueil.
       if (parsed.host === "calendar") {
         const date = parsed.searchParams.get("date");
-        if (date) window.location.hash = `#/calendar?date=${date}`;
+        if (date) {
+          window.location.hash = `#/calendar?date=${date}`;
+          // HashRouter (react-router-dom) ne se resynchronise que sur
+          // l'événement "popstate", jamais sur "hashchange" — que déclenche
+          // seule une affectation directe de location.hash. Sans ce
+          // popstate manuel, le routeur ignore complètement le changement
+          // quand l'app tournait déjà (l'URL change, mais Calendar.tsx ne
+          // voit jamais le nouveau "date", et reste affiché sur aujourd'hui).
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
         return;
       }
 

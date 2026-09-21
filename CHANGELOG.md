@@ -8,6 +8,7 @@ la vide.
 
 ## Non publié
 - Widgets Fusion et Journal : marge de sécurité supplémentaire en bas (toujours coupés sur certains téléphones malgré le fix précédent).
+- Corrige (vraiment) le clic sur un jour du widget calendrier : la navigation vers ce jour ne se propageait pas si l'app tournait déjà, elle restait sur aujourd'hui.
 
 ## v1.0.24 — 2026-09-21
 - Corrige le bas de la dernière ligne du widget Fusion coupé (les lettres avec jambage comme "j" étaient tronquées) : sa taille par défaut était devenue trop petite pour son propre contenu.
