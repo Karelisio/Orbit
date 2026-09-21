@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.22 — 2026-09-21
 - Corrige (pour de bon) le texte des widgets calendrier et Journal illisible en thème sombre : le fond suit maintenant la même donnée que la couleur du texte, au lieu du thème du téléphone qui pouvait différer du thème choisi dans l'app.
 - Widgets Fusion et Journal plus compacts : moins d'espace vide en haut et en bas à leur taille par défaut.
 
