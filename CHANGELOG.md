@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.19 — 2026-09-21
 - Taper sur un jour du widget calendrier ouvre maintenant l'app directement sur ce jour, au lieu de l'accueil.
 - Widget calendrier : les jours de règles (Wenn, prédites ou enregistrées) s'affichent discrètement, désactivable dans Réglages → Widget calendrier (comme dans le calendrier de l'app).
 - Widget calendrier plus joli : fond en dégradé Material You comme le reste de l'app, sous-titre avec la date du jour, et léger quadrillage entre les jours.
