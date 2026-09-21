@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.32 — 2026-09-21
 - Corrige (pour de bon) le widget calendrier encore marron chez certaines : un cas de rendu raté (grille du mois complexe, plus exposée qu'un widget simple) faisait retomber la tuile sur un fond transparent, que le lanceur repeignait alors avec sa propre couleur système au lieu de la couleur violette de l'app.
 
 ## v1.0.31 — 2026-09-21
