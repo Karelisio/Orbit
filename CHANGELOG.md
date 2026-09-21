@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Widgets Fusion et Journal : marge de sécurité supplémentaire en bas (toujours coupés sur certains téléphones malgré le fix précédent).
 
 ## v1.0.24 — 2026-09-21
 - Corrige le bas de la dernière ligne du widget Fusion coupé (les lettres avec jambage comme "j" étaient tronquées) : sa taille par défaut était devenue trop petite pour son propre contenu.
