@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Widgets Fusion et Journal : texte légèrement plus petit, et nouvelle tentative pour que la taille par défaut soit plus compacte sur les téléphones où elle restait trop grande.
 
 ## v1.0.27 — 2026-09-21
 - Corrige les bandes blanches sur les côtés de l'app sur les écrans plus larges que prévu (une limite de largeur héritée d'un rendu web, inutile dans l'appli installée).

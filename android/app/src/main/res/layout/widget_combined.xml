@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:text="📅 —"
         android:textColor="#21005D"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:textStyle="bold"
         android:maxLines="1"
         android:ellipsize="end" />
@@ -27,7 +27,7 @@
         android:layout_marginTop="4dp"
         android:text="✅ —"
         android:textColor="#4F378A"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:maxLines="1"
         android:ellipsize="end" />
 
@@ -38,7 +38,7 @@
         android:layout_marginTop="4dp"
         android:text="📝 —"
         android:textColor="#4F378A"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:maxLines="1"
         android:ellipsize="end"
         android:visibility="gone" />

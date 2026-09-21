@@ -15,7 +15,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="📝 Journal"
-        android:textSize="12sp"
+        android:textSize="11sp"
         android:textStyle="bold" />
 
     <TextView
@@ -23,7 +23,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:maxLines="4"
         android:ellipsize="end" />
 
@@ -32,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:textSize="11sp"
+        android:textSize="10sp"
         android:maxLines="1"
         android:ellipsize="end" />
 </LinearLayout>
