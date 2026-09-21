@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.31 — 2026-09-21
 - Widgets Tâches, Fusion et Journal : la taille du texte s'adapte maintenant à la hauteur réellement accordée par le lanceur, au lieu de rester minuscule dans une tuile plus grande que le minimum.
 - Tâches : ajout d'un bouton ✏️ pour modifier une tâche existante (titre, assignation, échéance, récurrence) — jusqu'ici seules la coche et la suppression étaient possibles.
 - Supprime le menu de sélection de texte qui apparaissait au long appui sur une tâche (comportement natif involontaire, pris pour un bug) : l'édition passe maintenant par le bouton ✏️.
