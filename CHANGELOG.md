@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Corrige (pour de bon) le widget calendrier encore marron chez certaines : un cas de rendu raté (grille du mois complexe, plus exposée qu'un widget simple) faisait retomber la tuile sur un fond transparent, que le lanceur repeignait alors avec sa propre couleur système au lieu de la couleur violette de l'app.
 
 ## v1.0.31 — 2026-09-21
 - Widgets Tâches, Fusion et Journal : la taille du texte s'adapte maintenant à la hauteur réellement accordée par le lanceur, au lieu de rester minuscule dans une tuile plus grande que le minimum.

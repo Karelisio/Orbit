@@ -96,10 +96,20 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         } catch (Throwable e) {
             // Un widget qui n'a pas pu être rendu reste affiché tel quel et,
             // surtout, sans action au clic : on pousse au minimum une tuile
-            // qui ouvre l'app plutôt que de laisser une carte morte.
+            // qui ouvre l'app plutôt que de laisser une carte morte. Sans
+            // fond posé explicitement, l'ImageView widget_bg reste
+            // transparente et certains lanceurs (HyperOS/MIUI...) peignent
+            // alors leur propre couleur système derrière — d'où un widget
+            // qui redevenait marron sans qu'aucune couleur système ne soit
+            // référencée nulle part dans le code : appliquer le même fond
+            // que la tuile normale évite cette carte "trouée".
             try {
+                SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
+                OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
                 RemoteViews fallback = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
+                theme.applyTileBackground(fallback, R.id.widget_bg);
                 fallback.setTextViewText(R.id.widget_cal_month, "Orbit");
+                theme.textOnPrimaryContainer(fallback, R.id.widget_cal_month);
                 fallback.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
                 appWidgetManager.updateAppWidget(appWidgetId, fallback);
             } catch (Throwable ignored) {
