@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Android 12+ : vraies couleurs dynamiques du système (fond d'écran), au lieu
-  du dégradé statique de drawable/widget_background.xml. Contrairement aux
-  autres accents du widget (couleur d'un événement, pastille "aujourd'hui"),
-  poussés par l'app via SharedPreferences et teintés à l'affichage, un fond en
-  dégradé ne peut pas être teinté dynamiquement : teindre un drawable
-  applique UNE seule couleur unie sur tout le drawable, ce qui aplatirait le
-  dégradé. On lit donc directement la palette système ici.
+  du dégradé statique de drawable/widget_background_light.xml. Contrairement
+  aux autres accents du widget (couleur d'un événement, pastille
+  "aujourd'hui"), poussés par l'app via SharedPreferences et teintés à
+  l'affichage, un fond en dégradé ne peut pas être teinté dynamiquement :
+  teindre un drawable applique UNE seule couleur unie sur tout le drawable,
+  ce qui aplatirait le dégradé. On lit donc directement la palette système
+  ici.
   centerColor = startColor pour garder la teinte sur toute la première
   moitié : le blanc de endColor n'apparaît que dans le dernier tiers.
+
+  Choisi en code (OrbitWidgetTheme.isDarkTheme(), voir les providers), pas
+  par la résolution jour/nuit d'Android : voir widget_background_light.xml.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient

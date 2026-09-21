@@ -127,9 +127,14 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         monthLabel = monthLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + monthLabel.substring(1);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
-        // Le fond en dégradé vient directement des ressources (drawable-v31/
-        // widget_background.xml sur Android 12+) : le teindre ici aplatirait
-        // le dégradé en une seule couleur unie (voir ce fichier).
+        // Choisi à partir de la même donnée que la couleur du texte
+        // (onSurfaceColor), jamais par la résolution jour/nuit d'Android :
+        // voir OrbitWidgetTheme.isDarkTheme().
+        views.setInt(
+            R.id.widget_root,
+            "setBackgroundResource",
+            theme.isDarkTheme() ? R.drawable.widget_background_dark : R.drawable.widget_background_light
+        );
 
         views.setTextViewText(R.id.widget_cal_month, monthLabel);
         views.setTextColor(R.id.widget_cal_month, onPrimaryContainer);

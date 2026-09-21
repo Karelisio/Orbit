@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Variante sombre du dégradé (voir drawable/widget_background.xml). Le texte
-  de la tuile suit la palette Material You de l'app (donc clair en sombre) —
-  le fond doit rester sombre sur toute sa hauteur pour garder le contraste.
+  Fond sombre de la tuile (voir widget_background_light.xml pour le
+  raisonnement). En pratique inatteignable en dessous d'Android 12
+  (OrbitWidgetTheme.isDarkTheme() renvoie toujours false sans lecture
+  dynamique), conservé pour la symétrie des ressources.
 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <gradient

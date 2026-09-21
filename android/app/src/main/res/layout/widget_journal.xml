@@ -4,9 +4,8 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="10dp">
 
     <TextView
         android:id="@+id/widget_journal_title"
@@ -19,9 +18,8 @@
     <TextView
         android:id="@+id/widget_journal_content"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="6dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:textSize="14sp"
         android:maxLines="4"
         android:ellipsize="end" />
