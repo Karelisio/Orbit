@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.28 — 2026-09-21
 - Widgets Fusion et Journal : texte légèrement plus petit, et nouvelle tentative pour que la taille par défaut soit plus compacte sur les téléphones où elle restait trop grande.
 
 ## v1.0.27 — 2026-09-21
