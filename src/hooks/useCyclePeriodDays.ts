@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useCouple } from "../context/CoupleContext";
 import { supabase } from "../lib/supabase";
 import { computeCycleSummary, predictedPeriodDatesUntil } from "../lib/cyclePredictions";
+
+interface MinimalCycleDay {
+  date: string;
+  flow: string | null;
+}
 
 /**
  * Jours de règles (lecture seule, table cycle_days de Wenn) sur une plage de
@@ -12,17 +17,20 @@ import { computeCycleSummary, predictedPeriodDatesUntil } from "../lib/cyclePred
  * Combine les jours déjà enregistrés (flow non nul) et les jours prédits
  * (projection du cycle moyen, comme Wenn) : sans la prédiction, seuls les
  * mois déjà vécus affichaient quelque chose, jamais les mois à venir.
+ *
+ * L'historique complet n'est chargé qu'une fois par couple : changer de mois
+ * ne refait plus la requête, seul le filtrage local est recalculé.
  */
 export function useCyclePeriodDays(rangeStart: Date, rangeEnd: Date, enabled: boolean): Set<string> {
   const { couple } = useCouple();
-  const [periodDates, setPeriodDates] = useState<Set<string>>(new Set());
+  const [cycleDays, setCycleDays] = useState<MinimalCycleDay[]>([]);
 
   const startStr = format(rangeStart, "yyyy-MM-dd");
   const endStr = format(rangeEnd, "yyyy-MM-dd");
 
   useEffect(() => {
     if (!enabled || !couple) {
-      setPeriodDates(new Set());
+      setCycleDays([]);
       return;
     }
 
@@ -38,33 +46,36 @@ export function useCyclePeriodDays(rangeStart: Date, rangeEnd: Date, enabled: bo
       .then(
         ({ data }) => {
           if (cancelled || !data) return;
-          const days = data as { date: string; flow: string | null }[];
-
-          const actual = days.filter((d) => d.flow && d.date >= startStr && d.date <= endStr).map((d) => d.date);
-
-          const summary = computeCycleSummary(days);
-          const predicted = predictedPeriodDatesUntil(
-            summary.nextPeriodStart,
-            summary.averageCycleLength,
-            summary.averagePeriodLength,
-            rangeEnd
-          );
-
-          const combined = new Set(actual);
-          for (const d of predicted) {
-            if (d >= startStr && d <= endStr) combined.add(d);
-          }
-          setPeriodDates(combined);
+          setCycleDays(data as MinimalCycleDay[]);
         },
         () => {
-          // hors ligne : on garde les jours de règles déjà affichés
+          // hors ligne : on garde les jours de règles déjà chargés
         }
       );
 
     return () => {
       cancelled = true;
     };
-  }, [enabled, couple?.id, startStr, endStr, rangeEnd]);
+  }, [enabled, couple?.id]);
 
-  return periodDates;
+  return useMemo(() => {
+    if (!enabled || cycleDays.length === 0) return new Set<string>();
+
+    const dates = new Set(
+      cycleDays.filter((d) => d.flow && d.date >= startStr && d.date <= endStr).map((d) => d.date)
+    );
+
+    const summary = computeCycleSummary(cycleDays);
+    const predicted = predictedPeriodDatesUntil(
+      summary.nextPeriodStart,
+      summary.averageCycleLength,
+      summary.averagePeriodLength,
+      rangeEnd
+    );
+    for (const date of predicted) {
+      if (date >= startStr && date <= endStr) dates.add(date);
+    }
+
+    return dates;
+  }, [enabled, cycleDays, startStr, endStr, rangeEnd]);
 }

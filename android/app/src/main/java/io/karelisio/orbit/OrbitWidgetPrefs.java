@@ -13,6 +13,7 @@ final class OrbitWidgetPrefs {
 
     static final String KEY_COLOR_PRIMARY = "color_primary";
     static final String KEY_COLOR_ON_PRIMARY = "color_on_primary";
+    static final String KEY_COLOR_PRIMARY_CONTAINER = "color_primary_container";
     static final String KEY_COLOR_ON_PRIMARY_CONTAINER = "color_on_primary_container";
     static final String KEY_COLOR_ON_SURFACE = "color_on_surface";
     static final String KEY_COLOR_ON_SURFACE_VARIANT = "color_on_surface_variant";

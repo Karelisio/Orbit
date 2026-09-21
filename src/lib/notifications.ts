@@ -60,7 +60,10 @@ export async function scheduleEventNotifications(event: OrbitEvent): Promise<voi
 }
 
 function formatRelative(minutesBefore: number): string {
-  if (minutesBefore >= 24 * 60) return "demain";
+  if (minutesBefore >= 24 * 60) {
+    const days = Math.round(minutesBefore / (24 * 60));
+    return days === 1 ? "demain" : `dans ${days} jours`;
+  }
   if (minutesBefore >= 60) return `dans ${Math.round(minutesBefore / 60)} h`;
   return `dans ${minutesBefore} min`;
 }

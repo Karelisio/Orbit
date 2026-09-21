@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Variante sombre de la tuile : le fond clair était conservé en thème sombre,
+  alors que les couleurs de texte, elles, suivent la palette Material You de
+  l'app (donc claires en sombre) — le texte devenait illisible.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#4F378B" />
+    <corners android:radius="24dp" />
+</shape>

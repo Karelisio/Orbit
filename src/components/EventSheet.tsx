@@ -4,7 +4,14 @@ import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useEventCategories } from "../hooks/useEventCategories";
 import DateTimeField from "./DateTimeField";
-import { EVENT_CATEGORY_COLOR_PALETTE, REMINDER_OPTIONS, REMINDER_UNIT_OPTIONS, type EventRecurrence, type OrbitEvent } from "../types";
+import {
+  EVENT_CATEGORY_COLOR_PALETTE,
+  REMINDER_OPTIONS,
+  REMINDER_UNIT_OPTIONS,
+  reminderLabel,
+  type EventRecurrence,
+  type OrbitEvent,
+} from "../types";
 import type { NewEvent } from "../hooks/useEvents";
 
 interface EventSheetProps {
@@ -230,7 +237,7 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
               .filter((m) => !REMINDER_OPTIONS.some((o) => o.minutes === m))
               .map((m) => (
                 <button key={m} type="button" className="chip selected" onClick={() => toggleReminder(m)}>
-                  {m} min avant
+                  {reminderLabel(m)}
                 </button>
               ))}
           </div>

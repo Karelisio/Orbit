@@ -47,10 +47,15 @@ export function useEvents() {
   }
 
   async function updateEvent(id: string, fields: Partial<NewEvent>) {
+    // Les rappels retirés doivent être annulés à partir de l'ANCIENNE liste :
+    // scheduleEventNotifications n'annule que les ids dérivés des rappels
+    // qu'on lui passe, donc sans ça un rappel supprimé continuait à sonner.
+    const previous = rows.find((e) => e.id === id);
     const { data, error } = await supabase.from("orbit_events").update(fields).eq("id", id).select().single();
     if (error) return { error: error.message };
     const updated = data as OrbitEvent;
     setRows((prev) => prev.map((e) => (e.id === id ? updated : e)).sort(sortEvents));
+    if (previous) await cancelEventNotifications(previous);
     await scheduleEventNotifications(updated);
     return { error: null };
   }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_LABELS, type ExpenseCategory } from "../types";
@@ -32,7 +33,9 @@ export default function ExpenseSheet({ onSave, onClose }: ExpenseSheetProps) {
       amount: parsedAmount,
       category,
       paid_by: paidBy,
-      spent_at: new Date().toISOString().slice(0, 10),
+      // Date locale, pas UTC : entre minuit et 2h du matin en France,
+      // toISOString() renvoyait encore la veille.
+      spent_at: format(new Date(), "yyyy-MM-dd"),
     });
     setSaving(false);
     if (error) setError(error);

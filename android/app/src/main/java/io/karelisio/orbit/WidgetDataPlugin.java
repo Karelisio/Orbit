@@ -43,6 +43,7 @@ public class WidgetDataPlugin extends Plugin {
 
         putColorIfPresent(call, editor, "primaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY);
         putColorIfPresent(call, editor, "onPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY);
+        putColorIfPresent(call, editor, "primaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER);
         putColorIfPresent(call, editor, "onPrimaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER);
         putColorIfPresent(call, editor, "onSurfaceColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE);
         putColorIfPresent(call, editor, "onSurfaceVariantColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT);

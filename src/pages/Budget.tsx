@@ -38,11 +38,11 @@ export default function Budget() {
             <p style={{ margin: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>Vous êtes à jour.</p>
           ) : balance.balance > 0 ? (
             <p style={{ margin: 0, fontSize: 13 }}>
-              Ton/ta partenaire te doit <strong>{balance.balance.toFixed(2)} €</strong>
+              Tu dois <strong>{balance.balance.toFixed(2)} €</strong> à ton/ta partenaire
             </p>
           ) : (
             <p style={{ margin: 0, fontSize: 13 }}>
-              Tu dois <strong>{Math.abs(balance.balance).toFixed(2)} €</strong> à ton/ta partenaire
+              Ton/ta partenaire te doit <strong>{Math.abs(balance.balance).toFixed(2)} €</strong>
             </p>
           )}
         </div>

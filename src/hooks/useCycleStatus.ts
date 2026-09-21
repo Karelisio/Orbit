@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { differenceInCalendarDays, parseISO } from "date-fns";
+import { differenceInCalendarDays, format as formatDate, parseISO } from "date-fns";
 import { useCouple } from "../context/CoupleContext";
 import { supabase } from "../lib/supabase";
 import { computeCycleSummary } from "../lib/cyclePredictions";
@@ -77,8 +77,13 @@ export function useCycleStatus(): CycleStatus {
   return status;
 }
 
+/**
+ * Date locale, pas UTC : avec toISOString(), entre minuit et 2h du matin en
+ * France, "aujourd'hui" était comparé à la veille et la phase du cycle
+ * (ovulation/fertile) pouvait être décalée d'un jour.
+ */
 function format(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return formatDate(date, "yyyy-MM-dd");
 }
 
 function isWithin(date: string, start: string | null, end: string | null): boolean {

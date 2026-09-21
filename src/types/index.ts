@@ -81,6 +81,22 @@ export const REMINDER_UNIT_OPTIONS = [
   { unit: "jours", label: "jours", toMinutes: (n: number) => n * 24 * 60 },
 ] as const;
 
+/** Libellé lisible de n'importe quel rappel, y compris personnalisé ("3 jours avant" et pas "4320 min avant"). */
+export function reminderLabel(minutes: number): string {
+  const preset = REMINDER_OPTIONS.find((o) => o.minutes === minutes);
+  if (preset) return preset.label;
+  if (minutes % (7 * 24 * 60) === 0) {
+    const weeks = minutes / (7 * 24 * 60);
+    return `${weeks} semaine${weeks > 1 ? "s" : ""} avant`;
+  }
+  if (minutes % (24 * 60) === 0) {
+    const days = minutes / (24 * 60);
+    return `${days} jour${days > 1 ? "s" : ""} avant`;
+  }
+  if (minutes % 60 === 0) return `${minutes / 60} h avant`;
+  return `${minutes} min avant`;
+}
+
 export type EventRecurrence = "none" | "yearly";
 
 export interface OrbitEvent {

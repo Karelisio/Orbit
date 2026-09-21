@@ -9,6 +9,7 @@ interface WidgetDataPlugin {
     eventsThisMonth: string;
     primaryColor?: string;
     onPrimaryColor?: string;
+    primaryContainerColor?: string;
     onPrimaryContainerColor?: string;
     onSurfaceColor?: string;
     onSurfaceVariantColor?: string;
@@ -25,6 +26,7 @@ function currentThemeColors() {
   return {
     primaryColor: read("--md-sys-color-primary"),
     onPrimaryColor: read("--md-sys-color-on-primary"),
+    primaryContainerColor: read("--md-sys-color-primary-container"),
     onPrimaryContainerColor: read("--md-sys-color-on-primary-container"),
     onSurfaceColor: read("--md-sys-color-on-surface"),
     onSurfaceVariantColor: read("--md-sys-color-on-surface-variant"),

@@ -7,6 +7,14 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Budget : le sens du solde était inversé — l'app affichait « ton/ta partenaire te doit » alors que c'était à toi de rembourser (et inversement).
+- Les rappels d'un événement qu'on retire ne sonnent plus : seuls les rappels de la nouvelle liste étaient annulés, les anciens restaient programmés.
+- Un rappel de plusieurs jours annonçait « demain » dans la notification, et un rappel personnalisé s'affichait « 4320 min avant » au lieu de « 3 jours avant ».
+- Widgets en thème sombre : le texte clair se retrouvait sur le fond clair de la tuile, donc illisible — fond et texte suivent maintenant la même palette.
+- La barre noire en haut de l'écran disparaît (un masquage de la barre d'état, resté du mode plein écran annulé, la faisait réafficher en surimpression).
+- Une dépense créée après minuit n'est plus datée de la veille.
+- L'app et les widgets partagent enfin les mêmes données en mémoire : un ajout se voit instantanément des deux côtés, avec deux fois moins de requêtes réseau.
+- Changer de mois dans le calendrier ne recharge plus tout l'historique de cycle à chaque fois.
 
 ## v1.0.15 — 2026-09-20
 - Le calendrier affiche maintenant aussi les règles prédites (pas seulement celles déjà enregistrées dans Wenn), y compris sur les mois suivants.

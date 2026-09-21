@@ -117,7 +117,8 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
         int[] bitmapSize = targetBitmapSize(context, appWidgetManager, appWidgetId);
 
-        int onPrimaryContainer = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, null), "#21005D");
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
+        int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
 
         Calendar shownMonth = Calendar.getInstance();
         shownMonth.add(Calendar.MONTH, offset);
@@ -125,6 +126,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         monthLabel = monthLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + monthLabel.substring(1);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
+        theme.applyBackground(views, R.id.widget_root);
         views.setTextViewText(R.id.widget_cal_month, monthLabel);
         views.setTextColor(R.id.widget_cal_month, onPrimaryContainer);
         views.setTextColor(R.id.widget_cal_prev, onPrimaryContainer);
@@ -132,7 +134,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_cal_prev, navIntent(context, appWidgetId, ACTION_PREV_MONTH));
         views.setOnClickPendingIntent(R.id.widget_cal_next, navIntent(context, appWidgetId, ACTION_NEXT_MONTH));
 
-        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(prefs, offset, eventsCsv, bitmapSize[0], bitmapSize[1]));
+        views.setImageViewBitmap(R.id.widget_calendar_image, drawMonthGrid(theme, offset, eventsCsv, bitmapSize[0], bitmapSize[1]));
         views.setOnClickPendingIntent(R.id.widget_calendar_image, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -174,14 +176,14 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         return map;
     }
 
-    private static Bitmap drawMonthGrid(SharedPreferences prefs, int offset, String eventsCsv, int bitmapW, int bitmapH) {
+    private static Bitmap drawMonthGrid(OrbitWidgetTheme theme, int offset, String eventsCsv, int bitmapW, int bitmapH) {
         // Les événements ne sont calculés côté app que pour le mois réel en cours.
         Map<Integer, DayEvent> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
 
-        int primary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_PRIMARY, null), "#6750A4");
-        int onPrimary = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY, null), "#FFFFFF");
-        int onSurface = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, null), "#1C1B1F");
-        int onSurfaceVariant = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, null), "#79747E");
+        int primary = theme.color(OrbitWidgetPrefs.KEY_COLOR_PRIMARY, "#6750A4");
+        int onPrimary = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY, "#FFFFFF");
+        int onSurface = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE, "#1C1B1F");
+        int onSurfaceVariant = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E");
 
         Bitmap bitmap = Bitmap.createBitmap(bitmapW, bitmapH, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);

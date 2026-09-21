@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.widget.RemoteViews;
 
 /**
@@ -43,20 +42,14 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
             taskCount == 0 ? "✅ Tout est fait" : "✅ " + taskCount + (taskCount == 1 ? " tâche à faire" : " tâches à faire")
         );
 
-        int onPrimaryContainer = parseColorOr(prefs.getString(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, null), "#21005D");
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
+        int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
+        theme.applyBackground(views, R.id.widget_root);
         views.setTextColor(R.id.widget_combined_event, onPrimaryContainer);
         views.setTextColor(R.id.widget_combined_tasks, onPrimaryContainer);
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
-    }
-
-    private static int parseColorOr(String hex, String fallbackHex) {
-        try {
-            return Color.parseColor(hex != null ? hex : fallbackHex);
-        } catch (IllegalArgumentException e) {
-            return Color.parseColor(fallbackHex);
-        }
     }
 
     static PendingIntent openAppIntent(Context context, int appWidgetId) {

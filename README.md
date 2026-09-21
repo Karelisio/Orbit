@@ -132,7 +132,13 @@ npm run dev
 ```bash
 npm run build       # build web (tsc + vite)
 npm run cap:sync    # copie le build dans android/ et synchronise les plugins
+npm run check       # types + tests de la logique pure (soldes, prédiction de cycle,
+                    # récurrences, libellés de rappel) — nécessite Node 22+
 ```
+
+`scripts/smoke-test.ts` fige notamment le **sens du solde du budget** (qui doit
+combien à qui) : une inversion de signe y est passée inaperçue une fois, le test
+sert de garde-fou.
 
 ## CI/CD & signature Android
 

@@ -3,7 +3,10 @@ import type { OrbitExpense } from "../types";
 export interface ExpenseBalance {
   totalsByPayer: Record<string, number>;
   total: number;
-  /** Positif : userA doit ça à userB. Négatif : l'inverse. Nul si équilibré. */
+  /**
+   * Ce que userA doit à userB. Positif : userA (celui qui regarde) doit
+   * cette somme à userB. Négatif : userB lui doit. Nul si équilibré.
+   */
   balance: number;
 }
 

@@ -1,24 +1,57 @@
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
 interface WithId {
   id: string;
 }
 
+interface Snapshot {
+  rows: WithId[];
+  loading: boolean;
+}
+
+interface CollectionStore {
+  key: string;
+  table: string;
+  coupleId: string;
+  sortBy: (a: WithId, b: WithId) => number;
+  snapshot: Snapshot;
+  listeners: Set<() => void>;
+  channel: RealtimeChannel | null;
+  refCount: number;
+}
+
+/**
+ * Un seul store par (table, couple), partagé par tous les composants montés.
+ * Avant, chaque appel du hook avait sa propre copie : WidgetSync et la page
+ * affichée chargeaient donc les mêmes données deux fois (deux requêtes, deux
+ * canaux temps réel), et surtout une mise à jour optimiste ne touchait qu'une
+ * copie — le widget continuait d'attendre l'écho réseau pour se rafraîchir.
+ */
+const stores = new Map<string, CollectionStore>();
+
+const EMPTY_LOADING: Snapshot = { rows: [], loading: true };
+const EMPTY_IDLE: Snapshot = { rows: [], loading: false };
+
+function storeKey(table: string, coupleId: string): string {
+  return `${table}:${coupleId}`;
+}
+
 function cacheKey(table: string, coupleId: string): string {
   return `orbit-cache-${table}-${coupleId}`;
 }
 
-function readCache<T>(table: string, coupleId: string): T[] {
+function readCache(table: string, coupleId: string): WithId[] {
   try {
     const raw = localStorage.getItem(cacheKey(table, coupleId));
-    return raw ? (JSON.parse(raw) as T[]) : [];
+    return raw ? (JSON.parse(raw) as WithId[]) : [];
   } catch {
     return [];
   }
 }
 
-function writeCache<T>(table: string, coupleId: string, rows: T[]): void {
+function writeCache(table: string, coupleId: string, rows: WithId[]): void {
   try {
     localStorage.setItem(cacheKey(table, coupleId), JSON.stringify(rows));
   } catch {
@@ -26,93 +59,150 @@ function writeCache<T>(table: string, coupleId: string, rows: T[]): void {
   }
 }
 
+function publish(store: CollectionStore, snapshot: Snapshot): void {
+  store.snapshot = snapshot;
+  for (const listener of store.listeners) listener();
+}
+
+function publishRows(store: CollectionStore, rows: WithId[]): void {
+  writeCache(store.table, store.coupleId, rows);
+  publish(store, { rows, loading: false });
+}
+
+/** Vrai tant que ce store est bien celui enregistré (il a pu être relâché entre-temps). */
+function isLive(store: CollectionStore): boolean {
+  return stores.get(store.key) === store;
+}
+
+function start(store: CollectionStore): void {
+  supabase
+    .from(store.table)
+    .select("*")
+    .eq("couple_id", store.coupleId)
+    .then(
+      ({ data, error }) => {
+        if (!isLive(store)) return;
+        // hors ligne / erreur réseau : on garde le cache déjà affiché
+        if (error || !data) {
+          publish(store, { ...store.snapshot, loading: false });
+          return;
+        }
+        publishRows(store, (data as WithId[]).slice().sort(store.sortBy));
+      },
+      () => {
+        if (isLive(store)) publish(store, { ...store.snapshot, loading: false });
+      }
+    );
+
+  // Nom de channel unique par store : Supabase réutilise un channel existant
+  // du même nom déjà abonné, et le .on() suivant plante alors
+  // ("cannot add postgres_changes callbacks ... after subscribe()").
+  store.channel = supabase
+    .channel(`orbit-${store.table}-${store.coupleId}-${Math.random().toString(36).slice(2)}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: store.table, filter: `couple_id=eq.${store.coupleId}` },
+      (payload) => {
+        if (!isLive(store)) return;
+        const current = store.snapshot.rows;
+
+        if (payload.eventType === "DELETE") {
+          const removedId = (payload.old as Partial<WithId>)?.id;
+          if (!removedId) return;
+          const next = current.filter((row) => row.id !== removedId);
+          if (next.length !== current.length) publishRows(store, next);
+          return;
+        }
+
+        const incoming = payload.new as WithId;
+        const exists = current.some((row) => row.id === incoming.id);
+        const next = exists ? current.map((row) => (row.id === incoming.id ? incoming : row)) : [...current, incoming];
+        publishRows(store, next.slice().sort(store.sortBy));
+      }
+    )
+    .subscribe();
+}
+
+function acquire(table: string, coupleId: string, sortBy: (a: WithId, b: WithId) => number): CollectionStore {
+  const key = storeKey(table, coupleId);
+  let store = stores.get(key);
+
+  if (!store) {
+    // Cache local d'abord : affichage immédiat au lancement, même hors ligne.
+    const cached = readCache(table, coupleId).slice().sort(sortBy);
+    store = {
+      key,
+      table,
+      coupleId,
+      sortBy,
+      snapshot: { rows: cached, loading: cached.length === 0 },
+      listeners: new Set(),
+      channel: null,
+      refCount: 0,
+    };
+    stores.set(key, store);
+    start(store);
+  }
+
+  store.refCount++;
+  return store;
+}
+
+function release(store: CollectionStore): void {
+  store.refCount--;
+  if (store.refCount > 0) return;
+  if (store.channel) supabase.removeChannel(store.channel);
+  if (isLive(store)) stores.delete(store.key);
+}
+
 /**
  * Charge une table filtrée par couple_id puis la garde synchronisée en temps
  * réel (INSERT/UPDATE/DELETE) — factorise ce qui serait sinon dupliqué à
  * l'identique dans useEvents/useTasks/useJournal/useExpenses.
  *
- * Hydrate immédiatement depuis un cache localStorage (dernière copie connue)
- * avant même la réponse réseau : lancement hors ligne ou connexion lente,
- * l'app affiche tout de suite les dernières données vues plutôt qu'un écran
- * vide. Le cache est ensuite tenu à jour à chaque changement de `rows`.
- * Écrire pendant qu'on est hors ligne reste possible mais échoue (l'erreur
- * réseau remonte normalement) : pas de file d'attente à resynchroniser plus
- * tard, pour éviter les doublons/conflits d'un système de sync maison sur
- * des données partagées en temps réel.
+ * Les données sont mises en cache dans localStorage et réaffichées avant même
+ * la réponse réseau (lancement hors ligne). Écrire hors ligne reste impossible
+ * et remonte l'erreur : pas de file d'attente à resynchroniser, pour éviter
+ * les doublons/conflits sur des données partagées en temps réel.
  */
 export function useRealtimeCollection<T extends WithId>(
   table: string,
   coupleId: string | null,
   sortBy: (a: T, b: T) => number
 ) {
-  const [rows, setRows] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!coupleId) return () => {};
+      const store = acquire(table, coupleId, sortBy as (a: WithId, b: WithId) => number);
+      store.listeners.add(onStoreChange);
+      return () => {
+        store.listeners.delete(onStoreChange);
+        release(store);
+      };
+    },
+    // sortBy est hors dépendances : il est recréé à chaque rendu par certains
+    // appelants, et reste le même pour une table donnée (un seul hook par table).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [table, coupleId]
+  );
 
-  useEffect(() => {
-    if (!coupleId) {
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const cached = readCache<T>(table, coupleId);
-    if (cached.length > 0) {
-      setRows(cached.sort(sortBy));
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-
-    supabase
-      .from(table)
-      .select("*")
-      .eq("couple_id", coupleId)
-      .then(
-        ({ data, error }) => {
-          if (cancelled) return;
-          setLoading(false);
-          if (error || !data) return; // hors ligne / erreur réseau : le cache déjà affiché reste
-          setRows((data as T[]).sort(sortBy));
-        },
-        () => {
-          if (!cancelled) setLoading(false);
-        }
-      );
-
-    // Nom de channel unique par instance : plusieurs composants montent ce
-    // hook en parallèle (WidgetSync + une page) pour la même table/couple,
-    // et Supabase réutilise un channel existant du même nom déjà abonné, ce
-    // qui fait planter le .on() suivant ("... after subscribe()").
-    const channel = supabase
-      .channel(`orbit-${table}-${coupleId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table, filter: `couple_id=eq.${coupleId}` },
-        (payload) => {
-          setRows((prev) => {
-            if (payload.eventType === "DELETE") {
-              return prev.filter((row) => row.id !== (payload.old as T).id);
-            }
-            const incoming = payload.new as T;
-            const exists = prev.some((row) => row.id === incoming.id);
-            const next = exists ? prev.map((row) => (row.id === incoming.id ? incoming : row)) : [...prev, incoming];
-            return next.sort(sortBy);
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
+  const getSnapshot = useCallback(() => {
+    if (!coupleId) return EMPTY_IDLE;
+    return stores.get(storeKey(table, coupleId))?.snapshot ?? EMPTY_LOADING;
   }, [table, coupleId]);
 
-  useEffect(() => {
-    if (coupleId) writeCache(table, coupleId, rows);
-  }, [rows, table, coupleId]);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot);
 
-  return { rows, loading, setRows };
+  /** Mise à jour optimiste : visible immédiatement par TOUS les composants (page + widget). */
+  const setRows = useCallback(
+    (updater: (prev: T[]) => T[]) => {
+      if (!coupleId) return;
+      const store = stores.get(storeKey(table, coupleId));
+      if (!store) return;
+      publishRows(store, updater(store.snapshot.rows as T[]) as WithId[]);
+    },
+    [table, coupleId]
+  );
+
+  return { rows: snapshot.rows as T[], loading: snapshot.loading, setRows };
 }
