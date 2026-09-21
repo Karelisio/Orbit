@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.17 — 2026-09-21
 - Widget calendrier vide et qui n'ouvrait plus l'app : agrandi, il dépassait la taille d'image autorisée pour un widget et Android refusait alors tout l'affichage. La grille est désormais faite de vraies cases, sans image géante.
 - Widget calendrier plus lisible : texte de taille constante quelle que soit la taille de la tuile (avant, plus le widget était grand, plus le texte grossissait et se coupait), et titres d'événements tronqués proprement avec « … ».
 - Le clic fonctionne désormais sur toute la tuile pour ouvrir l'app (les flèches gardent la navigation par mois).
