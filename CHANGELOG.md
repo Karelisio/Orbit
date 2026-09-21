@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.16 — 2026-09-21
 - Budget : le sens du solde était inversé — l'app affichait « ton/ta partenaire te doit » alors que c'était à toi de rembourser (et inversement).
 - Les rappels d'un événement qu'on retire ne sonnent plus : seuls les rappels de la nouvelle liste étaient annulés, les anciens restaient programmés.
 - Un rappel de plusieurs jours annonçait « demain » dans la notification, et un rappel personnalisé s'affichait « 4320 min avant » au lieu de « 3 jours avant ».
