@@ -1,0 +1,172 @@
+# Orbit — mémo pour Claude
+
+App calendrier de couple (mode Duo uniquement, pas de mode Solo), pour un
+couple réel : l'utilisateur et sa copine. Utilisateur non technique : il
+relaie des retours/screenshots de sa copine, teste peu lui-même. **Toujours
+répondre en français, court et direct.**
+
+## Stack
+
+- React + TypeScript + Vite, `HashRouter` (nécessaire pour Capacitor : pas de
+  serveur pour gérer les routes côté fichier `file://`).
+- Capacitor 7 (Android + iOS). Android est la plateforme réellement utilisée
+  et testée ; iOS compile mais n'est quasiment jamais vérifié.
+- Supabase : Postgres + Auth (lien magique) + Realtime + Storage — **projet
+  partagé avec Wenn** (app de suivi de cycle de la copine), même `couples`
+  et même code d'invitation des deux côtés.
+- Material Design 3 / Material You (thème dynamique à partir du fond d'écran
+  Android, ou d'une image choisie sur iOS/web).
+- CI/CD : GitHub Actions build + signe l'APK, auto-tag et release à chaque
+  push sur `main` (workflow `build-android.yml`).
+
+## Repo map
+
+```
+src/
+  context/       AuthContext, CoupleContext (couple lié, rôle owner/partner),
+                 ThemeModeContext (clair/sombre/système), PreferencesContext
+                 (réglages par appareil, localStorage : sections visibles,
+                 onglets, règles dans calendrier/widget...)
+  pages/         Home, Calendar, Tasks, Budget, Journal, Settings, Login,
+                 Onboarding
+  components/    EventSheet/ExpenseSheet (saisie), BottomNav, WidgetSync
+                 (pousse les données vers les widgets Android), CycleWidget
+                 (résumé du cycle de la copine, lu depuis Wenn), OrbitLogo
+  hooks/         useEvents, useTasks, useExpenses, useJournal,
+                 useEventCategories, useCyclePeriodDays (règles Wenn),
+                 useRealtimeCollection (base commune Supabase Realtime)
+  lib/           balances (calcul du solde du budget partagé), cyclePredictions
+                 (prédiction règles, lu depuis les données Wenn),
+                 deepLink (liens io.karelisio.orbit://...), notifications
+                 (rappels d'événements), widgetSync, materialYou,
+                 wallpaperColor, appUpdate, crashLog, supabase
+  types/index.ts Types + constantes partagées
+
+android/app/src/main/java/io/karelisio/orbit/
+  MainActivity.java              enregistre les plugins Capacitor custom
+  WidgetDataPlugin.java          pont JS -> widgets (SharedPreferences + refresh)
+  OrbitCalendarWidgetProvider.java  widget mini-calendrier du mois
+  OrbitTasksWidgetProvider.java     widget tâches en attente
+  OrbitCombinedWidgetProvider.java  widget fusion calendrier + tâches
+  OrbitWidgetPrefs.java / OrbitWidgetTheme.java  clés partagées + thème Material You des widgets
+  CrashLogPlugin.java            capture les fermetures brutales de l'app (voir plus bas)
+  ApkInstallerPlugin.java        lance l'installeur système pour l'APK téléchargé
+  WallpaperColorPlugin.java      lit la couleur dominante du fond d'écran (thème)
+
+supabase/schema.sql   schéma complet + policies RLS + migrations additives en fin de fichier
+CHANGELOG.md           source des notes de version (voir workflow ci-dessous)
+```
+
+## Modèle de données / comptes
+
+- **Duo uniquement** : deux comptes Supabase liés par un code d'invitation
+  (le même que côté Wenn). La **titulaire** (`owner`, la copine) et le
+  **partenaire** (`partner`, l'utilisateur) partagent événements, tâches,
+  budget et journal.
+- `OrbitEvent` : titre, dates début/fin, `all_day`, catégorie (personnalisable
+  à la volée), assignation (Ensemble / Moi / Partenaire → couleur fixe par
+  personne), `reminder_minutes_before[]` (rappels multiples possibles).
+  Les événements "Anniversaire" (ou avec récurrence annuelle activée)
+  comptent chaque année sans recréation (voir `nextEventOccurrence`/
+  `eventOccursOnDay` dans `types/index.ts`).
+- Budget partagé : dépenses assignées, solde calculé par `lib/balances.ts`
+  (qui doit combien à qui).
+- Le cycle/règles de la copine (widget "Orbite", pastilles dans le calendrier
+  et le widget) est **lu depuis les tables Wenn** du même projet Supabase —
+  Orbit n'écrit jamais ces données, seulement `useCyclePeriodDays`/
+  `cyclePredictions.ts` les consomment en lecture, désactivable dans Réglages
+  (calendrier et widget ont chacun leur propre interrupteur).
+
+## Widgets Android (trois, au choix dans le sélecteur de widgets)
+
+Tous lisent les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites par
+`WidgetDataPlugin.update()` côté natif, appelé depuis `WidgetSync.tsx`
+(monté globalement) à chaque changement de données. Toute nouvelle donnée à
+exposer à un widget suit ce chemin : calculer dans `WidgetSync.tsx` →
+ajouter un champ à `WidgetDataPlugin.update()` (JS + Java) → lire depuis
+`SharedPreferences` dans le(s) `AppWidgetProvider`.
+
+**Important — un rendu de widget qui plante emporte toute l'app** :
+`AppWidgetProvider.onUpdate()`/`refreshAll()` tournent dans le processus de
+l'app, pas un processus séparé. Toute erreur non rattrapée pendant la
+construction des `RemoteViews` ferme donc Orbit entièrement, sans dialogue
+ni accès facile au logcat depuis cet environnement. **Chaque appel de mise à
+jour d'un widget doit être enveloppé `try { ... } catch (Throwable ignored)`**
+(pas seulement `Exception`, pour attraper aussi `OutOfMemoryError`). En
+complément, `CrashLogPlugin` capture toute fermeture brutale malgré tout
+(installé en tout premier dans `MainActivity.onCreate`, avant les autres
+plugins) et l'affiche dans Réglages au redémarrage — c'est le seul moyen de
+diagnostiquer un crash sans accès à l'appareil.
+
+Le fond en dégradé Material You des widgets vient de ressources statiques
+(`drawable-v31/`/`drawable-night-v31/` avec les couleurs dynamiques système
+`@android:color/system_accent1_*`), **jamais d'un tint runtime** : teindre
+un `GradientDrawable` multi-stops l'aplatit en une seule couleur unie. Les
+éléments à couleur unie (pastille du jour, pastille d'événement, quadrillage)
+restent teintés dynamiquement via `OrbitWidgetTheme.tintBackground()`
+(`setBackgroundTintList`, API 31+ seulement) — mais un `<shape>` sans
+`<solid>` (contour seul) se remplit entièrement d'une couleur opaque par
+défaut dès qu'un tint lui est appliqué (bug connu de `GradientDrawable`) :
+toujours donner un `<solid>` explicite, même très translucide, à un drawable
+qu'on compte teindre.
+
+Tap sur une case du widget calendrier → ouvre directement l'app sur ce jour
+via le schéma personnalisé `io.karelisio.orbit://calendar?date=...` (voir
+`deepLink.ts` + intent-filter dédié dans `AndroidManifest.xml`, même
+mécanisme que le lien magique de connexion).
+
+## Notifications (rappels d'événements)
+
+`lib/notifications.ts` utilise `@capacitor/local-notifications` (natif,
+`AlarmManager` côté Android) — pas de `setTimeout` JS, donc en théorie
+fiable même app fermée. Deux pièges Android 12+ (targetSdk 35) déjà
+rencontrés :
+- Déclarer `SCHEDULE_EXACT_ALARM` dans le manifeste ne suffit pas :
+  l'utilisatrice doit en plus accorder le réglage système "Alarmes et
+  rappels" (`checkExactNotificationSetting`/`changeExactNotificationSetting`
+  du plugin). Sans ça, l'alarme devient inexacte et Doze peut la reporter
+  jusqu'à la réouverture de l'app — Réglages affiche une carte dédiée tant
+  que ce n'est pas accordé.
+- L'icône de la notification doit être une **silhouette blanche plate**
+  (`smallIcon` dans `capacitor.config.ts`, ressource `drawable/ic_stat_*`) :
+  sans ça, Android retombe sur une icône système générique, jamais sur
+  l'icône colorée de l'app (interdite pour une icône de notif).
+
+## Mise à jour in-app — piège CORS déjà résolu, ne pas régresser
+
+`src/lib/appUpdate.ts` télécharge l'APK avec `CapacitorHttp.request()`, **pas**
+`fetch()`. Les assets de release GitHub ne renvoient aucun header CORS ; un
+`fetch()` dans la WebView Capacitor échoue silencieusement même si la
+requête réussit côté réseau. Si un futur refactor réintroduit `fetch()` ici,
+le téléchargement recassera.
+
+## Workflow Git/CI — à suivre à chaque changement
+
+La branche de travail est `claude/orbit-couple-calendar-ftaa40`. Le push sur
+`main` déclenche le build + un **auto-tag patch** + une **Release GitHub**
+(APK signé), en lisant `## Non publié` de `CHANGELOG.md`, en l'archivant
+sous `## vX.Y.Z — DATE`, puis en repoussant ce commit directement sur `main`.
+
+1. Avant de commiter un changement visible, ajouter une puce sous
+   `## Non publié` dans `CHANGELOG.md`.
+2. Commiter, pousser sur la branche de travail (jamais directement sur `main`).
+3. Lancer `mcp__github__actions_run_trigger` (`build-android.yml`,
+   `ref: claude/orbit-couple-calendar-ftaa40`), attendre ~110s, vérifier le
+   run via `mcp__github__actions_list` (`conclusion: success`). Ne jamais
+   pousser sur `main` sans ce vert — le code natif Android ne peut pas être
+   testé autrement depuis cet environnement.
+4. `git fetch origin main`. Si `origin/main` a avancé (commit "Changelog :
+   vX.Y.Z" de la CI) : `git merge origin/main --no-edit`, résoudre le
+   conflit dans `CHANGELOG.md` en gardant les puces locales de `## Non
+   publié` suivies immédiatement du `## vX.Y.Z` entrant, `git add
+   CHANGELOG.md && git commit --no-edit`, revalider (`npx tsc --noEmit`).
+5. Pousser sur la branche de travail **et** sur `main`
+   (`git push origin claude/orbit-couple-calendar-ftaa40:main`).
+
+## Style de commit / conventions
+
+- Commits et code sans mention de modèle Claude ; l'attribution va dans les
+  lignes `Co-Authored-By`/`Claude-Session` fournies par le système, en fin
+  de message.
+- Pas de sur-ingénierie : cette app sert un couple, pas un produit à grande
+  échelle — préférer la solution la plus directe.
