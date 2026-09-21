@@ -129,10 +129,12 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
         // Choisi à partir de la même donnée que la couleur du texte
         // (onSurfaceColor), jamais par la résolution jour/nuit d'Android :
-        // voir OrbitWidgetTheme.isDarkTheme().
-        views.setInt(
-            R.id.widget_root,
-            "setBackgroundResource",
+        // voir OrbitWidgetTheme.isDarkTheme(). Posé sur une ImageView dédiée
+        // (widget_cal_background), pas sur widget_root : cette dernière porte
+        // aussi le clic plein-tuile ET les cases de jour cliquables, et les
+        // deux ne doivent jamais partager la même vue (voir widget_calendar.xml).
+        views.setImageViewResource(
+            R.id.widget_cal_background,
             theme.isDarkTheme() ? R.drawable.widget_background_dark : R.drawable.widget_background_light
         );
 

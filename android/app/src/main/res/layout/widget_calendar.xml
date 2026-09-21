@@ -5,13 +5,34 @@
   de la limite autorisée pour un widget — updateAppWidget() levait alors une
   exception et la tuile restait vide et non cliquable. Les vues natives
   restent nettes à toute taille et gardent un texte de taille constante.
+
+  widget_root est un FrameLayout (et non directement le LinearLayout de
+  contenu) pour séparer le fond (widget_cal_background, une simple ImageView
+  non cliquable) du clic plein-tuile : appliquer le fond en code sur la même
+  vue que celle qui porte à la fois le clic plein-tuile ET les cases de jour
+  cliquables (voir OrbitCalendarWidgetProvider.java) a déjà fait perdre le
+  clic précis sur un jour sur au moins un lanceur Android — les deux
+  responsabilités sont maintenant sur des vues distinctes.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="8dp">
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/widget_cal_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -74,4 +95,5 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical" />
-</LinearLayout>
+    </LinearLayout>
+</FrameLayout>

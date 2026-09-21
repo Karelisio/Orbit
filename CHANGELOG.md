@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Corrige le bas de la dernière ligne du widget Fusion coupé (les lettres avec jambage comme "j" étaient tronquées) : sa taille par défaut était devenue trop petite pour son propre contenu.
+- Corrige le clic sur un jour du widget calendrier qui n'ouvrait plus ce jour précis dans l'app depuis la dernière mise à jour.
 
 ## v1.0.23 — 2026-09-21
 - Widgets Fusion et Journal : redevenus redimensionnables (une taille minimale trop stricte les bloquait à leur taille par défaut), et plafonnés pour ne plus être proposés en trop grand par défaut.
