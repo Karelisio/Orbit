@@ -34,6 +34,7 @@ const DEFAULT_NAV_TABS: NavTabsVisibility = {
 
 const HOME_SECTIONS_KEY = "orbit-home-sections";
 const SHOW_PERIOD_KEY = "orbit-show-period-in-calendar";
+const SHOW_PERIOD_WIDGET_KEY = "orbit-show-period-in-widget";
 const NAV_TABS_KEY = "orbit-nav-tabs";
 
 interface PreferencesContextValue {
@@ -41,6 +42,8 @@ interface PreferencesContextValue {
   setHomeSectionVisible: (section: keyof HomeSectionsVisibility, visible: boolean) => void;
   showPeriodInCalendar: boolean;
   setShowPeriodInCalendar: (value: boolean) => void;
+  showPeriodInWidget: boolean;
+  setShowPeriodInWidget: (value: boolean) => void;
   navTabs: NavTabsVisibility;
   setNavTabVisible: (tab: NavTab, visible: boolean) => void;
 }
@@ -66,6 +69,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [showPeriodInCalendar, setShowPeriodInCalendarState] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(SHOW_PERIOD_KEY);
+      return stored === null ? true : stored === "true";
+    } catch {
+      return true;
+    }
+  });
+
+  const [showPeriodInWidget, setShowPeriodInWidgetState] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(SHOW_PERIOD_WIDGET_KEY);
       return stored === null ? true : stored === "true";
     } catch {
       return true;
@@ -99,6 +111,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      localStorage.setItem(SHOW_PERIOD_WIDGET_KEY, String(showPeriodInWidget));
+    } catch {
+      // idem
+    }
+  }, [showPeriodInWidget]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem(NAV_TABS_KEY, JSON.stringify(navTabs));
     } catch {
       // idem
@@ -120,6 +140,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setHomeSectionVisible,
         showPeriodInCalendar,
         setShowPeriodInCalendar: setShowPeriodInCalendarState,
+        showPeriodInWidget,
+        setShowPeriodInWidget: setShowPeriodInWidgetState,
         navTabs,
         setNavTabVisible,
       }}

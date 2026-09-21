@@ -10,6 +10,8 @@ final class OrbitWidgetPrefs {
     static final String KEY_NEXT_TASK_TITLE = "next_task_title";
     /** "jour:titre:couleurHexSansDièse;..." pour le mois en cours (un seul événement par jour). */
     static final String KEY_EVENTS_THIS_MONTH = "events_this_month";
+    /** "jour;jour;..." des jours de règles (Wenn) du mois en cours, désactivable dans Réglages. */
+    static final String KEY_PERIOD_DAYS_THIS_MONTH = "period_days_this_month";
 
     static final String KEY_COLOR_PRIMARY = "color_primary";
     static final String KEY_COLOR_ON_PRIMARY = "color_on_primary";

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Petit point signalant un jour de règles (prédites ou enregistrées dans
+     Wenn), même couleur fixe que le point du calendrier dans l'app
+     (Calendar.tsx) : ce n'est pas une couleur de thème, pas de teinte ici. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#B3261E" />
+</shape>

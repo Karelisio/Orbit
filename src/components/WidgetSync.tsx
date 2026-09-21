@@ -3,6 +3,8 @@ import { differenceInCalendarDays, format } from "date-fns";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { useCouple } from "../context/CoupleContext";
+import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
+import { usePreferences } from "../context/PreferencesContext";
 import { syncWidgets } from "../lib/widgetSync";
 import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
 
@@ -30,6 +32,12 @@ export default function WidgetSync() {
   const { events } = useEvents();
   const { tasks } = useTasks();
   const { couple } = useCouple();
+  const { showPeriodInWidget } = usePreferences();
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const periodDates = useCyclePeriodDays(monthStart, monthEnd, showPeriodInWidget);
 
   useEffect(() => {
     const now = new Date();
@@ -58,14 +66,23 @@ export default function WidgetSync() {
       .map(([day, { title, color }]) => `${day}:${title}:${color}`)
       .join(";");
 
+    // Jours de règles (déjà enregistrées ou prédites, voir useCyclePeriodDays)
+    // du mois affiché sur le widget, désactivable dans Réglages.
+    const periodDaysThisMonth: number[] = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = format(new Date(now.getFullYear(), now.getMonth(), day), "yyyy-MM-dd");
+      if (periodDates.has(dateStr)) periodDaysThisMonth.push(day);
+    }
+
     syncWidgets({
       nextEventTitle: nextEvent?.event.title ?? null,
       nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt.toISOString(), nextEvent.event.all_day) : null,
       pendingTasksCount: pendingTasks.length,
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsThisMonth,
+      periodDaysThisMonth: periodDaysThisMonth.join(";"),
     });
-  }, [events, tasks, couple]);
+  }, [events, tasks, couple, periodDates]);
 
   return null;
 }

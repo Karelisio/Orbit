@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -15,8 +16,10 @@ import android.widget.RemoteViews;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Widget "Calendrier" : une vraie mini-grille du mois, colorée avec le thème
@@ -106,6 +109,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
     private static RemoteViews buildViews(Context context, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
         String eventsCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, "");
+        String periodDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_THIS_MONTH, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
@@ -121,12 +125,19 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         monthLabel = monthLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + monthLabel.substring(1);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
-        theme.applyBackground(views, R.id.widget_root);
+        // Le fond en dégradé vient directement des ressources (drawable-v31/
+        // widget_background.xml sur Android 12+) : le teindre ici aplatirait
+        // le dégradé en une seule couleur unie (voir ce fichier).
 
         views.setTextViewText(R.id.widget_cal_month, monthLabel);
         views.setTextColor(R.id.widget_cal_month, onPrimaryContainer);
         views.setTextColor(R.id.widget_cal_prev, onPrimaryContainer);
         views.setTextColor(R.id.widget_cal_next, onPrimaryContainer);
+
+        String todayLabel = new SimpleDateFormat("EEEE d MMMM", Locale.FRENCH).format(Calendar.getInstance().getTime());
+        todayLabel = todayLabel.substring(0, 1).toUpperCase(Locale.FRENCH) + todayLabel.substring(1);
+        views.setTextViewText(R.id.widget_cal_subtitle, "Aujourd'hui : " + todayLabel);
+        views.setTextColor(R.id.widget_cal_subtitle, onSurfaceVariant);
         views.setOnClickPendingIntent(R.id.widget_cal_prev, navIntent(context, appWidgetId, ACTION_PREV_MONTH));
         views.setOnClickPendingIntent(R.id.widget_cal_next, navIntent(context, appWidgetId, ACTION_NEXT_MONTH));
         // Clic sur la tuile entière (et pas seulement sur la grille) : les
@@ -141,8 +152,10 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             views.addView(R.id.widget_cal_weekdays, label);
         }
 
-        // Les événements ne sont calculés côté app que pour le mois réel en cours.
+        // Les événements et les jours de règles ne sont calculés côté app que
+        // pour le mois réel en cours.
         Map<Integer, DayEvent> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
+        Set<Integer> periodDays = offset == 0 ? parseDayList(periodDaysCsv) : new HashSet<>();
 
         Calendar today = Calendar.getInstance();
         boolean isCurrentMonth = offset == 0;
@@ -170,6 +183,12 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                     continue;
                 }
 
+                // Quadrillage discret : un contour translucide par case, teinté
+                // à la couleur du thème (voir widget_cell_grid.xml).
+                cell.setInt(R.id.widget_cell_root, "setBackgroundResource", R.drawable.widget_cell_grid);
+                theme.tintBackground(cell, R.id.widget_cell_root, onSurfaceVariant);
+                cell.setOnClickPendingIntent(R.id.widget_cell_root, dayIntent(context, appWidgetId, shownMonth, day));
+
                 cell.setTextViewText(R.id.widget_cell_day, String.valueOf(day));
                 if (isCurrentMonth && day == todayDay) {
                     cell.setInt(R.id.widget_cell_day, "setBackgroundResource", R.drawable.widget_today_circle);
@@ -178,6 +197,8 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                 } else {
                     cell.setTextColor(R.id.widget_cell_day, onSurface);
                 }
+
+                cell.setViewVisibility(R.id.widget_cell_period_dot, periodDays.contains(day) ? View.VISIBLE : View.GONE);
 
                 DayEvent event = events.get(day);
                 if (event == null) {
@@ -223,6 +244,32 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             }
         }
         return map;
+    }
+
+    /** Format : "jour;jour;..." (voir WidgetSync.tsx). */
+    private static Set<Integer> parseDayList(String csv) {
+        Set<Integer> days = new HashSet<>();
+        if (TextUtils.isEmpty(csv)) return days;
+        for (String entry : csv.split(";")) {
+            try {
+                days.add(Integer.parseInt(entry.trim()));
+            } catch (NumberFormatException ignored) {
+                // entrée invalide : on l'ignore simplement
+            }
+        }
+        return days;
+    }
+
+    /** Ouvre l'app directement sur ce jour (voir deepLink.ts : hôte "calendar"). */
+    static PendingIntent dayIntent(Context context, int appWidgetId, Calendar shownMonth, int day) {
+        Calendar date = (Calendar) shownMonth.clone();
+        date.set(Calendar.DAY_OF_MONTH, day);
+        String iso = new SimpleDateFormat("yyyy-MM-dd", Locale.FRENCH).format(date.getTime());
+
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("io.karelisio.orbit://calendar?date=" + iso), context, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        int requestCode = appWidgetId * 2000 + date.get(Calendar.YEAR) * 400 + date.get(Calendar.MONTH) * 32 + day;
+        return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     static PendingIntent navIntent(Context context, int appWidgetId, String action) {

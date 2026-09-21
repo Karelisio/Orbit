@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Quadrillage discret entre les jours du mois : un simple contour très
+  translucide par case. Teinté à la couleur "on-surface-variant" du thème sur
+  Android 12+ (le tramage SRC_IN de la teinte conserve la transparence
+  d'origine du contour, seule sa teinte change) ; en dessous, ce gris
+  translucide fixe reste tel quel.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <stroke android:width="0.5dp" android:color="#268A8A8A" />
+    <corners android:radius="4dp" />
+</shape>

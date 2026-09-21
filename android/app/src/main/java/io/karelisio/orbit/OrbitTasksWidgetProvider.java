@@ -40,7 +40,8 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
         int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
-        theme.applyBackground(views, R.id.widget_root);
+        // Le fond en dégradé vient des ressources (drawable-v31/widget_background.xml) :
+        // pas de teinte ici, elle aplatirait le dégradé (voir ce fichier).
         views.setTextColor(R.id.widget_tasks_count, onPrimaryContainer);
         views.setTextColor(R.id.widget_tasks_label, onPrimaryContainer);
         views.setTextColor(R.id.widget_tasks_next, onPrimaryContainer);

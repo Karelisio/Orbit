@@ -15,6 +15,15 @@ export function initDeepLinks(): void {
   App.addListener("appUrlOpen", async ({ url }) => {
     try {
       const parsed = new URL(url);
+
+      // Tap sur une case du widget calendrier (voir OrbitCalendarWidgetProvider.java) :
+      // ouvre l'app directement sur ce jour, plutôt que sur l'accueil.
+      if (parsed.host === "calendar") {
+        const date = parsed.searchParams.get("date");
+        if (date) window.location.hash = `#/calendar?date=${date}`;
+        return;
+      }
+
       const fragment = parsed.hash.startsWith("#") ? parsed.hash.slice(1) : "";
       const params = new URLSearchParams(fragment || parsed.search);
 

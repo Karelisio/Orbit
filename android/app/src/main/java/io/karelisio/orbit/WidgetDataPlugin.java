@@ -41,6 +41,9 @@ public class WidgetDataPlugin extends Plugin {
         String eventsThisMonth = call.getString("eventsThisMonth");
         editor.putString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, eventsThisMonth != null ? eventsThisMonth : "");
 
+        String periodDaysThisMonth = call.getString("periodDaysThisMonth");
+        editor.putString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_THIS_MONTH, periodDaysThisMonth != null ? periodDaysThisMonth : "");
+
         putColorIfPresent(call, editor, "primaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY);
         putColorIfPresent(call, editor, "onPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY);
         putColorIfPresent(call, editor, "primaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER);

@@ -167,7 +167,16 @@ export default function Settings() {
   const { user, profile, signOut } = useAuth();
   const { couple, role, leaveCouple, renameCouple, setTogetherSince } = useCouple();
   const { mode, setMode, setThemeImageUrl } = useThemeMode();
-  const { homeSections, setHomeSectionVisible, showPeriodInCalendar, setShowPeriodInCalendar, navTabs, setNavTabVisible } = usePreferences();
+  const {
+    homeSections,
+    setHomeSectionVisible,
+    showPeriodInCalendar,
+    setShowPeriodInCalendar,
+    showPeriodInWidget,
+    setShowPeriodInWidget,
+    navTabs,
+    setNavTabVisible,
+  } = usePreferences();
 
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -341,6 +350,18 @@ export default function Settings() {
             onChange={(e) => setShowPeriodInCalendar(e.target.checked)}
           />
           <span>Afficher discrètement les règles (Wenn) dans le calendrier</span>
+        </label>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 className="section-title">Widget calendrier</h3>
+        <label className="checkbox-row">
+          <input
+            type="checkbox"
+            checked={showPeriodInWidget}
+            onChange={(e) => setShowPeriodInWidget(e.target.checked)}
+          />
+          <span>Afficher discrètement les règles (Wenn) sur le widget</span>
         </label>
       </div>
 

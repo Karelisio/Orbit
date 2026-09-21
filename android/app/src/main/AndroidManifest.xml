@@ -39,6 +39,17 @@
                 <data android:scheme="io.karelisio.orbit" android:host="login-callback" />
             </intent-filter>
 
+            <!--
+              Tap sur une case du widget calendrier (OrbitCalendarWidgetProvider) :
+              ouvre l'app directement sur ce jour au lieu de l'accueil. Même
+              schéma personnalisé que le lien magique, un hôte différent.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="io.karelisio.orbit" android:host="calendar" />
+            </intent-filter>
+
         </activity>
 
         <provider

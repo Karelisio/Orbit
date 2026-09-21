@@ -7,6 +7,7 @@ interface WidgetDataPlugin {
     pendingTasksCount: number;
     nextTaskTitle?: string;
     eventsThisMonth: string;
+    periodDaysThisMonth: string;
     primaryColor?: string;
     onPrimaryColor?: string;
     primaryContainerColor?: string;
@@ -41,6 +42,8 @@ export async function syncWidgets(data: {
   nextTaskTitle: string | null;
   /** "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." pour le mois en cours. */
   eventsThisMonth: string;
+  /** "jour;jour;..." des jours de règles (déjà enregistrées ou prédites) du mois en cours. */
+  periodDaysThisMonth: string;
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -50,6 +53,7 @@ export async function syncWidgets(data: {
       pendingTasksCount: data.pendingTasksCount,
       nextTaskTitle: data.nextTaskTitle ?? undefined,
       eventsThisMonth: data.eventsThisMonth,
+      periodDaysThisMonth: data.periodDaysThisMonth,
       ...currentThemeColors(),
     });
   } catch {

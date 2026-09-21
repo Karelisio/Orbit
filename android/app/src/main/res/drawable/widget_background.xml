@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fond de la tuile, en dégradé (haut -> bas) comme le fond de l'app (voir
+  .app-shell dans global.css : primary-container -> background). Sur Android
+  12+, drawable-v31/ prend le dessus avec les vraies teintes dynamiques du
+  système ; ce dégradé statique reste le repli pour les appareils plus anciens.
+-->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#EADDFF" />
+    <gradient
+        android:angle="270"
+        android:startColor="#EADDFF"
+        android:endColor="#F7F2FA" />
     <corners android:radius="24dp" />
 </shape>

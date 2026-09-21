@@ -50,6 +50,18 @@
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Repère "aujourd'hui" : jour de la semaine + quantième, toujours celui
+         du jour réel, même en naviguant vers un autre mois avec ‹ ›. -->
+    <TextView
+        android:id="@+id/widget_cal_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textSize="10sp" />
+
     <LinearLayout
         android:id="@+id/widget_cal_weekdays"
         android:layout_width="match_parent"

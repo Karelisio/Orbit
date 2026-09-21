@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   addMonths,
   addYears,
@@ -41,10 +42,27 @@ export default function Calendar() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
   const { showPeriodInCalendar } = usePreferences();
   const { couple } = useCouple();
-  const [month, setMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialDateParam = searchParams.get("date");
+  const [month, setMonth] = useState(() => (initialDateParam ? new Date(initialDateParam) : new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => initialDateParam ?? format(new Date(), "yyyy-MM-dd"));
   const [sheet, setSheet] = useState<"none" | "new" | OrbitEvent>("none");
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
+
+  // Ouvrir le calendrier sur un jour précis depuis l'extérieur (widget écran
+  // d'accueil : tap sur une case du mois) : le lien natif dépose "?date=..."
+  // dans l'URL, y compris si Calendar est déjà affiché (l'app était déjà
+  // ouverte en arrière-plan). Consommé puis retiré pour ne pas rejouer au
+  // prochain changement de mois manuel.
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    if (!dateParam) return;
+    const parsed = new Date(dateParam);
+    if (Number.isNaN(parsed.getTime())) return;
+    setMonth(parsed);
+    setSelectedDate(dateParam);
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
