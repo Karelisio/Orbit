@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.18 — 2026-09-21
 - L'app ne peut plus se fermer toute seule à cause d'un widget : le rafraîchissement des widgets tourne dans le processus de l'app, et une erreur d'affichage y emportait l'app entière. Il est maintenant isolé — au pire un widget n'est pas rafraîchi tout de suite.
 - Si l'app se ferme malgré tout de façon inattendue, Réglages affiche au redémarrage un rapport à copier/envoyer (jusque-là, la fermeture ne laissait aucune trace).
 
