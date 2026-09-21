@@ -11,6 +11,13 @@ interface ThemeModeContextValue {
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => void;
   setThemeImageUrl: (url: string | null) => Promise<void>;
+  /**
+   * Incrémenté une fois qu'un changement de thème (manuel ou bascule système)
+   * a fini d'être appliqué aux variables CSS. WidgetSync.tsx s'en sert pour
+   * savoir quand relire et repousser les couleurs aux widgets — sans lui,
+   * rien ne le lui indique (voir CHANGELOG : widget illisible en sombre).
+   */
+  themeVersion: number;
 }
 
 const ThemeModeContext = createContext<ThemeModeContextValue | undefined>(undefined);
@@ -23,6 +30,7 @@ function resolveDark(mode: ThemeMode): boolean | undefined {
 export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const { user, profile, refreshProfile } = useAuth();
   const [mode, setModeState] = useState<ThemeMode>(() => (localStorage.getItem("orbit-theme-mode") as ThemeMode) || "system");
+  const [themeVersion, setThemeVersion] = useState(0);
 
   function setMode(next: ThemeMode) {
     setModeState(next);
@@ -31,22 +39,29 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
 
   async function applyTheme() {
     const dark = resolveDark(mode);
-    if (profile?.theme_image_url) {
-      try {
-        await applyThemeFromImageUrl(profile.theme_image_url, dark);
-        return;
-      } catch {
-        // image invalide/inaccessible : on retombe sur la couleur de secours ci-dessous
+    try {
+      if (profile?.theme_image_url) {
+        try {
+          await applyThemeFromImageUrl(profile.theme_image_url, dark);
+          return;
+        } catch {
+          // image invalide/inaccessible : on retombe sur la couleur de secours ci-dessous
+        }
       }
-    }
-    if (Capacitor.getPlatform() === "android") {
-      const wallpaperColor = await getWallpaperSeedColor();
-      if (wallpaperColor) {
-        applyThemeFromSeedColor(wallpaperColor, dark);
-        return;
+      if (Capacitor.getPlatform() === "android") {
+        const wallpaperColor = await getWallpaperSeedColor();
+        if (wallpaperColor) {
+          applyThemeFromSeedColor(wallpaperColor, dark);
+          return;
+        }
       }
+      applyThemeFromSeedColor(profile?.theme_seed_color ?? DEFAULT_SEED_COLOR, dark);
+    } finally {
+      // Les variables CSS ne sont posées qu'ici (fin réelle de l'application,
+      // pas au déclenchement) : c'est le seul moment sûr pour dire à
+      // WidgetSync.tsx de les relire.
+      setThemeVersion((v) => v + 1);
     }
-    applyThemeFromSeedColor(profile?.theme_seed_color ?? DEFAULT_SEED_COLOR, dark);
   }
 
   useEffect(() => {
@@ -70,7 +85,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     await refreshProfile();
   }
 
-  return <ThemeModeContext.Provider value={{ mode, setMode, setThemeImageUrl }}>{children}</ThemeModeContext.Provider>;
+  return <ThemeModeContext.Provider value={{ mode, setMode, setThemeImageUrl, themeVersion }}>{children}</ThemeModeContext.Provider>;
 }
 
 export function useThemeMode() {

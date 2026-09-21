@@ -86,7 +86,7 @@
                 android:resource="@xml/widget_tasks_info" />
         </receiver>
 
-        <!-- Widget d'écran d'accueil : fusion calendrier + tâches -->
+        <!-- Widget d'écran d'accueil : fusion calendrier + tâches + journal -->
         <receiver
             android:name=".OrbitCombinedWidgetProvider"
             android:exported="false">
@@ -96,6 +96,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_combined_info" />
+        </receiver>
+
+        <!-- Widget d'écran d'accueil : dernière note du journal -->
+        <receiver
+            android:name=".OrbitJournalWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_journal_info" />
         </receiver>
     </application>
 

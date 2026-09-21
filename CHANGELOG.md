@@ -7,6 +7,9 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Corrige le texte du widget calendrier illisible en thème sombre (couleurs qui ne suivaient pas un changement de thème, seulement les données affichées).
+- Nouveau widget "Journal" : affiche la dernière note du journal.
+- Le widget "Fusion" affiche maintenant aussi la dernière note du journal, en plus du calendrier et des tâches.
 
 ## v1.0.20 — 2026-09-21
 - Corrige les cases du widget calendrier qui s'affichaient noires/marron au lieu du quadrillage discret prévu.

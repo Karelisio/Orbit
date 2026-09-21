@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 import { differenceInCalendarDays, format } from "date-fns";
+import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
+import { useJournal } from "../hooks/useJournal";
 import { useCouple } from "../context/CoupleContext";
 import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences } from "../context/PreferencesContext";
+import { useThemeMode } from "../context/ThemeModeContext";
 import { syncWidgets } from "../lib/widgetSync";
 import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
 
@@ -18,21 +21,35 @@ function eventTimeLabel(startsAt: string, allDay: boolean): string {
   return format(date, "d MMM") + time;
 }
 
+/** Symétrique de eventTimeLabel, mais pour une date passée (dernière note du journal). */
+function journalTimeLabel(createdAt: string): string {
+  const days = differenceInCalendarDays(new Date(), new Date(createdAt));
+  if (days <= 0) return "Aujourd'hui";
+  if (days === 1) return "Hier";
+  if (days < 7) return `Il y a ${days} j`;
+  return format(new Date(createdAt), "d MMM");
+}
+
 /**
- * Nettoie un titre d'événement pour l'encodage compact envoyé au widget natif.
- * La troncature finale est laissée au widget (ellipse "…" selon la largeur
- * réelle de la case) : on envoie juste de quoi remplir la pastille.
+ * Nettoie un texte pour l'encodage compact envoyé au widget natif (retire les
+ * séparateurs du format CSV). La troncature finale est laissée au widget
+ * (ellipse "…" selon la largeur réelle de la case) : on envoie juste de quoi
+ * remplir la tuile — 18 caractères pour un titre d'événement (pastille
+ * étroite), plus pour le contenu du journal (tuile plus grande).
  */
-function sanitizeForWidget(text: string): string {
-  return text.replace(/[:;]/g, " ").trim().slice(0, 18);
+function sanitizeForWidget(text: string, maxLength = 18): string {
+  return text.replace(/[:;]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
 /** Tient les widgets d'écran d'accueil Android à jour à chaque changement de données. */
 export default function WidgetSync() {
+  const { user } = useAuth();
   const { events } = useEvents();
   const { tasks } = useTasks();
-  const { couple } = useCouple();
+  const { entries: journalEntries } = useJournal();
+  const { couple, partnerId } = useCouple();
   const { showPeriodInWidget } = usePreferences();
+  const { themeVersion } = useThemeMode();
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -80,6 +97,17 @@ export default function WidgetSync() {
       if (periodDates.has(dateStr)) periodDaysThisMonth.push(day);
     }
 
+    // Dernière entrée du journal (déjà triée la plus récente en premier par
+    // useJournal), pour le widget dédié et la 3e ligne du widget Fusion.
+    const latestEntry = journalEntries[0] ?? null;
+    const journalAuthorLabel = latestEntry
+      ? latestEntry.author_id === user?.id
+        ? "Toi"
+        : latestEntry.author_id === partnerId
+          ? "Ton/ta partenaire"
+          : ""
+      : null;
+
     syncWidgets({
       nextEventTitle: nextEvent?.event.title ?? null,
       nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt.toISOString(), nextEvent.event.all_day) : null,
@@ -87,8 +115,11 @@ export default function WidgetSync() {
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsThisMonth,
       periodDaysThisMonth: periodDaysThisMonth.join(";"),
+      journalContent: latestEntry ? sanitizeForWidget(latestEntry.content, 90) : null,
+      journalAuthorLabel,
+      journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,
     });
-  }, [events, tasks, couple, periodDates]);
+  }, [events, tasks, journalEntries, couple, partnerId, user, periodDates, themeVersion]);
 
   return null;
 }

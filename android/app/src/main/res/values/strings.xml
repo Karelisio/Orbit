@@ -6,5 +6,6 @@
     <string name="custom_url_scheme">io.karelisio.orbit</string>
     <string name="widget_calendar_description">Orbit — mini calendrier du mois avec les jours d\'événements</string>
     <string name="widget_tasks_description">Orbit — tâches en attente</string>
-    <string name="widget_combined_description">Orbit — calendrier et tâches réunis</string>
+    <string name="widget_combined_description">Orbit — calendrier, tâches et journal réunis</string>
+    <string name="widget_journal_description">Orbit — dernière note du journal</string>
 </resources>

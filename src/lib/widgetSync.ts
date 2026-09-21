@@ -8,6 +8,9 @@ interface WidgetDataPlugin {
     nextTaskTitle?: string;
     eventsThisMonth: string;
     periodDaysThisMonth: string;
+    journalContent?: string;
+    journalAuthorLabel?: string;
+    journalTimeLabel?: string;
     primaryColor?: string;
     onPrimaryColor?: string;
     primaryContainerColor?: string;
@@ -44,6 +47,10 @@ export async function syncWidgets(data: {
   eventsThisMonth: string;
   /** "jour;jour;..." des jours de règles (déjà enregistrées ou prédites) du mois en cours. */
   periodDaysThisMonth: string;
+  /** Dernière entrée du journal, ou null s'il n'y en a aucune. */
+  journalContent: string | null;
+  journalAuthorLabel: string | null;
+  journalTimeLabel: string | null;
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -54,6 +61,9 @@ export async function syncWidgets(data: {
       nextTaskTitle: data.nextTaskTitle ?? undefined,
       eventsThisMonth: data.eventsThisMonth,
       periodDaysThisMonth: data.periodDaysThisMonth,
+      journalContent: data.journalContent ?? undefined,
+      journalAuthorLabel: data.journalAuthorLabel ?? undefined,
+      journalTimeLabel: data.journalTimeLabel ?? undefined,
       ...currentThemeColors(),
     });
   } catch {

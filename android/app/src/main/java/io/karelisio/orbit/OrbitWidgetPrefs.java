@@ -13,6 +13,11 @@ final class OrbitWidgetPrefs {
     /** "jour;jour;..." des jours de règles (Wenn) du mois en cours, désactivable dans Réglages. */
     static final String KEY_PERIOD_DAYS_THIS_MONTH = "period_days_this_month";
 
+    static final String KEY_HAS_JOURNAL = "has_journal";
+    static final String KEY_JOURNAL_CONTENT = "journal_content";
+    static final String KEY_JOURNAL_AUTHOR_LABEL = "journal_author_label";
+    static final String KEY_JOURNAL_TIME_LABEL = "journal_time_label";
+
     static final String KEY_COLOR_PRIMARY = "color_primary";
     static final String KEY_COLOR_ON_PRIMARY = "color_on_primary";
     static final String KEY_COLOR_PRIMARY_CONTAINER = "color_primary_container";

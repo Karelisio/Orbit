@@ -44,6 +44,16 @@ public class WidgetDataPlugin extends Plugin {
         String periodDaysThisMonth = call.getString("periodDaysThisMonth");
         editor.putString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_THIS_MONTH, periodDaysThisMonth != null ? periodDaysThisMonth : "");
 
+        String journalContent = call.getString("journalContent");
+        if (journalContent != null) {
+            editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, true);
+            editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT, journalContent);
+            editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL, call.getString("journalAuthorLabel", ""));
+            editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL, call.getString("journalTimeLabel", ""));
+        } else {
+            editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, false);
+        }
+
         putColorIfPresent(call, editor, "primaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY);
         putColorIfPresent(call, editor, "onPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY);
         putColorIfPresent(call, editor, "primaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER);
@@ -73,6 +83,10 @@ public class WidgetDataPlugin extends Plugin {
         }
         try {
             OrbitCombinedWidgetProvider.refreshAll(context);
+        } catch (Throwable ignored) {
+        }
+        try {
+            OrbitJournalWidgetProvider.refreshAll(context);
         } catch (Throwable ignored) {
         }
     }

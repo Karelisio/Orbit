@@ -29,4 +29,16 @@
         android:textSize="14sp"
         android:maxLines="1"
         android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_combined_journal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="📝 —"
+        android:textColor="#4F378A"
+        android:textSize="14sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:visibility="gone" />
 </LinearLayout>

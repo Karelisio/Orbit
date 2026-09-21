@@ -7,14 +7,13 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.view.View;
 import android.widget.RemoteViews;
 
 /**
- * Widget "Fusion" : calendrier + tâches + journal dans un seul widget, pour
- * qui ne veut placer qu'une seule tuile sur son écran d'accueil.
+ * Widget "Journal" : affiche la dernière note du journal du couple. Les
+ * données sont écrites par WidgetDataPlugin (depuis WidgetSync.tsx).
  */
-public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
+public class OrbitJournalWidgetProvider extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
@@ -30,38 +29,29 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
 
     static void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
-        boolean hasEvent = prefs.getBoolean(OrbitWidgetPrefs.KEY_HAS_EVENT, false);
-        int taskCount = prefs.getInt(OrbitWidgetPrefs.KEY_PENDING_TASKS_COUNT, 0);
-
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_combined);
-
-        if (!hasEvent) {
-            views.setTextViewText(R.id.widget_combined_event, "📅 Aucun événement à venir");
-        } else {
-            String title = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_TITLE, "");
-            String timeLabel = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_TIME_LABEL, "");
-            views.setTextViewText(R.id.widget_combined_event, "📅 " + title + " — " + timeLabel);
-        }
-
-        views.setTextViewText(
-            R.id.widget_combined_tasks,
-            taskCount == 0 ? "✅ Tout est fait" : "✅ " + taskCount + (taskCount == 1 ? " tâche à faire" : " tâches à faire")
-        );
-
         boolean hasJournal = prefs.getBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, false);
-        views.setViewVisibility(R.id.widget_combined_journal, hasJournal ? View.VISIBLE : View.GONE);
-        if (hasJournal) {
-            String journalContent = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT, "");
-            views.setTextViewText(R.id.widget_combined_journal, "📝 " + journalContent);
+
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_journal);
+
+        if (!hasJournal) {
+            views.setTextViewText(R.id.widget_journal_content, "Aucune note pour l'instant");
+            views.setTextViewText(R.id.widget_journal_footer, "");
+        } else {
+            String content = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT, "");
+            String author = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL, "");
+            String time = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL, "");
+            views.setTextViewText(R.id.widget_journal_content, content);
+            views.setTextViewText(R.id.widget_journal_footer, author.isEmpty() ? time : author + " · " + time);
         }
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
         int onPrimaryContainer = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER, "#21005D");
+        int onSurfaceVariant = theme.color(OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E");
         // Le fond en dégradé vient des ressources (drawable-v31/widget_background.xml) :
         // pas de teinte ici, elle aplatirait le dégradé (voir ce fichier).
-        views.setTextColor(R.id.widget_combined_event, onPrimaryContainer);
-        views.setTextColor(R.id.widget_combined_tasks, onPrimaryContainer);
-        views.setTextColor(R.id.widget_combined_journal, onPrimaryContainer);
+        views.setTextColor(R.id.widget_journal_title, onPrimaryContainer);
+        views.setTextColor(R.id.widget_journal_content, onPrimaryContainer);
+        views.setTextColor(R.id.widget_journal_footer, onSurfaceVariant);
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
@@ -80,7 +70,7 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
 
     static void refreshAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        ComponentName component = new ComponentName(context, OrbitCombinedWidgetProvider.class);
+        ComponentName component = new ComponentName(context, OrbitJournalWidgetProvider.class);
         int[] ids = manager.getAppWidgetIds(component);
         for (int id : ids) {
             try {
