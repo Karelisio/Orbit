@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Corrige les bandes blanches sur les côtés de l'app sur les écrans plus larges que prévu (une limite de largeur héritée d'un rendu web, inutile dans l'appli installée).
 
 ## v1.0.25 — 2026-09-21
 - Widgets Fusion et Journal : marge de sécurité supplémentaire en bas (toujours coupés sur certains téléphones malgré le fix précédent).
