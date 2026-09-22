@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Taper sur un jour du calendrier ayant le point "tâche" affiche maintenant les tâches en attente de ce jour (avec case à cocher et bouton de modification), comme pour les événements.
 
 ## v1.0.33 — 2026-09-22
 - Un 🎂 remplace le point coloré d'un anniversaire dans le calendrier (app et widget) — ce point pouvait être rouge par coïncidence (même couleur par défaut que le point "règles"), d'où la confusion.

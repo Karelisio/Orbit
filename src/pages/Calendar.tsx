@@ -22,6 +22,7 @@ import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences } from "../context/PreferencesContext";
 import { useCouple } from "../context/CoupleContext";
 import EventSheet from "../components/EventSheet";
+import TaskSheet from "../components/TaskSheet";
 import { eventDisplayColor, eventOccursOnDay, type OrbitEvent, type OrbitTask } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -45,7 +46,7 @@ function tasksOnDay(tasks: OrbitTask[], dateStr: string): OrbitTask[] {
 
 export default function Calendar() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
-  const { tasks } = useTasks();
+  const { tasks, updateTask, toggleTask, deleteTask } = useTasks();
   const { showPeriodInCalendar } = usePreferences();
   const { couple } = useCouple();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,6 +54,7 @@ export default function Calendar() {
   const [month, setMonth] = useState(() => (initialDateParam ? new Date(initialDateParam) : new Date()));
   const [selectedDate, setSelectedDate] = useState(() => initialDateParam ?? format(new Date(), "yyyy-MM-dd"));
   const [sheet, setSheet] = useState<"none" | "new" | OrbitEvent>("none");
+  const [taskSheet, setTaskSheet] = useState<"none" | OrbitTask>("none");
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
 
   // Ouvrir le calendrier sur un jour précis depuis l'extérieur (widget écran
@@ -79,6 +81,7 @@ export default function Calendar() {
   const periodDates = useCyclePeriodDays(days[0], days[days.length - 1], showPeriodInCalendar);
 
   const selectedEvents = useMemo(() => eventsOnDay(events, new Date(selectedDate)), [events, selectedDate]);
+  const selectedTasks = useMemo(() => tasksOnDay(tasks, selectedDate), [tasks, selectedDate]);
 
   return (
     <div className="screen">
@@ -231,6 +234,27 @@ export default function Calendar() {
             ))}
           </div>
         )}
+
+        {selectedTasks.length > 0 && (
+          <>
+            <p className="section-title" style={{ marginTop: 16 }}>
+              Tâches
+            </p>
+            <div className="list">
+              {selectedTasks.map((task) => (
+                <div key={task.id} className="list-item">
+                  <label className="checkbox-row" style={{ flex: 1 }}>
+                    <input type="checkbox" checked={task.done} onChange={() => toggleTask(task)} />
+                    <span>{task.title}</span>
+                  </label>
+                  <button className="btn-icon" onClick={() => setTaskSheet(task)} aria-label="Modifier la tâche">
+                    ✏️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {sheet === "new" && (
@@ -245,6 +269,17 @@ export default function Calendar() {
             setSheet("none");
           }}
           onClose={() => setSheet("none")}
+        />
+      )}
+      {taskSheet !== "none" && (
+        <TaskSheet
+          task={taskSheet}
+          onSave={(fields) => updateTask(taskSheet.id, fields)}
+          onDelete={() => {
+            deleteTask(taskSheet.id);
+            setTaskSheet("none");
+          }}
+          onClose={() => setTaskSheet("none")}
         />
       )}
     </div>
