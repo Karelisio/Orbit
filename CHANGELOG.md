@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Nouveau réglage dans Réglages → Widgets : taille du texte des widgets Tâches, Fusion et Journal (Petite/Normale/Grande), pour corriger toi-même quand l'ajustement automatique ne convient pas à ton lanceur d'écran d'accueil (ex. Smart Launcher, où le widget Fusion redevenait trop grand).
 
 ## v1.0.34 — 2026-09-22
 - Taper sur un jour du calendrier ayant le point "tâche" affiche maintenant les tâches en attente de ce jour (avec case à cocher et bouton de modification), comme pour les événements.

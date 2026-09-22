@@ -3,7 +3,13 @@ import { Capacitor } from "@capacitor/core";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useThemeMode } from "../context/ThemeModeContext";
-import { usePreferences, type HomeSectionsVisibility, type NavTab, NAV_TAB_LABELS } from "../context/PreferencesContext";
+import {
+  usePreferences,
+  type HomeSectionsVisibility,
+  type NavTab,
+  type WidgetFontScale,
+  NAV_TAB_LABELS,
+} from "../context/PreferencesContext";
 import DateField from "../components/DateField";
 import { supabase } from "../lib/supabase";
 import { isExactAlarmGranted, openExactAlarmSettings, requestNotificationPermission } from "../lib/notifications";
@@ -16,6 +22,12 @@ const HOME_SECTION_LABELS: Record<keyof HomeSectionsVisibility, string> = {
   events: "Prochains événements",
   tasks: "Tâches en cours",
 };
+
+const WIDGET_FONT_SCALE_OPTIONS: { value: WidgetFontScale; label: string }[] = [
+  { value: "petite", label: "Petite" },
+  { value: "normale", label: "Normale" },
+  { value: "grande", label: "Grande" },
+];
 
 function UpdateCard() {
   const [checking, setChecking] = useState(false);
@@ -210,6 +222,8 @@ export default function Settings() {
     setShowPeriodInWidget,
     navTabs,
     setNavTabVisible,
+    widgetFontScale,
+    setWidgetFontScale,
   } = usePreferences();
 
   const [uploading, setUploading] = useState(false);
@@ -398,6 +412,26 @@ export default function Settings() {
           />
           <span>Afficher discrètement les règles (Wenn) sur le widget</span>
         </label>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 className="section-title">Widgets</h3>
+        <p style={{ fontSize: 13, color: "var(--md-sys-color-on-surface-variant)", margin: "0 0 10px" }}>
+          Taille du texte des widgets Tâches, Fusion et Journal, si elle ne convient pas sur ton téléphone
+          (chaque lanceur d'écran d'accueil impose sa propre taille de tuile).
+        </p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {WIDGET_FONT_SCALE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`chip${widgetFontScale === option.value ? " selected" : ""}`}
+              onClick={() => setWidgetFontScale(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

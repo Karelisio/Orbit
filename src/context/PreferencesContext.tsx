@@ -32,10 +32,13 @@ const DEFAULT_NAV_TABS: NavTabsVisibility = {
   journal: true,
 };
 
+export type WidgetFontScale = "petite" | "normale" | "grande";
+
 const HOME_SECTIONS_KEY = "orbit-home-sections";
 const SHOW_PERIOD_KEY = "orbit-show-period-in-calendar";
 const SHOW_PERIOD_WIDGET_KEY = "orbit-show-period-in-widget";
 const NAV_TABS_KEY = "orbit-nav-tabs";
+const WIDGET_FONT_SCALE_KEY = "orbit-widget-font-scale";
 
 interface PreferencesContextValue {
   homeSections: HomeSectionsVisibility;
@@ -46,6 +49,8 @@ interface PreferencesContextValue {
   setShowPeriodInWidget: (value: boolean) => void;
   navTabs: NavTabsVisibility;
   setNavTabVisible: (tab: NavTab, visible: boolean) => void;
+  widgetFontScale: WidgetFontScale;
+  setWidgetFontScale: (value: WidgetFontScale) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextValue | undefined>(undefined);
@@ -81,6 +86,15 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       return stored === null ? true : stored === "true";
     } catch {
       return true;
+    }
+  });
+
+  const [widgetFontScale, setWidgetFontScaleState] = useState<WidgetFontScale>(() => {
+    try {
+      const stored = localStorage.getItem(WIDGET_FONT_SCALE_KEY);
+      return stored === "petite" || stored === "grande" ? stored : "normale";
+    } catch {
+      return "normale";
     }
   });
 
@@ -125,6 +139,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   }, [navTabs]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(WIDGET_FONT_SCALE_KEY, widgetFontScale);
+    } catch {
+      // idem
+    }
+  }, [widgetFontScale]);
+
   function setHomeSectionVisible(section: keyof HomeSectionsVisibility, visible: boolean) {
     setHomeSections((prev) => ({ ...prev, [section]: visible }));
   }
@@ -144,6 +166,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setShowPeriodInWidget: setShowPeriodInWidgetState,
         navTabs,
         setNavTabVisible,
+        widgetFontScale,
+        setWidgetFontScale: setWidgetFontScaleState,
       }}
     >
       {children}

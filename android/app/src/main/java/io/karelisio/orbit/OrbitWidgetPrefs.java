@@ -9,6 +9,13 @@ final class OrbitWidgetPrefs {
     static final String KEY_PENDING_TASKS_COUNT = "pending_tasks_count";
     static final String KEY_NEXT_TASK_TITLE = "next_task_title";
     /**
+     * Facteur manuel de taille de police (Réglages > Widgets), composé avec
+     * OrbitWidgetTheme.heightScale() plutôt que de le remplacer : un lanceur
+     * peut accorder une hauteur de tuile bien plus généreuse qu'un autre, et
+     * aucun calcul automatique ne convient à tout le monde.
+     */
+    static final String KEY_FONT_SCALE = "font_scale";
+    /**
      * "aaaa-mm-jj:titre:couleurHexSansDièse;..." sur une fenêtre de plusieurs
      * mois à venir (voir WidgetSync.tsx) : dates absolues, pas juste un
      * numéro de jour, pour pouvoir couvrir plusieurs mois dans la même

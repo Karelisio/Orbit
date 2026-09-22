@@ -64,7 +64,7 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
 
         // minHeight de widget_combined_info.xml : la police grandit avec la
         // tuile si le lanceur en accorde plus que ce minimum.
-        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 40);
+        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 40) * theme.userFontScale();
         theme.scaleText(views, R.id.widget_combined_event, 12f, scale);
         theme.scaleText(views, R.id.widget_combined_tasks, 12f, scale);
         theme.scaleText(views, R.id.widget_combined_journal, 12f, scale);

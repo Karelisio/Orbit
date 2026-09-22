@@ -6,10 +6,23 @@ import { useTasks } from "../hooks/useTasks";
 import { useJournal } from "../hooks/useJournal";
 import { useCouple } from "../context/CoupleContext";
 import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
-import { usePreferences } from "../context/PreferencesContext";
+import { usePreferences, type WidgetFontScale } from "../context/PreferencesContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { syncWidgets } from "../lib/widgetSync";
 import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
+
+/**
+ * Facteur manuel (Réglages > Widgets), composé avec l'ajustement automatique
+ * à la hauteur réelle de la tuile (OrbitWidgetTheme.heightScale()) plutôt que
+ * de le remplacer : un lanceur peut accorder une hauteur bien plus généreuse
+ * qu'un autre pour "la même" tuile, et aucun calcul automatique ne convient
+ * à tout le monde.
+ */
+const WIDGET_FONT_SCALE_FACTORS: Record<WidgetFontScale, number> = {
+  petite: 0.75,
+  normale: 1,
+  grande: 1.25,
+};
 
 function eventTimeLabel(startsAt: string, allDay: boolean): string {
   const date = new Date(startsAt);
@@ -48,7 +61,7 @@ export default function WidgetSync() {
   const { tasks } = useTasks();
   const { entries: journalEntries } = useJournal();
   const { couple, partnerId } = useCouple();
-  const { showPeriodInWidget } = usePreferences();
+  const { showPeriodInWidget, widgetFontScale } = usePreferences();
   const { themeVersion, seedColor } = useThemeMode();
 
   // Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
@@ -138,8 +151,9 @@ export default function WidgetSync() {
       journalAuthorLabel,
       journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,
       seedColor,
+      fontScale: WIDGET_FONT_SCALE_FACTORS[widgetFontScale],
     });
-  }, [events, tasks, journalEntries, couple, partnerId, user, periodDates, themeVersion, seedColor]);
+  }, [events, tasks, journalEntries, couple, partnerId, user, periodDates, themeVersion, seedColor, widgetFontScale]);
 
   return null;
 }

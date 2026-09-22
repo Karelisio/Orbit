@@ -27,6 +27,7 @@ interface WidgetDataPlugin {
     darkOnSurfaceColor?: string;
     darkOnSurfaceVariantColor?: string;
     darkTertiaryColor?: string;
+    fontScale: number;
   }): Promise<void>;
 }
 
@@ -78,6 +79,8 @@ export async function syncWidgets(data: {
   journalTimeLabel: string | null;
   /** Couleur source du thème courant (voir ThemeModeContext.seedColor). */
   seedColor: string;
+  /** Facteur manuel de taille de police des widgets (Réglages > Widgets), composé avec l'ajustement automatique à la hauteur. */
+  fontScale: number;
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -93,6 +96,7 @@ export async function syncWidgets(data: {
       journalAuthorLabel: data.journalAuthorLabel ?? undefined,
       journalTimeLabel: data.journalTimeLabel ?? undefined,
       ...themeColorsForWidgets(data.seedColor),
+      fontScale: data.fontScale,
     });
   } catch {
     // plateforme sans widgets (ou plugin indisponible) : tant pis

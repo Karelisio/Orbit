@@ -160,6 +160,16 @@ réappliquer l'échelle en direct pendant un redimensionnement, pas
 seulement à la prochaine donnée poussée. Le widget Calendrier n'est pas
 concerné : sa grille a une structure différente (cases fixes).
 
+Cet ajustement automatique ne suffit pas toujours : deux lanceurs peuvent
+accorder des hauteurs très différentes pour "la même" tuile (ex. Smart
+Launcher, tuile jugée trop grande malgré `heightScale()`). Réglages >
+Widgets propose donc un facteur manuel (Petite/Normale/Grande, préférence
+par appareil dans `PreferencesContext.tsx`, clé `widgetFontScale`) qui
+**compose** avec `heightScale()` au lieu de le remplacer :
+`OrbitWidgetTheme.userFontScale()` lit `KEY_FONT_SCALE` (poussé par
+`WidgetSync.tsx` via `fontScale`), et chaque provider multiplie les deux
+facteurs avant `scaleText()`.
+
 Tap sur une case du widget calendrier → ouvre directement l'app sur ce jour
 via le schéma personnalisé `io.karelisio.orbit://calendar?date=...` (voir
 `deepLink.ts` + intent-filter dédié dans `AndroidManifest.xml`, même

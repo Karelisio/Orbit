@@ -161,6 +161,18 @@ final class OrbitWidgetTheme {
         views.setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, baseSp * scale);
     }
 
+    /**
+     * Facteur manuel choisi dans Réglages > Widgets (Petite/Normale/Grande),
+     * à composer avec `heightScale()` plutôt qu'à sa place : l'ajustement
+     * automatique corrige la hauteur réelle accordée par le lanceur, celui-ci
+     * laisse le dernier mot à l'utilisatrice quand un lanceur donné ne
+     * convient toujours pas (ex. Smart Launcher, tuile jugée trop grande
+     * malgré l'auto-ajustement). 1 par défaut si jamais poussé par l'app.
+     */
+    float userFontScale() {
+        return prefs.getFloat(OrbitWidgetPrefs.KEY_FONT_SCALE, 1f);
+    }
+
     /** Parse une couleur "#rrggbb", en retombant sur `fallbackHex` si elle est absente ou invalide. */
     static int parseColorOr(String hex, String fallbackHex) {
         try {

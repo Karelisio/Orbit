@@ -38,6 +38,9 @@ public class WidgetDataPlugin extends Plugin {
         String nextTaskTitle = call.getString("nextTaskTitle");
         editor.putString(OrbitWidgetPrefs.KEY_NEXT_TASK_TITLE, nextTaskTitle != null ? nextTaskTitle : "");
 
+        Float fontScale = call.getFloat("fontScale");
+        editor.putFloat(OrbitWidgetPrefs.KEY_FONT_SCALE, fontScale != null ? fontScale : 1f);
+
         String eventsCsv = call.getString("eventsCsv");
         editor.putString(OrbitWidgetPrefs.KEY_EVENTS_CSV, eventsCsv != null ? eventsCsv : "");
 

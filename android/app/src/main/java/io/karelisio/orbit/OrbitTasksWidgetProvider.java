@@ -47,7 +47,7 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
 
         // minHeight de widget_tasks_info.xml : la police grandit avec la
         // tuile si le lanceur en accorde plus que ce minimum.
-        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 60);
+        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 60) * theme.userFontScale();
         theme.scaleText(views, R.id.widget_tasks_count, 28f, scale);
         theme.scaleText(views, R.id.widget_tasks_label, 12f, scale);
         theme.scaleText(views, R.id.widget_tasks_next, 11f, scale);

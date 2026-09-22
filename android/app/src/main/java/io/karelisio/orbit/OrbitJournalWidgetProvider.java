@@ -53,7 +53,7 @@ public class OrbitJournalWidgetProvider extends AppWidgetProvider {
 
         // minHeight de widget_journal_info.xml : la police grandit avec la
         // tuile si le lanceur en accorde plus que ce minimum.
-        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 40);
+        float scale = OrbitWidgetTheme.heightScale(appWidgetManager, appWidgetId, 40) * theme.userFontScale();
         theme.scaleText(views, R.id.widget_journal_title, 11f, scale);
         theme.scaleText(views, R.id.widget_journal_content, 12f, scale);
         theme.scaleText(views, R.id.widget_journal_footer, 10f, scale);
