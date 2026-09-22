@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.35 — 2026-09-22
 - Nouveau réglage dans Réglages → Widgets : taille du texte des widgets Tâches, Fusion et Journal (Petite/Normale/Grande), pour corriger toi-même quand l'ajustement automatique ne convient pas à ton lanceur d'écran d'accueil (ex. Smart Launcher, où le widget Fusion redevenait trop grand).
 
 ## v1.0.34 — 2026-09-22
