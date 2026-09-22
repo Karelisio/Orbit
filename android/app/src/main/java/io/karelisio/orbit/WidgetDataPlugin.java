@@ -38,11 +38,14 @@ public class WidgetDataPlugin extends Plugin {
         String nextTaskTitle = call.getString("nextTaskTitle");
         editor.putString(OrbitWidgetPrefs.KEY_NEXT_TASK_TITLE, nextTaskTitle != null ? nextTaskTitle : "");
 
-        String eventsThisMonth = call.getString("eventsThisMonth");
-        editor.putString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, eventsThisMonth != null ? eventsThisMonth : "");
+        String eventsCsv = call.getString("eventsCsv");
+        editor.putString(OrbitWidgetPrefs.KEY_EVENTS_CSV, eventsCsv != null ? eventsCsv : "");
 
-        String periodDaysThisMonth = call.getString("periodDaysThisMonth");
-        editor.putString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_THIS_MONTH, periodDaysThisMonth != null ? periodDaysThisMonth : "");
+        String periodDaysCsv = call.getString("periodDaysCsv");
+        editor.putString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV, periodDaysCsv != null ? periodDaysCsv : "");
+
+        String taskDaysCsv = call.getString("taskDaysCsv");
+        editor.putString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, taskDaysCsv != null ? taskDaysCsv : "");
 
         String journalContent = call.getString("journalContent");
         if (journalContent != null) {

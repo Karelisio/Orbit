@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays, eachDayOfInterval, format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
@@ -51,10 +51,16 @@ export default function WidgetSync() {
   const { showPeriodInWidget } = usePreferences();
   const { themeVersion, seedColor } = useThemeMode();
 
+  // Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
+  // à venir, pour que la navigation ‹ › du widget affiche de vraies données
+  // au lieu de retomber sur une grille vide dès qu'on quitte le mois du jour
+  // (voir OrbitCalendarWidgetProvider.java, qui ne rend qu'un mois à la fois
+  // — seul le stockage couvre plusieurs mois, pas le rendu).
+  const WIDGET_MONTHS_AHEAD = 12;
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const periodDates = useCyclePeriodDays(monthStart, monthEnd, showPeriodInWidget);
+  const windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1 + WIDGET_MONTHS_AHEAD, 0);
+  const periodDates = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
 
   useEffect(() => {
     const now = new Date();
@@ -68,34 +74,46 @@ export default function WidgetSync() {
     // Événements du jour affichés en pastilles empilées sur le widget
     // calendrier, jusqu'à 2 par jour (au-delà, la case n'a plus la place :
     // silencieusement tronqué, comme le titre l'est déjà à 18 caractères).
-    // Le format CSV "jour:titre:couleur;..." supporte nativement plusieurs
-    // entrées pour un même jour, pas besoin d'un nouveau séparateur. Un
-    // événement récurrent chaque année compte pour n'importe quel jour du
-    // mois affiché qui correspond, quelle que soit l'année de sa création.
+    // Le format CSV "date:titre:couleur;..." (date absolue, pas juste un
+    // numéro de jour) supporte nativement plusieurs entrées pour un même
+    // jour ET plusieurs mois dans la même chaîne — OrbitCalendarWidgetProvider
+    // ne garde que les entrées du mois affiché au moment du rendu. Un
+    // événement récurrent chaque année compte pour n'importe quel jour qui
+    // correspond, quelle que soit l'année de sa création.
     const MAX_EVENTS_PER_DAY = 2;
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const windowDays = eachDayOfInterval({ start: windowStart, end: windowEnd });
     const entries: string[] = [];
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayDate = new Date(now.getFullYear(), now.getMonth(), day);
+    for (const dayDate of windowDays) {
       const matches = events
         .filter((e) => eventOccursOnDay(e, dayDate))
         .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())
         .slice(0, MAX_EVENTS_PER_DAY);
+      const dateStr = format(dayDate, "yyyy-MM-dd");
       for (const match of matches) {
-        const title = sanitizeForWidget(match.title);
+        const isBirthday = match.category === "Anniversaire";
+        const title = isBirthday ? `🎂 ${sanitizeForWidget(match.title, 16)}` : sanitizeForWidget(match.title);
         const color = eventDisplayColor(match, couple).replace("#", "");
-        entries.push(`${day}:${title}:${color}`);
+        entries.push(`${dateStr}:${title}:${color}`);
       }
     }
-    const eventsThisMonth = entries.join(";");
+    const eventsCsv = entries.join(";");
 
     // Jours de règles (déjà enregistrées ou prédites, voir useCyclePeriodDays)
-    // du mois affiché sur le widget, désactivable dans Réglages.
-    const periodDaysThisMonth: number[] = [];
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = format(new Date(now.getFullYear(), now.getMonth(), day), "yyyy-MM-dd");
-      if (periodDates.has(dateStr)) periodDaysThisMonth.push(day);
-    }
+    // sur la fenêtre poussée au widget, désactivable dans Réglages.
+    // useCyclePeriodDays filtre déjà sur [windowStart, windowEnd].
+    const periodDaysCsv = Array.from(periodDates).join(";");
+
+    // Jours ayant au moins une tâche en attente, sur la même fenêtre : pas
+    // besoin de boucler jour par jour, due_date est déjà une date absolue.
+    const windowStartStr = format(windowStart, "yyyy-MM-dd");
+    const windowEndStr = format(windowEnd, "yyyy-MM-dd");
+    const taskDaysCsv = Array.from(
+      new Set(
+        tasks
+          .filter((t) => !t.done && t.due_date && t.due_date >= windowStartStr && t.due_date <= windowEndStr)
+          .map((t) => t.due_date as string)
+      )
+    ).join(";");
 
     // Dernière entrée du journal (déjà triée la plus récente en premier par
     // useJournal), pour le widget dédié et la 3e ligne du widget Fusion.
@@ -113,8 +131,9 @@ export default function WidgetSync() {
       nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt.toISOString(), nextEvent.event.all_day) : null,
       pendingTasksCount: pendingTasks.length,
       nextTaskTitle: pendingTasks[0]?.title ?? null,
-      eventsThisMonth,
-      periodDaysThisMonth: periodDaysThisMonth.join(";"),
+      eventsCsv,
+      periodDaysCsv,
+      taskDaysCsv,
       journalContent: latestEntry ? sanitizeForWidget(latestEntry.content, 90) : null,
       journalAuthorLabel,
       journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,

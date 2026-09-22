@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Petit point signalant un jour avec au moins une tâche en attente,
+     teinté à la couleur primaire du thème (voir OrbitWidgetTheme.tintPrimary,
+     API 31+), sinon ce violet par défaut. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#6750A4" />
+</shape>

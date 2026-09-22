@@ -17,11 +17,12 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useEvents } from "../hooks/useEvents";
+import { useTasks } from "../hooks/useTasks";
 import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences } from "../context/PreferencesContext";
 import { useCouple } from "../context/CoupleContext";
 import EventSheet from "../components/EventSheet";
-import { eventDisplayColor, eventOccursOnDay, type OrbitEvent } from "../types";
+import { eventDisplayColor, eventOccursOnDay, type OrbitEvent, type OrbitTask } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => format(new Date(2000, i, 1), "MMM", { locale: fr }));
@@ -38,8 +39,13 @@ function eventsOnDay(events: OrbitEvent[], day: Date): OrbitEvent[] {
   return events.filter((e) => eventOccursOnDay(e, day));
 }
 
+function tasksOnDay(tasks: OrbitTask[], dateStr: string): OrbitTask[] {
+  return tasks.filter((t) => !t.done && t.due_date === dateStr);
+}
+
 export default function Calendar() {
   const { events, addEvent, updateEvent, deleteEvent } = useEvents();
+  const { tasks } = useTasks();
   const { showPeriodInCalendar } = usePreferences();
   const { couple } = useCouple();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -164,6 +170,7 @@ export default function Calendar() {
         {days.map((date) => {
           const dateStr = format(date, "yyyy-MM-dd");
           const dayEvents = eventsOnDay(events, date);
+          const dayTasks = tasksOnDay(tasks, dateStr);
           const isPeriodDay = showPeriodInCalendar && periodDates.has(dateStr);
           const classes = ["calendar-day"];
           if (!isSameMonth(date, month)) classes.push("outside");
@@ -171,13 +178,26 @@ export default function Calendar() {
           if (isSameDay(date, new Date(selectedDate))) classes.push("selected");
           return (
             <button key={dateStr} className={classes.join(" ")} onClick={() => setSelectedDate(dateStr)}>
+              {dayTasks.length > 0 && (
+                <span className="calendar-day-dots calendar-day-tasks">
+                  {dayTasks.slice(0, 3).map((t) => (
+                    <span key={t.id} className="dot dot-task" title={t.title} />
+                  ))}
+                </span>
+              )}
               <span className="calendar-day-number">{format(date, "d")}</span>
               {(dayEvents.length > 0 || isPeriodDay) && (
                 <span className="calendar-day-dots">
                   {isPeriodDay && <span className="dot" style={{ background: "#b3261e" }} title="Règles" />}
-                  {dayEvents.slice(0, isPeriodDay ? 2 : 3).map((e) => (
-                    <span key={e.id} className="dot" style={{ background: eventDisplayColor(e, couple) }} />
-                  ))}
+                  {dayEvents.slice(0, isPeriodDay ? 2 : 3).map((e) =>
+                    e.category === "Anniversaire" ? (
+                      <span key={e.id} className="event-cake" title={e.title}>
+                        🎂
+                      </span>
+                    ) : (
+                      <span key={e.id} className="dot" style={{ background: eventDisplayColor(e, couple) }} />
+                    )
+                  )}
                 </span>
               )}
             </button>

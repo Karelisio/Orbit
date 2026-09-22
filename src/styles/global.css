@@ -379,6 +379,15 @@ textarea.input {
   height: 5px;
 }
 
+.dot-task {
+  background: var(--md-sys-color-primary);
+}
+
+.event-cake {
+  font-size: 8px;
+  line-height: 1;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;

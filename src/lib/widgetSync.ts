@@ -7,8 +7,9 @@ interface WidgetDataPlugin {
     nextEventTimeLabel?: string;
     pendingTasksCount: number;
     nextTaskTitle?: string;
-    eventsThisMonth: string;
-    periodDaysThisMonth: string;
+    eventsCsv: string;
+    periodDaysCsv: string;
+    taskDaysCsv: string;
     journalContent?: string;
     journalAuthorLabel?: string;
     journalTimeLabel?: string;
@@ -65,10 +66,12 @@ export async function syncWidgets(data: {
   nextEventTimeLabel: string | null;
   pendingTasksCount: number;
   nextTaskTitle: string | null;
-  /** "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." pour le mois en cours. */
-  eventsThisMonth: string;
-  /** "jour;jour;..." des jours de règles (déjà enregistrées ou prédites) du mois en cours. */
-  periodDaysThisMonth: string;
+  /** "aaaa-mm-jj:titre:couleurHexSansDièse;..." sur une fenêtre de plusieurs mois à venir (voir WidgetSync.tsx). */
+  eventsCsv: string;
+  /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours de règles (déjà enregistrées ou prédites) sur la même fenêtre. */
+  periodDaysCsv: string;
+  /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours ayant au moins une tâche en attente, sur la même fenêtre. */
+  taskDaysCsv: string;
   /** Dernière entrée du journal, ou null s'il n'y en a aucune. */
   journalContent: string | null;
   journalAuthorLabel: string | null;
@@ -83,8 +86,9 @@ export async function syncWidgets(data: {
       nextEventTimeLabel: data.nextEventTimeLabel ?? undefined,
       pendingTasksCount: data.pendingTasksCount,
       nextTaskTitle: data.nextTaskTitle ?? undefined,
-      eventsThisMonth: data.eventsThisMonth,
-      periodDaysThisMonth: data.periodDaysThisMonth,
+      eventsCsv: data.eventsCsv,
+      periodDaysCsv: data.periodDaysCsv,
+      taskDaysCsv: data.taskDaysCsv,
       journalContent: data.journalContent ?? undefined,
       journalAuthorLabel: data.journalAuthorLabel ?? undefined,
       journalTimeLabel: data.journalTimeLabel ?? undefined,

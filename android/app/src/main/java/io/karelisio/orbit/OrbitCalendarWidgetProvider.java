@@ -36,9 +36,13 @@ import java.util.Set;
  * la tuile restait vide et non cliquable. Les vues natives restent aussi
  * nettes à n'importe quelle taille, avec un texte de taille constante.
  *
- * Les événements ne sont disponibles que pour le mois réel en cours (calculé
- * côté app) : en naviguant vers un autre mois, la grille reste exacte mais
- * sans pastilles.
+ * Événements, jours de règles et jours de tâches sont calculés côté app
+ * (WidgetSync.tsx) sur une fenêtre de plusieurs mois à venir, encodés avec
+ * une date absolue (aaaa-mm-jj) plutôt qu'un simple numéro de jour — ce qui
+ * permet de naviguer vers les mois suivants avec de vraies données. Seules
+ * les entrées du mois affiché sont conservées au rendu (voir parseEvents/
+ * parseDayList). Un mois passé (avant le mois réel courant) reste vide :
+ * la fenêtre poussée ne couvre que le présent et l'avenir.
  */
 public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
@@ -120,8 +124,9 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
 
     private static RemoteViews buildViews(Context context, int appWidgetId) {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
-        String eventsCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENTS_THIS_MONTH, "");
-        String periodDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_THIS_MONTH, "");
+        String eventsCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENTS_CSV, "");
+        String periodDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV, "");
+        String taskDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
         OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
@@ -161,10 +166,12 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             views.addView(R.id.widget_cal_weekdays, label);
         }
 
-        // Les événements et les jours de règles ne sont calculés côté app que
-        // pour le mois réel en cours.
-        Map<Integer, List<DayEvent>> events = offset == 0 ? parseEvents(eventsCsv) : new HashMap<>();
-        Set<Integer> periodDays = offset == 0 ? parseDayList(periodDaysCsv) : new HashSet<>();
+        // Les CSV couvrent plusieurs mois (dates absolues) ; on ne garde ici
+        // que les entrées du mois affiché.
+        String monthKey = new SimpleDateFormat("yyyy-MM", Locale.FRENCH).format(shownMonth.getTime());
+        Map<Integer, List<DayEvent>> events = parseEvents(eventsCsv, monthKey);
+        Set<Integer> periodDays = parseDayList(periodDaysCsv, monthKey);
+        Set<Integer> taskDays = parseDayList(taskDaysCsv, monthKey);
 
         Calendar today = Calendar.getInstance();
         boolean isCurrentMonth = offset == 0;
@@ -207,6 +214,8 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                 }
 
                 cell.setViewVisibility(R.id.widget_cell_period_dot, periodDays.contains(day) ? View.VISIBLE : View.GONE);
+                cell.setViewVisibility(R.id.widget_cell_task_dot, taskDays.contains(day) ? View.VISIBLE : View.GONE);
+                theme.tintPrimary(cell, R.id.widget_cell_task_dot);
 
                 cell.removeAllViews(R.id.widget_cell_events);
                 List<DayEvent> dayEvents = events.get(day);
@@ -239,19 +248,23 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
     }
 
     /**
-     * Format : "jour:titre:couleurHexSansDièse;jour:titre:couleur;..." (voir
-     * WidgetSync.tsx). Plusieurs entrées peuvent partager le même jour
-     * (jusqu'à 2, plafonnées côté JS) : chacune devient une pastille
-     * empilée dans la case.
+     * Format : "aaaa-mm-jj:titre:couleurHexSansDièse;..." (voir
+     * WidgetSync.tsx), sur plusieurs mois. Plusieurs entrées peuvent
+     * partager le même jour (jusqu'à 2, plafonnées côté JS) : chacune
+     * devient une pastille empilée dans la case. Seules les entrées dont la
+     * date commence par `monthKey` ("aaaa-mm" du mois affiché) sont
+     * conservées, ré-indexées par numéro de jour pour le reste du rendu.
      */
-    private static Map<Integer, List<DayEvent>> parseEvents(String csv) {
+    private static Map<Integer, List<DayEvent>> parseEvents(String csv, String monthKey) {
         Map<Integer, List<DayEvent>> map = new HashMap<>();
         if (TextUtils.isEmpty(csv)) return map;
         for (String entry : csv.split(";")) {
             String[] fields = entry.split(":", 3);
             if (fields.length < 3) continue;
+            String date = fields[0].trim();
+            if (date.length() < 10 || !date.startsWith(monthKey)) continue;
             try {
-                int day = Integer.parseInt(fields[0].trim());
+                int day = Integer.parseInt(date.substring(8, 10));
                 int color = OrbitWidgetTheme.parseColorOr("#" + fields[2].trim(), "#7D5260");
                 map.computeIfAbsent(day, k -> new ArrayList<>()).add(new DayEvent(fields[1], color));
             } catch (NumberFormatException ignored) {
@@ -261,13 +274,18 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         return map;
     }
 
-    /** Format : "jour;jour;..." (voir WidgetSync.tsx). */
-    private static Set<Integer> parseDayList(String csv) {
+    /**
+     * Format : "aaaa-mm-jj;aaaa-mm-jj;..." (voir WidgetSync.tsx), sur
+     * plusieurs mois. Même filtrage par `monthKey` que parseEvents().
+     */
+    private static Set<Integer> parseDayList(String csv, String monthKey) {
         Set<Integer> days = new HashSet<>();
         if (TextUtils.isEmpty(csv)) return days;
         for (String entry : csv.split(";")) {
+            String date = entry.trim();
+            if (date.length() < 10 || !date.startsWith(monthKey)) continue;
             try {
-                days.add(Integer.parseInt(entry.trim()));
+                days.add(Integer.parseInt(date.substring(8, 10)));
             } catch (NumberFormatException ignored) {
                 // entrée invalide : on l'ignore simplement
             }

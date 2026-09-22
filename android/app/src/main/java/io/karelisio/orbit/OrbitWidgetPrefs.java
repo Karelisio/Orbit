@@ -8,10 +8,18 @@ final class OrbitWidgetPrefs {
     static final String KEY_EVENT_TIME_LABEL = "event_time_label";
     static final String KEY_PENDING_TASKS_COUNT = "pending_tasks_count";
     static final String KEY_NEXT_TASK_TITLE = "next_task_title";
-    /** "jour:titre:couleurHexSansDièse;..." pour le mois en cours (un seul événement par jour). */
-    static final String KEY_EVENTS_THIS_MONTH = "events_this_month";
-    /** "jour;jour;..." des jours de règles (Wenn) du mois en cours, désactivable dans Réglages. */
-    static final String KEY_PERIOD_DAYS_THIS_MONTH = "period_days_this_month";
+    /**
+     * "aaaa-mm-jj:titre:couleurHexSansDièse;..." sur une fenêtre de plusieurs
+     * mois à venir (voir WidgetSync.tsx) : dates absolues, pas juste un
+     * numéro de jour, pour pouvoir couvrir plusieurs mois dans la même
+     * chaîne. Le rendu (OrbitCalendarWidgetProvider) ne garde que les
+     * entrées du mois affiché.
+     */
+    static final String KEY_EVENTS_CSV = "events_csv";
+    /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours de règles (Wenn), même fenêtre, désactivable dans Réglages. */
+    static final String KEY_PERIOD_DAYS_CSV = "period_days_csv";
+    /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours ayant au moins une tâche en attente, même fenêtre. */
+    static final String KEY_TASK_DAYS_CSV = "task_days_csv";
 
     static final String KEY_HAS_JOURNAL = "has_journal";
     static final String KEY_JOURNAL_CONTENT = "journal_content";

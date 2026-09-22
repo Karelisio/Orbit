@@ -174,6 +174,24 @@ ne pas régresser :
   `window.dispatchEvent(new PopStateEvent("popstate"))` manuel, sinon le
   routeur ignore le changement quand l'app tourne déjà.
 
+**Grille du widget Calendrier sur plusieurs mois** : `WidgetSync.tsx` pousse
+`eventsCsv`/`periodDaysCsv`/`taskDaysCsv` (clés `OrbitWidgetPrefs.KEY_*_CSV`)
+avec des **dates absolues** (`aaaa-mm-jj`, pas un simple numéro de jour), sur
+une fenêtre glissante (mois courant + `WIDGET_MONTHS_AHEAD` mois à venir,
+12 par défaut) — jamais les mois passés, hors périmètre. Un point "tâche"
+(couleur primaire de l'app, `widget_task_dot.xml`) s'ajoute désormais à côté
+du point "règles" dans une rangée sous le numéro du jour, pour les jours
+ayant au moins une tâche en attente. `OrbitCalendarWidgetProvider` ne
+construit toujours les `RemoteViews` que pour **un seul mois à la fois**
+(celui affiché, via `offset`) : `parseEvents`/`parseDayList` filtrent les
+CSV par préfixe `aaaa-mm` avant de les ré-indexer par numéro de jour — seul
+le stockage couvre plusieurs mois, jamais le rendu. Une catégorie
+"Anniversaire" est aussi préfixée `🎂 ` dans le titre de son événement
+(même logique côté in-app, `Calendar.tsx`, où elle remplace carrément le
+point coloré par un 🎂 — l'ancien "point rouge" pour les anniversaires
+n'était qu'une coïncidence : `#b3261e`, la couleur par défaut de la
+catégorie, est la même que celle du point "règles").
+
 ## Notifications (rappels d'événements)
 
 `lib/notifications.ts` utilise `@capacitor/local-notifications` (natif,
