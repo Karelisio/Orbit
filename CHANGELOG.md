@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.33 — 2026-09-22
 - Un 🎂 remplace le point coloré d'un anniversaire dans le calendrier (app et widget) — ce point pouvait être rouge par coïncidence (même couleur par défaut que le point "règles"), d'où la confusion.
 - Le calendrier affiche maintenant un point pour les tâches en attente, au-dessus du numéro du jour (dans l'app et dans le widget Calendrier).
 - Le widget Calendrier affiche enfin les rendez-vous, tâches et jours de règles en naviguant sur les mois à venir (jusqu'à 12 mois), au lieu de rester vide dès qu'on quittait le mois en cours.
