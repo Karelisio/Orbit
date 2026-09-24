@@ -8,6 +8,7 @@ la vide.
 
 ## Non publié
 - Les widgets suivent maintenant un changement de fond d'écran instantanément, même app fermée (avant : jusqu'à 30 min) — l'app et les widgets utilisent directement les couleurs du système Android plutôt qu'un calcul, donc ne peuvent plus jamais afficher des teintes différentes entre eux.
+- Voile des widgets adouci : le blanc (ou noir en sombre) qui se posait par-dessus la couleur dynamique était trop marqué, il est maintenant deux fois plus léger.
 
 ## v1.0.36 — 2026-09-24
 - Les widgets suivent enfin un changement de fond d'écran sans avoir à ouvrir Orbit : ils recalculent eux-mêmes les couleurs, au plus tard dans la demi-heure (tout de suite si tu ouvres l'app ou déplaces le widget). Si tu as choisi une image de thème dans l'app, elle reste prioritaire, comme avant.
