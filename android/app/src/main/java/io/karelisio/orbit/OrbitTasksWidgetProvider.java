@@ -39,7 +39,7 @@ public class OrbitTasksWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_tasks_label, count <= 1 ? "tâche à faire" : "tâches à faire");
         views.setTextViewText(R.id.widget_tasks_next, count == 0 ? "Tout est fait ✨" : nextTaskTitle);
 
-        OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
         theme.applyTileBackground(views, R.id.widget_bg);
         theme.textOnPrimaryContainer(views, R.id.widget_tasks_count);
         theme.textOnPrimaryContainer(views, R.id.widget_tasks_label);

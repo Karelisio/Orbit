@@ -45,7 +45,7 @@ public class OrbitJournalWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_journal_footer, author.isEmpty() ? time : author + " · " + time);
         }
 
-        OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
         theme.applyTileBackground(views, R.id.widget_bg);
         theme.textOnPrimaryContainer(views, R.id.widget_journal_title);
         theme.textOnPrimaryContainer(views, R.id.widget_journal_content);

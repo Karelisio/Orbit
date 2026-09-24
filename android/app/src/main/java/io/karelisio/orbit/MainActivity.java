@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
         CrashLogPlugin.install(getApplicationContext());
         registerPlugin(CrashLogPlugin.class);
         registerPlugin(WallpaperColorPlugin.class);
+        registerPlugin(DynamicColorPlugin.class);
         registerPlugin(ApkInstallerPlugin.class);
         registerPlugin(WidgetDataPlugin.class);
         super.onCreate(savedInstanceState);

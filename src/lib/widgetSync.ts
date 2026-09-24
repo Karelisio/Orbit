@@ -28,7 +28,6 @@ interface WidgetDataPlugin {
     darkOnSurfaceVariantColor?: string;
     darkTertiaryColor?: string;
     fontScale: number;
-    seedColor: string;
     seedFollowsWallpaper: boolean;
   }): Promise<void>;
 }
@@ -79,9 +78,14 @@ export async function syncWidgets(data: {
   journalContent: string | null;
   journalAuthorLabel: string | null;
   journalTimeLabel: string | null;
-  /** Couleur source du thème courant (voir ThemeModeContext.seedColor). */
+  /**
+   * Couleur source du thème courant (voir ThemeModeContext.seedColor) : sert
+   * uniquement à dériver la palette de repli ci-dessous (image de thème
+   * choisie, ou Android < 12 sans couleur système dynamique) — jamais
+   * transmise telle quelle au natif.
+   */
   seedColor: string;
-  /** Vrai si cette couleur source vient du fond d'écran : les widgets peuvent alors recalculer la palette seuls quand il change. */
+  /** Vrai sauf si une image de thème est choisie : les widgets suivent alors les couleurs système dynamiques de leur XML plutôt que la palette ci-dessous. */
   seedFollowsWallpaper: boolean;
   /** Facteur manuel de taille de police des widgets (Réglages > Widgets), composé avec l'ajustement automatique à la hauteur. */
   fontScale: number;
@@ -101,7 +105,6 @@ export async function syncWidgets(data: {
       journalTimeLabel: data.journalTimeLabel ?? undefined,
       ...themeColorsForWidgets(data.seedColor),
       fontScale: data.fontScale,
-      seedColor: data.seedColor,
       seedFollowsWallpaper: data.seedFollowsWallpaper,
     });
   } catch {

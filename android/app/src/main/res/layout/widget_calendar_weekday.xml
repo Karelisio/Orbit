@@ -6,5 +6,6 @@
     android:layout_height="wrap_content"
     android:layout_weight="1"
     android:gravity="center"
+    android:textColor="@color/widget_dyn_on_surface_variant"
     android:textSize="10sp"
     android:textStyle="bold" />

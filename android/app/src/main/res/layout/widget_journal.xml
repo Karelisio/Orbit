@@ -15,6 +15,8 @@
         android:id="@+id/widget_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/widget_background_solid"
+        android:backgroundTint="@color/widget_dyn_primary_container"
         android:clickable="false"
         android:focusable="false"
         android:importantForAccessibility="no"
@@ -34,6 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="📝 Journal"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="11sp"
             android:textStyle="bold" />
 
@@ -43,6 +46,7 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:layout_marginTop="3dp"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="12sp"
             android:maxLines="4"
             android:ellipsize="end" />
@@ -52,6 +56,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
+            android:textColor="@color/widget_dyn_on_surface_variant"
             android:textSize="10sp"
             android:maxLines="1"
             android:ellipsize="end" />

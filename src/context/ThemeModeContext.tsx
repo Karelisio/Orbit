@@ -2,8 +2,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../lib/supabase";
-import { applyThemeFromImageUrl, applyThemeFromSeedColor, DEFAULT_SEED_COLOR, watchSystemThemeChanges } from "../lib/materialYou";
+import { applyDynamicPalette, applyThemeFromImageUrl, applyThemeFromSeedColor, DEFAULT_SEED_COLOR, watchSystemThemeChanges } from "../lib/materialYou";
 import { getWallpaperSeedColor } from "../lib/wallpaperColor";
+import { getSystemDynamicColors } from "../lib/dynamicColor";
 
 type ThemeMode = "system" | "light" | "dark";
 
@@ -26,10 +27,10 @@ interface ThemeModeContextValue {
    */
   seedColor: string;
   /**
-   * Vrai quand cette couleur source vient du fond d'écran Android (et non
-   * d'une image de thème choisie dans l'app). Les widgets s'en servent pour
-   * savoir s'ils peuvent recalculer la palette eux-mêmes au changement de
-   * fond d'écran, app fermée (voir OrbitWidgetPalette.java).
+   * Vrai sauf quand une image de thème est choisie dans l'app. Les widgets
+   * s'en servent pour savoir s'ils doivent laisser leur défaut XML (couleurs
+   * système dynamiques, voir CLAUDE.md) tel quel, ou appliquer la palette
+   * poussée ci-dessous par-dessus.
    */
   seedFollowsWallpaper: boolean;
 }
@@ -66,6 +67,20 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
         }
       }
       if (Capacitor.getPlatform() === "android") {
+        // Couleurs système dynamiques (Android 12+) en priorité : les mêmes
+        // valeurs que celles que les widgets lisent en XML, donc jamais de
+        // divergence possible, et un changement de fond d'écran s'applique
+        // sans le moindre calcul JS (voir dynamicColor.ts).
+        const dynamicColors = await getSystemDynamicColors();
+        if (dynamicColors) {
+          const isDark = dark ?? window.matchMedia("(prefers-color-scheme: dark)").matches;
+          applyDynamicPalette(isDark ? dynamicColors.dark : dynamicColors.light, isDark);
+          setSeedColor(DEFAULT_SEED_COLOR);
+          setSeedFollowsWallpaper(true);
+          return;
+        }
+        // En dessous d'Android 12, la couleur dynamique n'existe pas : repli
+        // sur le calcul JS depuis la couleur dominante du fond d'écran.
         const wallpaperColor = await getWallpaperSeedColor();
         if (wallpaperColor) {
           applyThemeFromSeedColor(wallpaperColor, dark);

@@ -60,13 +60,10 @@ public class WidgetDataPlugin extends Plugin {
             editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, false);
         }
 
-        // Couleur source + provenance : de quoi laisser les widgets
-        // recalculer la palette eux-mêmes si le fond d'écran change pendant
-        // que l'app est fermée (voir OrbitWidgetPalette).
-        String seedColor = call.getString("seedColor");
-        if (seedColor != null) {
-            editor.putString(OrbitWidgetPrefs.KEY_SEED_COLOR, seedColor);
-        }
+        // Provenance de la teinte courante : quand elle suit le fond d'écran
+        // (cas normal), OrbitWidgetTheme laisse les couleurs système
+        // dynamiques déclarées dans les layouts XML des widgets faire le
+        // travail — jamais quand une image de thème est choisie.
         editor.putBoolean(
             OrbitWidgetPrefs.KEY_SEED_FOLLOWS_WALLPAPER,
             Boolean.TRUE.equals(call.getBoolean("seedFollowsWallpaper", false))

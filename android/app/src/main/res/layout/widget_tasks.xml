@@ -8,6 +8,8 @@
         android:id="@+id/widget_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/widget_background_solid"
+        android:backgroundTint="@color/widget_dyn_primary_container"
         android:clickable="false"
         android:focusable="false"
         android:importantForAccessibility="no"
@@ -25,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="—"
-            android:textColor="#21005D"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -34,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="tâches à faire"
-            android:textColor="#4F378A"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="12sp"
             android:gravity="center" />
 
@@ -44,7 +46,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text=""
-            android:textColor="#4F378A"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="11sp"
             android:maxLines="1"
             android:ellipsize="end" />

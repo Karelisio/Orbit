@@ -50,14 +50,14 @@ final class OrbitWidgetPrefs {
     static final String KEY_COLOR_TERTIARY = "color_tertiary";
 
     /**
-     * Couleur source ("#rrggbb") dont la palette ci-dessus a été dérivée, et
-     * si elle vient bien du fond d'écran. Les deux permettent aux widgets de
-     * recalculer la palette eux-mêmes quand le fond d'écran change, sans
-     * attendre un lancement de l'app (voir OrbitWidgetPalette) — mais jamais
-     * quand la copine a choisi une image de thème dans l'app, auquel cas la
-     * palette poussée doit rester telle quelle.
+     * Vrai sauf quand la copine a choisi une image de thème dans l'app. Dans
+     * ce cas seulement, OrbitWidgetTheme applique la palette ci-dessus
+     * (poussée par l'app) par-dessus les couleurs système dynamiques
+     * déclarées par défaut dans les layouts XML des widgets (voir
+     * CLAUDE.md — "Couleurs système dynamiques"). Sinon les couleurs
+     * système suivent le fond d'écran d'elles-mêmes, sans le moindre code :
+     * c'est Android/le lanceur qui repeint, pas Orbit.
      */
-    static final String KEY_SEED_COLOR = "seed_color";
     static final String KEY_SEED_FOLLOWS_WALLPAPER = "seed_follows_wallpaper";
 
     /** Préfixe de clé pour le décalage de mois affiché par widget (navigation ‹ ›), par appWidgetId. */

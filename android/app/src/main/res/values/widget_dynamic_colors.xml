@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Couleurs de rôle des widgets, déclarées en dur ici (repli statique, en
+  dessous d'Android 12) et redéfinies dans values-v31/ et values-night-v31/
+  pour pointer sur les couleurs système dynamiques (voir CLAUDE.md —
+  "Couleurs système dynamiques"). Les valeurs ci-dessous sont le violet
+  Material You par défaut de l'app, mêmes tons que les replis en dur
+  d'OrbitWidgetTheme.java.
+-->
+<resources>
+    <color name="widget_dyn_primary">#6750A4</color>
+    <color name="widget_dyn_on_primary">#FFFFFF</color>
+    <color name="widget_dyn_primary_container">#EADDFF</color>
+    <color name="widget_dyn_on_primary_container">#21005D</color>
+    <color name="widget_dyn_on_surface">#1C1B1F</color>
+    <color name="widget_dyn_on_surface_variant">#79747E</color>
+</resources>

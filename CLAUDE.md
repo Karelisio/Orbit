@@ -98,50 +98,68 @@ complément, `CrashLogPlugin` capture toute fermeture brutale malgré tout
 plugins) et l'affiche dans Réglages au redémarrage — c'est le seul moyen de
 diagnostiquer un crash sans accès à l'appareil.
 
-Le fond en dégradé des widgets est monté en **deux couches** par
-`OrbitWidgetTheme.applyTileBackground()`, sur une `ImageView` dédiée
-(`widget_bg`) : une base unie (`widget_background_solid`) teintée avec le
-`primary-container` poussé par l'app, plus un voile en dégradé translucide
-(`widget_sheen`, variante `drawable-night/`) posé dessus en image. Deux
-couches parce qu'un `GradientDrawable` multi-stops ne peut pas être teint (le
-tint l'aplatit en une couleur unie) — et **ne jamais revenir à
-`@android:color/system_accent1_*`** : cette palette suit le thème du
-constructeur (HyperOS…) et divergeait visiblement de celle que l'app tire du
-fond d'écran (widget marron, app violette).
+## Couleurs système dynamiques (branche d'expérimentation)
+
+**Cette branche remplace le calcul JS (`material-color-utilities`) par les
+couleurs système dynamiques d'Android (`@android:color/system_accent1_*`
+etc.) comme source normale des couleurs, app ET widgets — l'inverse de ce
+que `main` faisait jusqu'ici.** Contexte : les widgets recalculaient déjà
+la palette (JS au lancement de l'app, puis un port Java natif ajouté
+ensuite pour suivre un changement de fond d'écran app fermée), mais avec un
+délai (poll `updatePeriodMillis`). Une autre app du même auteur (Mago)
+suit le fond d'écran **instantanément, sans le moindre code de
+synchronisation**, en utilisant directement les ressources système
+dynamiques dans le XML des widgets plutôt qu'en les recalculant. Cette
+branche teste la même approche sur Orbit — à confirmer sur appareil réel
+avant fusion dans `main` ; si le rendu système diverge trop de la teinte de
+marque sur certains lanceurs (c'était la raison du calcul JS à l'origine),
+revenir à la version précédente (calcul natif + poll 30 min).
+
+**Widgets** : chaque layout XML déclare `android:textColor`/
+`android:backgroundTint` par défaut vers `@color/widget_dyn_*`
+(`res/values/widget_dynamic_colors.xml` en repli statique < API 31,
+`res/values-v31/` en clair, `res/values-night-v31/` en sombre — qualificatif
+combiné nécessaire, `night` seul étant plus spécifique que `v31` seul et
+gagnant sinon toujours, même en Android 12+). Ces couleurs sont résolues et
+repeintes par le LANCEUR lui-même à chaque changement de thème système,
+y compris quand Orbit ne tourne pas — `OrbitWidgetTheme` (dans
+`textOnPrimaryContainer()`, `tintPrimary()`, `applyTileBackground()` etc.)
+**ne fait alors rien** (`usingDynamicColor()` renvoie vrai). La seule
+exception : une image de thème choisie dans l'app
+(`KEY_SEED_FOLLOWS_WALLPAPER` faux) — dans ce cas seulement,
+`OrbitWidgetTheme` applique par-dessus la palette poussée par
+`WidgetSync.tsx` (deux variantes claire/sombre, `RemoteViews.setColorInt`/
+`setColorStateList`, comme avant). `setBackgroundResource()` reste toujours
+appelé (même en mode dynamique) : `View` réapplique automatiquement le
+`backgroundTint` déjà posé à la nouvelle image du drawable, donc ça
+n'annule rien du défaut système. Cas particulier : la case "aujourd'hui" du
+widget Calendrier (fond + texte changent par jour, pas par thème) est
+gérée par **deux vues superposées** (`widget_cell_day`/
+`widget_cell_day_today` dans `widget_calendar_cell.xml`), chacune avec son
+propre défaut XML correct, plutôt qu'une couleur conditionnelle à calculer.
+
+**App (WebView)** : `DynamicColorPlugin.java` lit les mêmes ressources
+système et les expose à `ThemeModeContext.applyTheme()` via
+`dynamicColor.ts`/`materialYou.applyDynamicPalette()`, en priorité sur
+l'ancien calcul JS (`getWallpaperSeedColor()` + `themeFromSourceColor()`,
+gardé en repli pour Android < 12). Mêmes tons choisis des deux côtés
+(commentaires "mêmes tons que ..." croisés entre les deux fichiers) : app
+et widgets ne peuvent donc jamais diverger, contrairement à l'ancien risque
+"widget marron, app violette" (qui venait d'une **asymétrie** — app sur
+palette JS, widget sur palette système — pas de `system_accent1` en
+lui-même).
+
+Plus de dépendance `com.google.android.material` (aucune classe
+`color.utilities` n'est plus utilisée nulle part) : ni calcul natif ni
+polling de rattrapage plus nécessaires pour la couleur, tout est
+résolu par des références de ressource statiques.
 
 **Clair/sombre d'un widget = mode nuit du lanceur, pas le thème choisi dans
-Orbit.** L'app pousse la palette dans ses DEUX variantes (`WidgetSync.tsx` →
-`widgetPalettesFromSeed()`, clés suffixées `_dark`), et chaque couleur est
-posée avec les deux valeurs à la fois : `RemoteViews.setColorInt(vue,
-méthode, clair, sombre)` et `setColorStateList(vue, méthode, clair, sombre)`
-(API 31+), plus les qualificatifs `drawable-night/` pour le voile. Android
-choisit alors lui-même **et refait ce choix au basculement**, sans que l'app
-tourne — sinon un widget reste figé sur le mode actif au dernier lancement
-de l'app. Fond, texte et pastilles viennent donc tous de la même décision :
-jamais de widget mi-clair mi-sombre (le bug d'illisibilité d'origine venait
-précisément de deux sources différentes).
-
-**Changement de fond d'écran, app fermée** : `OrbitWidgetPalette` recalcule
-la palette côté natif, avant chaque rendu (appelé depuis
-`OrbitWidgetTheme.from(context, prefs)`, seul point de passage commun aux
-quatre providers). Il lit la couleur source exactement comme
-`WallpaperColorPlugin` le fait pour l'app
-(`WallpaperManager#getWallpaperColors`, sans permission) et la compare à
-`KEY_SEED_COLOR` : identique — le cas normal — il ressort sans rien
-calculer. Sinon il régénère les 14 couleurs avec
-`com.google.android.material.color.utilities.Scheme` (dépendance MDC
-ajoutée **uniquement** pour ces classes de calcul : c'est le jumeau Java de
-l'API `Scheme.light/dark` utilisée en JS, donc mêmes couleurs que l'app —
-ne pas la remplacer par une approximation maison, ce serait rouvrir le bug
-"widget marron"). Deux garde-fous : le drapeau `KEY_SEED_FOLLOWS_WALLPAPER`
-poussé par l'app (faux quand la copine a choisi une image de thème, auquel
-cas le widget ne doit surtout pas repartir du fond d'écran), et un
-`try/catch (Throwable)` global puisque ce code tourne dans le rendu d'un
-widget. C'est le tic `updatePeriodMillis` (30 min, le plancher Android) qui
-déclenche le rattrapage sans l'app : il n'existe aucune notification
-système exploitable app fermée (`ACTION_WALLPAPER_CHANGED` est déprécié et
-n'est plus délivré aux receivers du manifeste,
-`addOnColorsChangedListener()` exige un processus vivant).
+Orbit** (inchangé) : les qualificatifs `values-v31`/`values-night-v31`
+suivent nativement le mode nuit du lanceur, jamais le thème choisi dans
+Orbit (Réglages > Thème) — cohérent avec ce que le mécanisme dual
+`setColorInt`/`setColorStateList` visait déjà à garantir pour le cas
+"image de thème".
 
 Les éléments à couleur unie (pastille du jour, pastille d'événement,
 quadrillage) sont teintés via les helpers de rôle de `OrbitWidgetTheme`

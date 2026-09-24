@@ -23,6 +23,8 @@
         android:id="@+id/widget_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/widget_background_solid"
+        android:backgroundTint="@color/widget_dyn_primary_container"
         android:clickable="false"
         android:focusable="false"
         android:importantForAccessibility="no"
@@ -46,6 +48,7 @@
             android:layout_height="30dp"
             android:gravity="center"
             android:text="‹"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -57,6 +60,7 @@
             android:gravity="center"
             android:maxLines="1"
             android:ellipsize="end"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="13sp"
             android:textStyle="bold" />
 
@@ -66,6 +70,7 @@
             android:layout_height="30dp"
             android:gravity="center"
             android:text="›"
+            android:textColor="@color/widget_dyn_on_primary_container"
             android:textSize="17sp"
             android:textStyle="bold" />
     </LinearLayout>
@@ -80,6 +85,7 @@
         android:gravity="center"
         android:maxLines="1"
         android:ellipsize="end"
+        android:textColor="@color/widget_dyn_on_surface_variant"
         android:textSize="10sp" />
 
     <LinearLayout

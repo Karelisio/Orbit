@@ -5,25 +5,55 @@
      widget_calendar_event_chip.xml et WidgetSync.tsx — ajoutées
      dynamiquement dans widget_cell_events, vide/absent s'il n'y en a pas).
      Le fond en quadrillage discret marque la limite de la case ; le clic
-     ouvre l'app sur ce jour précis. -->
+     ouvre l'app sur ce jour précis.
+
+     widget_cell_root et le voile widget_dyn_on_surface_variant du
+     quadrillage suivent la couleur système dynamique par défaut (voir
+     CLAUDE.md) via android:backgroundTint, réappliqué automatiquement à
+     chaque changement de drawable de fond (comportement standard de View) —
+     OrbitWidgetTheme ne l'écrase que si une image de thème est choisie. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_cell_root"
     android:layout_width="0dp"
     android:layout_height="match_parent"
     android:layout_weight="1"
     android:layout_margin="0.5dp"
+    android:backgroundTint="@color/widget_dyn_on_surface_variant"
     android:orientation="vertical"
     android:gravity="top|center_horizontal"
     android:paddingLeft="1dp"
     android:paddingRight="1dp">
 
-    <TextView
-        android:id="@+id/widget_cell_day"
+    <!-- Numéro du jour, en deux vues superposées plutôt qu'une seule aux
+         couleurs changeantes : "aujourd'hui" a son propre fond (cercle
+         primaire) et son propre texte (onPrimary), un jour normal les siens
+         (transparent, onSurface) — chacun avec son défaut XML correct, pas
+         de couleur conditionnelle à appliquer en Java pour le cas courant. -->
+    <FrameLayout
         android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:gravity="center"
-        android:maxLines="1"
-        android:textSize="12sp" />
+        android:layout_height="22dp">
+
+        <TextView
+            android:id="@+id/widget_cell_day"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textSize="12sp"
+            android:textColor="@color/widget_dyn_on_surface" />
+
+        <TextView
+            android:id="@+id/widget_cell_day_today"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textSize="12sp"
+            android:background="@drawable/widget_today_circle"
+            android:backgroundTint="@color/widget_dyn_primary"
+            android:textColor="@color/widget_dyn_on_primary"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/widget_cell_dots_row"
@@ -46,6 +76,7 @@
             android:layout_height="5dp"
             android:layout_marginStart="2dp"
             android:background="@drawable/widget_task_dot"
+            android:backgroundTint="@color/widget_dyn_primary"
             android:visibility="gone" />
     </LinearLayout>
 

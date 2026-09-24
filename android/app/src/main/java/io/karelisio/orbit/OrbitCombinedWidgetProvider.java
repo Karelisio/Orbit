@@ -56,7 +56,7 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_combined_journal, "📝 " + journalContent);
         }
 
-        OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
         theme.applyTileBackground(views, R.id.widget_bg);
         theme.textOnPrimaryContainer(views, R.id.widget_combined_event);
         theme.textOnPrimaryContainer(views, R.id.widget_combined_tasks);

@@ -109,7 +109,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             // que la tuile normale évite cette carte "trouée".
             try {
                 SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
-                OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
+                OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
                 RemoteViews fallback = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
                 theme.applyTileBackground(fallback, R.id.widget_bg);
                 fallback.setTextViewText(R.id.widget_cal_month, "Orbit");
@@ -129,7 +129,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         String taskDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
-        OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
 
         Calendar shownMonth = Calendar.getInstance();
         shownMonth.add(Calendar.MONTH, offset);
@@ -204,12 +204,22 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                 theme.tintOnSurfaceVariant(cell, R.id.widget_cell_root);
                 cell.setOnClickPendingIntent(R.id.widget_cell_root, dayIntent(context, appWidgetId, shownMonth, day));
 
-                cell.setTextViewText(R.id.widget_cell_day, String.valueOf(day));
+                // Deux vues superposées plutôt qu'une seule à colorer au cas
+                // par cas (voir widget_calendar_cell.xml) : chacune porte déjà
+                // son propre défaut correct (couleur système dynamique), les
+                // appels ci-dessous ne servent plus qu'à appliquer une image
+                // de thème choisie dans l'app (sinon no-op, voir
+                // OrbitWidgetTheme.usingDynamicColor()).
                 if (isCurrentMonth && day == todayDay) {
-                    cell.setInt(R.id.widget_cell_day, "setBackgroundResource", R.drawable.widget_today_circle);
-                    theme.tintPrimary(cell, R.id.widget_cell_day);
-                    theme.textOnPrimary(cell, R.id.widget_cell_day);
+                    cell.setViewVisibility(R.id.widget_cell_day, View.GONE);
+                    cell.setViewVisibility(R.id.widget_cell_day_today, View.VISIBLE);
+                    cell.setTextViewText(R.id.widget_cell_day_today, String.valueOf(day));
+                    theme.tintPrimary(cell, R.id.widget_cell_day_today);
+                    theme.textOnPrimary(cell, R.id.widget_cell_day_today);
                 } else {
+                    cell.setViewVisibility(R.id.widget_cell_day, View.VISIBLE);
+                    cell.setViewVisibility(R.id.widget_cell_day_today, View.GONE);
+                    cell.setTextViewText(R.id.widget_cell_day, String.valueOf(day));
                     theme.textOnSurface(cell, R.id.widget_cell_day);
                 }
 

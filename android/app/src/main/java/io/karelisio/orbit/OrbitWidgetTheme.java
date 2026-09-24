@@ -1,7 +1,6 @@
 package io.karelisio.orbit;
 
 import android.appwidget.AppWidgetManager;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -11,28 +10,26 @@ import android.util.TypedValue;
 import android.widget.RemoteViews;
 
 /**
- * Couleurs Material You des widgets, poussées par l'app (voir WidgetSync.tsx).
+ * Couleurs des widgets.
  *
- * L'app pousse la palette en DEUX variantes, claire et sombre (voir
- * OrbitWidgetPrefs.DARK_SUFFIX), et chaque couleur est posée ici avec les deux
- * valeurs à la fois : à partir d'Android 12, RemoteViews sait choisir selon le
- * mode nuit du lanceur, et refait ce choix tout seul quand le téléphone
- * bascule. Un widget suit donc le passage clair/sombre sans que l'app ait
- * besoin de tourner — avant, il restait figé sur le mode actif au dernier
- * lancement de l'app, parfois pendant des heures.
+ * Cas normal (la teinte suit le fond d'écran, `KEY_SEED_FOLLOWS_WALLPAPER`) :
+ * cette classe **ne fait rien** — chaque layout XML de widget déclare déjà
+ * `android:textColor`/`android:backgroundTint` par défaut vers
+ * `@color/widget_dyn_*`, qui pointent sur les couleurs système dynamiques
+ * (`@android:color/system_accent1_*` etc., Android 12+, variantes
+ * `values-v31`/`values-night-v31`, voir CLAUDE.md). C'est Android/le lanceur
+ * qui résout et repeint ces couleurs, y compris sans qu'Orbit tourne — la
+ * limite d'avant (recalcul possible seulement au lancement de l'app, ou par
+ * un recalcul natif coûteux à chaque rendu) n'existe plus, plus aucun code
+ * n'est nécessaire.
  *
- * C'est donc le mode nuit du LANCEUR qui tranche, et non le thème choisi dans
- * Orbit (Réglages > Thème) : fond, texte et pastilles viennent tous de cette
- * même décision, donc restent toujours cohérents entre eux — c'est ce qui
- * compte, un widget mi-clair mi-sombre étant illisible. En dessous
- * d'Android 12, rien de tout cela n'existe : on garde les couleurs statiques
- * d'origine, assorties au fond clair statique.
- *
- * La teinte (couleur source) vient toujours de l'app, elle : la palette
- * système d'Android (@android:color/system_accent1_*) suit le thème du
- * constructeur et pouvait diverger visiblement de celle qu'Orbit tire du fond
- * d'écran. Changer de fond d'écran reste le seul cas qui demande d'ouvrir
- * l'app une fois, le temps qu'elle recalcule la palette.
+ * Seul cas où cette classe agit : une image de thème choisie dans l'app
+ * (`KEY_SEED_FOLLOWS_WALLPAPER` faux). La palette alors poussée par
+ * WidgetSync.tsx (deux variantes claire/sombre, `OrbitWidgetPrefs.DARK_SUFFIX`)
+ * est appliquée par-dessus le défaut XML via `RemoteViews.setColorInt`/
+ * `setColorStateList` (Android 12+ ; en dessous, la teinte système
+ * n'existant pas non plus, ce sont de toute façon les couleurs statiques de
+ * repli qui s'appliquent).
  */
 final class OrbitWidgetTheme {
 
@@ -44,12 +41,16 @@ final class OrbitWidgetTheme {
         this.dynamic = dynamic;
     }
 
-    static OrbitWidgetTheme from(Context context, SharedPreferences prefs) {
-        // Rattrape un changement de fond d'écran survenu pendant que l'app
-        // était fermée : sans ça, la palette ne serait recalculée qu'au
-        // prochain lancement d'Orbit (voir OrbitWidgetPalette).
-        OrbitWidgetPalette.refreshFromWallpaperIfNeeded(context, prefs);
+    static OrbitWidgetTheme from(SharedPreferences prefs) {
         return new OrbitWidgetTheme(prefs, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S);
+    }
+
+    /**
+     * Vrai quand le défaut XML (couleurs système dynamiques) doit rester tel
+     * quel, sans qu'aucune couleur ne soit appliquée par-dessus depuis ici.
+     */
+    private boolean usingDynamicColor() {
+        return dynamic && prefs.getBoolean(OrbitWidgetPrefs.KEY_SEED_FOLLOWS_WALLPAPER, true);
     }
 
     /** Variante claire d'une couleur de la palette (ou la couleur statique d'origine). */
@@ -91,8 +92,13 @@ final class OrbitWidgetTheme {
         tintFromPalette(views, viewId, OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT, "#79747E", "#CAC4D0");
     }
 
-    /** Couleur de texte, dans ses deux variantes : Android choisit selon le mode nuit. */
+    /**
+     * Couleur de texte, dans ses deux variantes : Android choisit selon le
+     * mode nuit. Ne fait rien si la teinte suit le fond d'écran : le défaut
+     * XML (couleur système dynamique) est déjà correct et se réajuste seul.
+     */
     private void setTextColor(RemoteViews views, int viewId, String prefKey, String lightFallback, String darkFallback) {
+        if (usingDynamicColor()) return;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             views.setColorInt(viewId, "setTextColor", color(prefKey, lightFallback), darkColor(prefKey, darkFallback));
         } else {
@@ -100,8 +106,16 @@ final class OrbitWidgetTheme {
         }
     }
 
-    /** Teinte le fond d'une vue avec une couleur de la palette, dans ses deux variantes. */
+    /**
+     * Teinte le fond d'une vue avec une couleur de la palette, dans ses deux
+     * variantes. Même repli que `setTextColor()` quand la teinte suit le
+     * fond d'écran : le `android:backgroundTint` XML par défaut de la vue
+     * (couleur système dynamique) reste actif, `setBackgroundResource()`
+     * (appelé séparément, ex. `applyTileBackground()`) le réapplique
+     * automatiquement à la nouvelle image du drawable.
+     */
     private void tintFromPalette(RemoteViews views, int viewId, String prefKey, String lightFallback, String darkFallback) {
+        if (usingDynamicColor()) return;
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
         views.setColorStateList(
             viewId,
@@ -124,11 +138,17 @@ final class OrbitWidgetTheme {
 
     /**
      * Pose le fond de la tuile sur une ImageView dédiée, en deux couches : une
-     * base unie teintée au primary-container de l'app, et un voile en dégradé
-     * posé dessus en image pour retrouver le dégradé du fond de l'app. Deux
-     * couches parce qu'un dégradé ne peut pas être teinté — le tint
-     * l'aplatirait en une couleur unie — alors que la couleur, elle, doit
-     * venir de l'app.
+     * base unie (couleur système dynamique par défaut, voir XML du widget —
+     * ou teinte au primary-container de l'app si une image de thème est
+     * choisie), et un voile en dégradé posé dessus en image pour retrouver le
+     * dégradé du fond de l'app. Deux couches parce qu'un dégradé ne peut pas
+     * être teinté — le tint l'aplatirait en une couleur unie.
+     *
+     * `setBackgroundResource()` est toujours appelé, même quand la teinte
+     * suit le fond d'écran : il réapplique automatiquement le
+     * `android:backgroundTint` XML déjà posé sur la vue à la nouvelle
+     * instance du drawable (comportement standard de `View`), donc n'annule
+     * rien du défaut système dynamique.
      *
      * Le voile vient de @drawable/widget_sheen, qui a une variante
      * drawable-night/ : Android la re-résout tout seul au basculement du mode
