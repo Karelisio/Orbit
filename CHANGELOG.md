@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.36 — 2026-09-24
 - Les widgets suivent enfin un changement de fond d'écran sans avoir à ouvrir Orbit : ils recalculent eux-mêmes les couleurs, au plus tard dans la demi-heure (tout de suite si tu ouvres l'app ou déplaces le widget). Si tu as choisi une image de thème dans l'app, elle reste prioritaire, comme avant.
 
 ## v1.0.35 — 2026-09-22
