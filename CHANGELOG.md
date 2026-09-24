@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Les widgets suivent enfin un changement de fond d'écran sans avoir à ouvrir Orbit : ils recalculent eux-mêmes les couleurs, au plus tard dans la demi-heure (tout de suite si tu ouvres l'app ou déplaces le widget). Si tu as choisi une image de thème dans l'app, elle reste prioritaire, comme avant.
 
 ## v1.0.35 — 2026-09-22
 - Nouveau réglage dans Réglages → Widgets : taille du texte des widgets Tâches, Fusion et Journal (Petite/Normale/Grande), pour corriger toi-même quand l'ajustement automatique ne convient pas à ton lanceur d'écran d'accueil (ex. Smart Launcher, où le widget Fusion redevenait trop grand).

@@ -60,6 +60,18 @@ public class WidgetDataPlugin extends Plugin {
             editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, false);
         }
 
+        // Couleur source + provenance : de quoi laisser les widgets
+        // recalculer la palette eux-mêmes si le fond d'écran change pendant
+        // que l'app est fermée (voir OrbitWidgetPalette).
+        String seedColor = call.getString("seedColor");
+        if (seedColor != null) {
+            editor.putString(OrbitWidgetPrefs.KEY_SEED_COLOR, seedColor);
+        }
+        editor.putBoolean(
+            OrbitWidgetPrefs.KEY_SEED_FOLLOWS_WALLPAPER,
+            Boolean.TRUE.equals(call.getBoolean("seedFollowsWallpaper", false))
+        );
+
         putColorIfPresent(call, editor, "primaryColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY);
         putColorIfPresent(call, editor, "onPrimaryColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY);
         putColorIfPresent(call, editor, "primaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_PRIMARY_CONTAINER);

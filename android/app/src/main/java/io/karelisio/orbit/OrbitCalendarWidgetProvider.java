@@ -109,7 +109,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
             // que la tuile normale évite cette carte "trouée".
             try {
                 SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
-                OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
+                OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
                 RemoteViews fallback = new RemoteViews(context.getPackageName(), R.layout.widget_calendar);
                 theme.applyTileBackground(fallback, R.id.widget_bg);
                 fallback.setTextViewText(R.id.widget_cal_month, "Orbit");
@@ -129,7 +129,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         String taskDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
-        OrbitWidgetTheme theme = OrbitWidgetTheme.from(prefs);
+        OrbitWidgetTheme theme = OrbitWidgetTheme.from(context, prefs);
 
         Calendar shownMonth = Calendar.getInstance();
         shownMonth.add(Calendar.MONTH, offset);

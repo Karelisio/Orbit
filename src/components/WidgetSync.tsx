@@ -62,7 +62,7 @@ export default function WidgetSync() {
   const { entries: journalEntries } = useJournal();
   const { couple, partnerId } = useCouple();
   const { showPeriodInWidget, widgetFontScale } = usePreferences();
-  const { themeVersion, seedColor } = useThemeMode();
+  const { themeVersion, seedColor, seedFollowsWallpaper } = useThemeMode();
 
   // Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
   // à venir, pour que la navigation ‹ › du widget affiche de vraies données
@@ -151,9 +151,22 @@ export default function WidgetSync() {
       journalAuthorLabel,
       journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,
       seedColor,
+      seedFollowsWallpaper,
       fontScale: WIDGET_FONT_SCALE_FACTORS[widgetFontScale],
     });
-  }, [events, tasks, journalEntries, couple, partnerId, user, periodDates, themeVersion, seedColor, widgetFontScale]);
+  }, [
+    events,
+    tasks,
+    journalEntries,
+    couple,
+    partnerId,
+    user,
+    periodDates,
+    themeVersion,
+    seedColor,
+    seedFollowsWallpaper,
+    widgetFontScale,
+  ]);
 
   return null;
 }

@@ -1,6 +1,7 @@
 package io.karelisio.orbit;
 
 import android.appwidget.AppWidgetManager;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -43,7 +44,11 @@ final class OrbitWidgetTheme {
         this.dynamic = dynamic;
     }
 
-    static OrbitWidgetTheme from(SharedPreferences prefs) {
+    static OrbitWidgetTheme from(Context context, SharedPreferences prefs) {
+        // Rattrape un changement de fond d'écran survenu pendant que l'app
+        // était fermée : sans ça, la palette ne serait recalculée qu'au
+        // prochain lancement d'Orbit (voir OrbitWidgetPalette).
+        OrbitWidgetPalette.refreshFromWallpaperIfNeeded(context, prefs);
         return new OrbitWidgetTheme(prefs, Build.VERSION.SDK_INT >= Build.VERSION_CODES.S);
     }
 

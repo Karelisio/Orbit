@@ -28,6 +28,8 @@ interface WidgetDataPlugin {
     darkOnSurfaceVariantColor?: string;
     darkTertiaryColor?: string;
     fontScale: number;
+    seedColor: string;
+    seedFollowsWallpaper: boolean;
   }): Promise<void>;
 }
 
@@ -79,6 +81,8 @@ export async function syncWidgets(data: {
   journalTimeLabel: string | null;
   /** Couleur source du thème courant (voir ThemeModeContext.seedColor). */
   seedColor: string;
+  /** Vrai si cette couleur source vient du fond d'écran : les widgets peuvent alors recalculer la palette seuls quand il change. */
+  seedFollowsWallpaper: boolean;
   /** Facteur manuel de taille de police des widgets (Réglages > Widgets), composé avec l'ajustement automatique à la hauteur. */
   fontScale: number;
 }): Promise<void> {
@@ -97,6 +101,8 @@ export async function syncWidgets(data: {
       journalTimeLabel: data.journalTimeLabel ?? undefined,
       ...themeColorsForWidgets(data.seedColor),
       fontScale: data.fontScale,
+      seedColor: data.seedColor,
+      seedFollowsWallpaper: data.seedFollowsWallpaper,
     });
   } catch {
     // plateforme sans widgets (ou plugin indisponible) : tant pis

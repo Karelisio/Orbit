@@ -119,10 +119,29 @@ choisit alors lui-même **et refait ce choix au basculement**, sans que l'app
 tourne — sinon un widget reste figé sur le mode actif au dernier lancement
 de l'app. Fond, texte et pastilles viennent donc tous de la même décision :
 jamais de widget mi-clair mi-sombre (le bug d'illisibilité d'origine venait
-précisément de deux sources différentes). Un changement de **fond d'écran**
-reste le seul cas qui demande d'ouvrir l'app une fois : la palette est
-calculée en JS par `material-color-utilities`, impossible à refaire côté
-natif sans réimplémenter tout l'algorithme M3.
+précisément de deux sources différentes).
+
+**Changement de fond d'écran, app fermée** : `OrbitWidgetPalette` recalcule
+la palette côté natif, avant chaque rendu (appelé depuis
+`OrbitWidgetTheme.from(context, prefs)`, seul point de passage commun aux
+quatre providers). Il lit la couleur source exactement comme
+`WallpaperColorPlugin` le fait pour l'app
+(`WallpaperManager#getWallpaperColors`, sans permission) et la compare à
+`KEY_SEED_COLOR` : identique — le cas normal — il ressort sans rien
+calculer. Sinon il régénère les 14 couleurs avec
+`com.google.android.material.color.utilities.Scheme` (dépendance MDC
+ajoutée **uniquement** pour ces classes de calcul : c'est le jumeau Java de
+l'API `Scheme.light/dark` utilisée en JS, donc mêmes couleurs que l'app —
+ne pas la remplacer par une approximation maison, ce serait rouvrir le bug
+"widget marron"). Deux garde-fous : le drapeau `KEY_SEED_FOLLOWS_WALLPAPER`
+poussé par l'app (faux quand la copine a choisi une image de thème, auquel
+cas le widget ne doit surtout pas repartir du fond d'écran), et un
+`try/catch (Throwable)` global puisque ce code tourne dans le rendu d'un
+widget. C'est le tic `updatePeriodMillis` (30 min, le plancher Android) qui
+déclenche le rattrapage sans l'app : il n'existe aucune notification
+système exploitable app fermée (`ACTION_WALLPAPER_CHANGED` est déprécié et
+n'est plus délivré aux receivers du manifeste,
+`addOnColorsChangedListener()` exige un processus vivant).
 
 Les éléments à couleur unie (pastille du jour, pastille d'événement,
 quadrillage) sont teintés via les helpers de rôle de `OrbitWidgetTheme`

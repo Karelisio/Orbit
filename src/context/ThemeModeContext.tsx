@@ -25,6 +25,13 @@ interface ThemeModeContextValue {
    * contiennent que le mode actuellement affiché.
    */
   seedColor: string;
+  /**
+   * Vrai quand cette couleur source vient du fond d'écran Android (et non
+   * d'une image de thème choisie dans l'app). Les widgets s'en servent pour
+   * savoir s'ils peuvent recalculer la palette eux-mêmes au changement de
+   * fond d'écran, app fermée (voir OrbitWidgetPalette.java).
+   */
+  seedFollowsWallpaper: boolean;
 }
 
 const ThemeModeContext = createContext<ThemeModeContextValue | undefined>(undefined);
@@ -39,6 +46,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => (localStorage.getItem("orbit-theme-mode") as ThemeMode) || "system");
   const [themeVersion, setThemeVersion] = useState(0);
   const [seedColor, setSeedColor] = useState(DEFAULT_SEED_COLOR);
+  const [seedFollowsWallpaper, setSeedFollowsWallpaper] = useState(false);
 
   function setMode(next: ThemeMode) {
     setModeState(next);
@@ -51,6 +59,7 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
       if (profile?.theme_image_url) {
         try {
           setSeedColor(await applyThemeFromImageUrl(profile.theme_image_url, dark));
+          setSeedFollowsWallpaper(false);
           return;
         } catch {
           // image invalide/inaccessible : on retombe sur la couleur de secours ci-dessous
@@ -61,12 +70,14 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
         if (wallpaperColor) {
           applyThemeFromSeedColor(wallpaperColor, dark);
           setSeedColor(wallpaperColor);
+          setSeedFollowsWallpaper(true);
           return;
         }
       }
       const fallbackSeed = profile?.theme_seed_color ?? DEFAULT_SEED_COLOR;
       applyThemeFromSeedColor(fallbackSeed, dark);
       setSeedColor(fallbackSeed);
+      setSeedFollowsWallpaper(false);
     } finally {
       // Les variables CSS ne sont posées qu'ici (fin réelle de l'application,
       // pas au déclenchement) : c'est le seul moment sûr pour dire à
@@ -96,7 +107,11 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
     await refreshProfile();
   }
 
-  return <ThemeModeContext.Provider value={{ mode, setMode, setThemeImageUrl, themeVersion, seedColor }}>{children}</ThemeModeContext.Provider>;
+  return (
+    <ThemeModeContext.Provider value={{ mode, setMode, setThemeImageUrl, themeVersion, seedColor, seedFollowsWallpaper }}>
+      {children}
+    </ThemeModeContext.Provider>
+  );
 }
 
 export function useThemeMode() {
