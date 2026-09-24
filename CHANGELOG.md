@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.38 — 2026-09-24
 - Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.
 
 ## v1.0.37 — 2026-09-24
