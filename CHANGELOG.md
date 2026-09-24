@@ -7,6 +7,8 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+
+## v1.0.37 — 2026-09-24
 - Les widgets suivent maintenant un changement de fond d'écran instantanément, même app fermée (avant : jusqu'à 30 min) — l'app et les widgets utilisent directement les couleurs du système Android plutôt qu'un calcul, donc ne peuvent plus jamais afficher des teintes différentes entre eux.
 - Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.
 
