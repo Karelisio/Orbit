@@ -7,10 +7,10 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.
 
 ## v1.0.37 — 2026-09-24
 - Les widgets suivent maintenant un changement de fond d'écran instantanément, même app fermée (avant : jusqu'à 30 min) — l'app et les widgets utilisent directement les couleurs du système Android plutôt qu'un calcul, donc ne peuvent plus jamais afficher des teintes différentes entre eux.
-- Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.
 
 ## v1.0.36 — 2026-09-24
 - Les widgets suivent enfin un changement de fond d'écran sans avoir à ouvrir Orbit : ils recalculent eux-mêmes les couleurs, au plus tard dans la demi-heure (tout de suite si tu ouvres l'app ou déplaces le widget). Si tu as choisi une image de thème dans l'app, elle reste prioritaire, comme avant.
