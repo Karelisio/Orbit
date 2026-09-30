@@ -15,6 +15,7 @@ import { supabase } from "../lib/supabase";
 import { isExactAlarmGranted, openExactAlarmSettings, requestNotificationPermission } from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
 import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
+import { showToast } from "../lib/toast";
 
 const HOME_SECTION_LABELS: Record<keyof HomeSectionsVisibility, string> = {
   together: "Compteur jours ensemble",
@@ -188,9 +189,15 @@ function CrashCard() {
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="btn btn-secondary"
-          onClick={() => {
-            navigator.clipboard?.writeText(crash.trace);
-            setCopied(true);
+          onClick={async () => {
+            // Presse-papiers indisponible ou refusé par la WebView : dire
+            // quoi faire plutôt qu'afficher « Copié » à tort.
+            try {
+              await navigator.clipboard.writeText(crash.trace);
+              setCopied(true);
+            } catch {
+              showToast("Copie impossible : fais plutôt une capture d'écran du rapport.");
+            }
           }}
         >
           {copied ? "Copié ✅" : "Copier"}
@@ -272,9 +279,15 @@ export default function Settings() {
 
   async function copyInviteCode() {
     if (!couple) return;
-    await navigator.clipboard.writeText(couple.invite_code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    // Sans ce catch, un presse-papiers indisponible ou refusé laissait une
+    // promesse rejetée sans le moindre retour à l'écran.
+    try {
+      await navigator.clipboard.writeText(couple.invite_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      showToast("Copie impossible : recopie le code à la main.");
+    }
   }
 
   async function handleEnableNotifications() {
