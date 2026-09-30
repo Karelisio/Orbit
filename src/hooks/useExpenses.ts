@@ -13,7 +13,7 @@ function sortExpenses(a: OrbitExpense, b: OrbitExpense): number {
 export function useExpenses() {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const { rows, loading, setRows } = useRealtimeCollection<OrbitExpense>("orbit_expenses", couple?.id ?? null, sortExpenses);
+  const { rows, loading, setRows, mutate } = useRealtimeCollection<OrbitExpense>("orbit_expenses", couple?.id ?? null, sortExpenses);
 
   // Ajout optimiste : sans ça, l'app n'affichait la nouvelle dépense qu'au
   // retour de l'écho temps réel Supabase, avec un délai réseau perceptible.
@@ -30,10 +30,13 @@ export function useExpenses() {
     return { error: null };
   }
 
-  async function deleteExpense(id: string) {
-    setRows((prev) => prev.filter((e) => e.id !== id));
-    const { error } = await supabase.from("orbit_expenses").delete().eq("id", id);
-    return { error: error?.message ?? null };
+  // Suppression optimiste, annulée avec un message si elle échoue (voir mutate).
+  function deleteExpense(id: string) {
+    return mutate(
+      (prev) => prev.filter((e) => e.id !== id),
+      () => supabase.from("orbit_expenses").delete().eq("id", id),
+      "Dépense non supprimée : vérifie ta connexion."
+    );
   }
 
   return { expenses: rows, loading, addExpense, deleteExpense };

@@ -276,6 +276,23 @@ textarea.input {
   margin: 8px auto 16px;
 }
 
+/* Message court (lib/toast.ts) : au-dessus de la barre de navigation et
+   des feuilles de saisie, couleurs inversées comme un snackbar Material. */
+.toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: 60;
+  padding: 12px 16px;
+  border-radius: var(--radius-s);
+  background: var(--md-sys-color-on-surface);
+  color: var(--md-sys-color-surface);
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  animation: slide-up 0.2s ease;
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }

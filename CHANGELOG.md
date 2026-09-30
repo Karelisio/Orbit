@@ -18,6 +18,7 @@ la vide.
 - Un lien du widget calendrier avec une date invalide ouvre simplement le calendrier (au lieu de l'écran d'erreur).
 - En voyage à l'ouest de la France (Amériques…), les dates choisies (échéances, sélecteur de date, dépenses, jour sélectionné dans le calendrier) ne s'affichent plus avec un jour de décalage.
 - Connexion plus sûre : le lien reçu par e-mail ne fonctionne plus que sur le téléphone qui l'a demandé (l'ouvrir depuis l'appli mail de ce téléphone), et un message clair s'affiche s'il a expiré ou s'il est ouvert ailleurs. Rien ne change si tu es déjà connecté·e.
+- Sans connexion, une tâche cochée ou une dépense, une note, une tâche ou un événement supprimé revient tout de suite à sa place, avec un petit message « … vérifie ta connexion » (avant : ça disparaissait, puis revenait plus tard sans explication).
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.

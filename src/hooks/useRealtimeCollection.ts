@@ -3,6 +3,8 @@ import { App } from "@capacitor/app";
 import type { PluginListenerHandle } from "@capacitor/core";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { fetchAllRows, supabase } from "../lib/supabase";
+import { revertOptimistic } from "../lib/optimistic";
+import { showToast } from "../lib/toast";
 
 interface WithId {
   id: string;
@@ -116,6 +118,12 @@ function load(store: CollectionStore): void {
       if (isLive(store)) publish(store, { ...store.snapshot, loading: false });
     }
   );
+}
+
+/** Annule une écriture optimiste qui a échoué (voir revertOptimistic), cache local compris. */
+function revert(store: CollectionStore, before: WithId[], after: WithId[]): void {
+  const rows = revertOptimistic(store.snapshot.rows, before, after);
+  if (rows) publishRows(store, rows.slice().sort(store.sortBy));
 }
 
 /** Retire une ligne supprimée (écho temps réel) si elle est chez nous, cache local compris. */
@@ -238,7 +246,8 @@ export interface CollectionOptions {
  * Les données sont mises en cache dans localStorage et réaffichées avant même
  * la réponse réseau (lancement hors ligne). Écrire hors ligne reste impossible
  * et remonte l'erreur : pas de file d'attente à resynchroniser, pour éviter
- * les doublons/conflits sur des données partagées en temps réel.
+ * les doublons/conflits sur des données partagées en temps réel. Une écriture
+ * optimiste qui échoue est annulée à l'écran avec un message (voir mutate).
  */
 export function useRealtimeCollection<T extends WithId>(
   table: string,
@@ -280,5 +289,39 @@ export function useRealtimeCollection<T extends WithId>(
     [table, coupleId]
   );
 
-  return { rows: snapshot.rows as T[], loading: snapshot.loading, setRows };
+  /**
+   * Écriture optimiste avec retour en arrière : `optimistic` s'affiche tout
+   * de suite (page + widget), puis `request` part au serveur. Si elle échoue
+   * (hors ligne, refus...), les lignes touchées reprennent leur état d'avant
+   * et un message court le dit. Avant, une tâche cochée ou une dépense
+   * supprimée hors ligne disparaissait, puis revenait sans explication au
+   * rechargement suivant — les appelants ignoraient le résultat.
+   */
+  const mutate = useCallback(
+    async (
+      optimistic: (prev: T[]) => T[],
+      request: () => PromiseLike<{ error: { message: string } | null }>,
+      failureMessage: string
+    ): Promise<{ error: string | null }> => {
+      const store = coupleId ? stores.get(storeKey(table, coupleId)) : undefined;
+      const before = store?.snapshot.rows ?? null;
+      const after = store && before ? (optimistic(before as T[]) as WithId[]) : null;
+      if (store && after) publishRows(store, after);
+
+      let error: string | null = null;
+      try {
+        error = (await request()).error?.message ?? null;
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      if (error) {
+        if (store && before && after && isLive(store)) revert(store, before, after);
+        showToast(failureMessage);
+      }
+      return { error };
+    },
+    [table, coupleId]
+  );
+
+  return { rows: snapshot.rows as T[], loading: snapshot.loading, setRows, mutate };
 }

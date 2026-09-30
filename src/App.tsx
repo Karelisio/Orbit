@@ -12,6 +12,7 @@ import Journal from "./pages/Journal";
 import Settings from "./pages/Settings";
 import BottomNav from "./components/BottomNav";
 import WidgetSync from "./components/WidgetSync";
+import Toast from "./components/Toast";
 
 function AppShell() {
   return (
@@ -27,6 +28,7 @@ function AppShell() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <BottomNav />
+      <Toast />
     </div>
   );
 }

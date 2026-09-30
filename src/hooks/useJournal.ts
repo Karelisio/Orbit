@@ -11,7 +11,11 @@ function sortEntries(a: OrbitJournalEntry, b: OrbitJournalEntry): number {
 export function useJournal() {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const { rows, loading, setRows } = useRealtimeCollection<OrbitJournalEntry>("orbit_journal_entries", couple?.id ?? null, sortEntries);
+  const { rows, loading, setRows, mutate } = useRealtimeCollection<OrbitJournalEntry>(
+    "orbit_journal_entries",
+    couple?.id ?? null,
+    sortEntries
+  );
 
   // Ajout optimiste : sans ça, l'app n'affichait la nouvelle note qu'au
   // retour de l'écho temps réel Supabase, avec un délai réseau perceptible.
@@ -30,10 +34,13 @@ export function useJournal() {
     return { error: null };
   }
 
-  async function deleteEntry(id: string) {
-    setRows((prev) => prev.filter((e) => e.id !== id));
-    const { error } = await supabase.from("orbit_journal_entries").delete().eq("id", id);
-    return { error: error?.message ?? null };
+  // Suppression optimiste, annulée avec un message si elle échoue (voir mutate).
+  function deleteEntry(id: string) {
+    return mutate(
+      (prev) => prev.filter((e) => e.id !== id),
+      () => supabase.from("orbit_journal_entries").delete().eq("id", id),
+      "Note non supprimée : vérifie ta connexion."
+    );
   }
 
   return { entries: rows, loading, addEntry, deleteEntry };

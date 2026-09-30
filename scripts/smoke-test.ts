@@ -3,6 +3,7 @@ import { addDays, addMonths, addYears, format } from "date-fns";
 import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { parseDateParam } from "../src/lib/localDate.ts";
+import { revertOptimistic } from "../src/lib/optimistic.ts";
 import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
 import { eventTimeLabel, journalTimeLabel } from "../src/lib/widgetLabels.ts";
@@ -344,6 +345,38 @@ await checkAsync("une erreur réseau en cours de route est remontée telle quell
   const { data, error } = await fetchAllRows(t.build);
   assert.equal(data, null);
   assert.deepEqual(error, { message: "Failed to fetch" });
+});
+
+console.log("\nécriture optimiste annulée en cas d'échec");
+check("suppression qui échoue : la ligne revient", () => {
+  const a = { id: "a", v: 1 }, b = { id: "b", v: 1 };
+  const before = [a, b];
+  const after = before.filter((r) => r.id !== "a");
+  assert.deepEqual(revertOptimistic(after, before, after)?.map((r) => r.id).sort(), ["a", "b"]);
+});
+check("tâche cochée qui échoue : l'ancienne version revient", () => {
+  const t = { id: "t", done: false };
+  const before = [t];
+  const after = [{ ...t, done: true }];
+  assert.deepEqual(revertOptimistic(after, before, after), [t]);
+});
+check("un écho plus récent entre-temps n'est pas écrasé, les autres lignes non plus", () => {
+  const t = { id: "t", done: false }, u = { id: "u", done: false };
+  const before = [t, u];
+  const after = [{ ...t, done: true }, u];
+  const newer = { id: "t", done: true, title: "renommée par l'autre" };
+  const fresh = { id: "v", done: false };
+  const current = [newer, u, fresh];
+  assert.equal(revertOptimistic(current, before, after), null);
+});
+check("ligne supprimée puis déjà revenue par un rechargement : pas de doublon", () => {
+  const a = { id: "a" };
+  const reloaded = { id: "a" };
+  assert.equal(revertOptimistic([reloaded], [a], []), null);
+});
+check("ajout optimiste qui échoue : retiré", () => {
+  const a = { id: "a" }, tmp = { id: "tmp" };
+  assert.deepEqual(revertOptimistic([a, tmp], [a], [a, tmp]), [a]);
 });
 
 console.log(`\n${passed} vérifications OK\n`);
