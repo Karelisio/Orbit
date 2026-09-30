@@ -66,6 +66,17 @@ function themeColorsForWidgets(seedColor: string) {
   };
 }
 
+/** Palettes de la dernière couleur source : recalculées seulement quand elle change. */
+let paletteCache: { seed: string; colors: ReturnType<typeof themeColorsForWidgets> } | null = null;
+
+function cachedThemeColors(seedColor: string) {
+  if (paletteCache?.seed !== seedColor) paletteCache = { seed: seedColor, colors: themeColorsForWidgets(seedColor) };
+  return paletteCache.colors;
+}
+
+/** Dernier contenu poussé aux widgets, pour ne pas les reconstruire à l'identique. */
+let lastPushedPayload: string | null = null;
+
 export async function syncWidgets(data: {
   nextEventTitle: string | null;
   /** Libellé figé au moment de la synchro : simple repli, le widget recalcule le sien depuis nextEventsJson. */
@@ -108,26 +119,34 @@ export async function syncWidgets(data: {
   fontScale: number;
 }): Promise<void> {
   if (Capacitor.getPlatform() !== "android") return;
+  const payload = {
+    nextEventTitle: data.nextEventTitle ?? undefined,
+    nextEventTimeLabel: data.nextEventTimeLabel ?? undefined,
+    nextEventsJson: data.nextEventsJson,
+    pendingTasksCount: data.pendingTasksCount,
+    nextTaskTitle: data.nextTaskTitle ?? undefined,
+    eventsCsv: data.eventsCsv,
+    periodDaysCsv: data.periodDaysCsv,
+    predictedPeriodDaysCsv: data.predictedPeriodDaysCsv,
+    taskDaysCsv: data.taskDaysCsv,
+    journalContent: data.journalContent ?? undefined,
+    journalAuthorLabel: data.journalAuthorLabel ?? undefined,
+    journalTimeLabel: data.journalTimeLabel ?? undefined,
+    journalCreatedAt: data.journalCreatedAt ?? undefined,
+    ...cachedThemeColors(data.seedColor),
+    fontScale: data.fontScale,
+    seedFollowsWallpaper: data.seedFollowsWallpaper,
+  };
+  // Même contenu que la dernière fois (écho temps réel d'une modif déjà
+  // affichée, rafraîchissement de session...) : rien à reconstruire.
+  const serialized = JSON.stringify(payload);
+  if (serialized === lastPushedPayload) return;
+  lastPushedPayload = serialized;
   try {
-    await WidgetData.update({
-      nextEventTitle: data.nextEventTitle ?? undefined,
-      nextEventTimeLabel: data.nextEventTimeLabel ?? undefined,
-      nextEventsJson: data.nextEventsJson,
-      pendingTasksCount: data.pendingTasksCount,
-      nextTaskTitle: data.nextTaskTitle ?? undefined,
-      eventsCsv: data.eventsCsv,
-      periodDaysCsv: data.periodDaysCsv,
-      predictedPeriodDaysCsv: data.predictedPeriodDaysCsv,
-      taskDaysCsv: data.taskDaysCsv,
-      journalContent: data.journalContent ?? undefined,
-      journalAuthorLabel: data.journalAuthorLabel ?? undefined,
-      journalTimeLabel: data.journalTimeLabel ?? undefined,
-      journalCreatedAt: data.journalCreatedAt ?? undefined,
-      ...themeColorsForWidgets(data.seedColor),
-      fontScale: data.fontScale,
-      seedFollowsWallpaper: data.seedFollowsWallpaper,
-    });
+    await WidgetData.update(payload);
   } catch {
-    // plateforme sans widgets (ou plugin indisponible) : tant pis
+    // plateforme sans widgets (ou plugin indisponible) : tant pis — la
+    // prochaine synchro retentera, même à contenu identique
+    lastPushedPayload = null;
   }
 }

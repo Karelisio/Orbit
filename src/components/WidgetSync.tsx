@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
 import { eachDayOfInterval, format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
@@ -35,6 +35,15 @@ const WIDGET_FONT_SCALE_FACTORS: Record<WidgetFontScale, number> = {
 const WIDGET_NEXT_EVENTS = 10;
 
 /**
+ * Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
+ * à venir, pour que la navigation ‹ › du widget affiche de vraies données
+ * au lieu de retomber sur une grille vide dès qu'on quitte le mois du jour
+ * (voir OrbitCalendarWidgetProvider.java, qui ne rend qu'un mois à la fois
+ * — seul le stockage couvre plusieurs mois, pas le rendu).
+ */
+const WIDGET_MONTHS_AHEAD = 12;
+
+/**
  * Nettoie un texte pour l'encodage compact envoyé au widget natif (retire les
  * séparateurs du format CSV). La troncature finale est laissée au widget
  * (ellipse "…" selon la largeur réelle de la case) : on envoie juste de quoi
@@ -57,16 +66,21 @@ export default function WidgetSync() {
   const { couple, partnerId } = useCouple();
   const { showPeriodInWidget, widgetFontScale } = usePreferences();
   const { themeVersion, seedColor, seedFollowsWallpaper } = useThemeMode();
+  const userId = user?.id ?? null;
 
-  // Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
-  // à venir, pour que la navigation ‹ › du widget affiche de vraies données
-  // au lieu de retomber sur une grille vide dès qu'on quitte le mois du jour
-  // (voir OrbitCalendarWidgetProvider.java, qui ne rend qu'un mois à la fois
-  // — seul le stockage couvre plusieurs mois, pas le rendu).
-  const WIDGET_MONTHS_AHEAD = 12;
-  const now = new Date();
-  const windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1 + WIDGET_MONTHS_AHEAD, 0);
+  // Fenêtre recalculée seulement quand le mois change (clé "aaaa-mm"), et le
+  // jour du jour en dépendance de la synchro : avant, de nouveaux objets Date
+  // à chaque rendu donnaient un nouvel ensemble de jours de règles, donc une
+  // synchro complète et la reconstruction de tous les widgets à CHAQUE rendu.
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const monthKey = todayKey.slice(0, 7);
+  const { windowStart, windowEnd } = useMemo(() => {
+    const [year, month] = monthKey.split("-").map(Number);
+    return {
+      windowStart: new Date(year, month - 1, 1),
+      windowEnd: new Date(year, month + WIDGET_MONTHS_AHEAD, 0),
+    };
+  }, [monthKey]);
   const periodDays = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
 
   // Rappels d'événements resynchronisés au démarrage et à chaque changement
@@ -80,6 +94,11 @@ export default function WidgetSync() {
   }, [events, eventsLoading]);
 
   useEffect(() => {
+    // Pas de synchro tant que le thème n'est pas résolu (themeVersion à 0) :
+    // la toute première poussait sinon la palette violette par défaut
+    // (seedFollowsWallpaper encore à faux), appliquée un instant par-dessus
+    // les couleurs système des widgets.
+    if (themeVersion === 0) return;
     const now = new Date();
     // Même règle que l'accueil : une journée entière reste « à venir » jusqu'au soir.
     const upcoming = events
@@ -148,7 +167,7 @@ export default function WidgetSync() {
     // useJournal), pour le widget dédié et la 3e ligne du widget Fusion.
     const latestEntry = journalEntries[0] ?? null;
     const journalAuthorLabel = latestEntry
-      ? latestEntry.author_id === user?.id
+      ? latestEntry.author_id === userId
         ? "Toi"
         : latestEntry.author_id === partnerId
           ? "Ton/ta partenaire"
@@ -173,14 +192,19 @@ export default function WidgetSync() {
       seedFollowsWallpaper,
       fontScale: WIDGET_FONT_SCALE_FACTORS[widgetFontScale],
     });
+    // Identique à la dernière poussée (écho temps réel, rafraîchissement de
+    // session...) : syncWidgets ne refait rien, voir lib/widgetSync.ts.
   }, [
     events,
     tasks,
     journalEntries,
     couple,
     partnerId,
-    user,
+    userId,
     periodDays,
+    windowStart,
+    windowEnd,
+    todayKey,
     themeVersion,
     seedColor,
     seedFollowsWallpaper,
