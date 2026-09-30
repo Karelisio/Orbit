@@ -156,14 +156,13 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
 
   async function setTogetherSince(date: string | null) {
     if (!couple) return { error: "Aucun couple lié" };
-    const { data, error } = await supabase
-      .from("couples")
-      .update({ together_since: date })
-      .eq("id", couple.id)
-      .select()
-      .single();
+    // RPC plutôt qu'un update direct : seule la titulaire a une policy UPDATE
+    // sur `couples`, l'update du/de la partenaire ne touchait donc aucune
+    // ligne. set_together_since() (SECURITY DEFINER) l'autorise aux deux.
+    const { data, error } = await supabase.rpc("set_together_since", { p_date: date });
     if (error) return { error: error.message };
-    setCouple(data as Couple);
+    const updated = data as Couple | null;
+    if (updated?.id) setCouple(updated);
     return { error: null };
   }
 

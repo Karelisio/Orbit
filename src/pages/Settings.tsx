@@ -233,6 +233,7 @@ export default function Settings() {
   const [renaming, setRenaming] = useState(false);
   const [renameStatus, setRenameStatus] = useState<string | null>(null);
   const [togetherSince, setTogetherSinceInput] = useState(couple?.together_since ?? "");
+  const [togetherSinceError, setTogetherSinceError] = useState<string | null>(null);
   const [notifStatus, setNotifStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -250,7 +251,9 @@ export default function Settings() {
   }
 
   async function handleTogetherSinceSave() {
-    await setTogetherSince(togetherSince || null);
+    setTogetherSinceError(null);
+    const { error } = await setTogetherSince(togetherSince || null);
+    if (error) setTogetherSinceError(`Date non enregistrée : ${error}`);
   }
 
   async function handleImagePick(file: File) {
@@ -457,6 +460,9 @@ export default function Settings() {
             Enregistrer
           </button>
         </div>
+        {togetherSinceError && (
+          <p style={{ fontSize: 13, margin: "10px 0 0", color: "var(--md-sys-color-error)" }}>{togetherSinceError}</p>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

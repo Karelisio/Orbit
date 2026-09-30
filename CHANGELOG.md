@@ -12,6 +12,7 @@ la vide.
 - L'app ne se recharge plus d'elle-même de temps en temps (écran « Chargement... » qui faisait perdre une saisie en cours), et se remet à jour en silence quand on revient dessus.
 - Rappels d'événements : ils sonnent maintenant sur les deux téléphones (plus seulement sur celui qui a créé l'événement), suivent les modifications et suppressions faites par l'autre, reviennent chaque année pour les anniversaires, et se remettent en place tout seuls sur un nouveau téléphone.
 - Une dépense, une tâche, un événement ou une note supprimés par l'un disparaissent maintenant aussi tout de suite chez l'autre (ils restaient affichés jusqu'au redémarrage de l'app), et tout se remet à jour quand on revient sur l'app.
+- « Jours ensemble » : le/la partenaire peut maintenant aussi enregistrer la date de mise en couple (elle n'était en fait jamais sauvegardée de son côté), et un message s'affiche si l'enregistrement échoue.
 
 ## v1.0.38 — 2026-09-24
 - Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.
