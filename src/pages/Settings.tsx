@@ -224,6 +224,8 @@ export default function Settings() {
     setNavTabVisible,
     widgetFontScale,
     setWidgetFontScale,
+    preferThemeImage,
+    setPreferThemeImage,
   } = usePreferences();
 
   const [uploading, setUploading] = useState(false);
@@ -343,6 +345,27 @@ export default function Settings() {
           <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
             {uploading ? "Chargement..." : "Choisir une image"}
           </button>
+        </div>
+      )}
+
+      {Capacitor.getPlatform() === "android" && profile?.theme_image_url && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 className="section-title">Couleurs de l'app</h3>
+          <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+            Une image de thème a été choisie (dans Wenn ou sur un autre appareil). Sur ce téléphone, les couleurs d'Orbit
+            et de ses widgets suivent :
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className={`chip${!preferThemeImage ? " selected" : ""}`} onClick={() => setPreferThemeImage(false)}>
+              Le fond d'écran
+            </button>
+            <button className={`chip${preferThemeImage ? " selected" : ""}`} onClick={() => setPreferThemeImage(true)}>
+              L'image choisie
+            </button>
+          </div>
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)" }}>
+            Propre à cet appareil ; l'image reste enregistrée pour Wenn et les autres appareils.
+          </p>
         </div>
       )}
 

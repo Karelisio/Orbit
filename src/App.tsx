@@ -1,7 +1,6 @@
 import { Navigate, HashRouter, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { CoupleProvider, useCouple } from "./context/CoupleContext";
-import { PreferencesProvider } from "./context/PreferencesContext";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
@@ -37,11 +36,8 @@ function CoupleGate() {
   const { couple, loading } = useCouple();
   if (loading) return <div className="center-screen">Chargement...</div>;
   if (!couple) return <Onboarding />;
-  return (
-    <PreferencesProvider>
-      <AppShell />
-    </PreferencesProvider>
-  );
+  // PreferencesProvider est monté plus haut (main.tsx) : le thème en dépend.
+  return <AppShell />;
 }
 
 export default function App() {

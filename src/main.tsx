@@ -4,6 +4,7 @@ import App from "./App";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeModeProvider } from "./context/ThemeModeContext";
+import { PreferencesProvider } from "./context/PreferencesContext";
 import { applyThemeFromSeedColor, DEFAULT_SEED_COLOR } from "./lib/materialYou";
 import { initDeepLinks } from "./lib/deepLink";
 import "./styles/global.css";
@@ -33,9 +34,11 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
-        <ThemeModeProvider>
-          <App />
-        </ThemeModeProvider>
+        <PreferencesProvider>
+          <ThemeModeProvider>
+            <App />
+          </ThemeModeProvider>
+        </PreferencesProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>

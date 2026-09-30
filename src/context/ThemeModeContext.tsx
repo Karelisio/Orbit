@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useAuth } from "./AuthContext";
+import { usePreferences } from "./PreferencesContext";
 import { supabase } from "../lib/supabase";
 import { applyDynamicPalette, applyThemeFromImageUrl, applyThemeFromSeedColor, DEFAULT_SEED_COLOR, watchSystemThemeChanges } from "../lib/materialYou";
 import { getWallpaperSeedColor } from "../lib/wallpaperColor";
@@ -44,6 +45,7 @@ function resolveDark(mode: ThemeMode): boolean | undefined {
 
 export function ThemeModeProvider({ children }: { children: ReactNode }) {
   const { user, profile, refreshProfile } = useAuth();
+  const { preferThemeImage } = usePreferences();
   const [mode, setModeState] = useState<ThemeMode>(() => (localStorage.getItem("orbit-theme-mode") as ThemeMode) || "system");
   const [themeVersion, setThemeVersion] = useState(0);
   const [seedColor, setSeedColor] = useState(DEFAULT_SEED_COLOR);
@@ -56,8 +58,13 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
 
   async function applyTheme() {
     const dark = resolveDark(mode);
+    // Sur Android, une image choisie (sur Wenn ou un autre appareil) ne passe
+    // plus d'office devant le fond d'écran : Réglages > Couleurs de l'app
+    // (préférence propre au téléphone) permet de revenir aux couleurs du
+    // fond d'écran, pour l'app comme pour les widgets.
+    const followImage = Capacitor.getPlatform() !== "android" || preferThemeImage;
     try {
-      if (profile?.theme_image_url) {
+      if (profile?.theme_image_url && followImage) {
         try {
           setSeedColor(await applyThemeFromImageUrl(profile.theme_image_url, dark));
           setSeedFollowsWallpaper(false);
@@ -104,9 +111,15 @@ export function ThemeModeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applyTheme();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, profile?.theme_image_url, profile?.theme_seed_color]);
+  }, [mode, profile?.theme_image_url, profile?.theme_seed_color, preferThemeImage]);
 
-  useEffect(() => watchSystemThemeChanges(() => mode === "system" && applyTheme()), [mode]);
+  // Mêmes dépendances que ci-dessus : sinon la bascule clair/sombre du
+  // système réappliquait le thème avec une préférence ou une image périmées.
+  useEffect(
+    () => watchSystemThemeChanges(() => mode === "system" && applyTheme()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, profile?.theme_image_url, profile?.theme_seed_color, preferThemeImage]
+  );
 
   async function setThemeImageUrl(url: string | null) {
     if (!user) return;

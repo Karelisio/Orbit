@@ -24,6 +24,7 @@ la vide.
 - Widgets Calendrier et Tâches : sur les téléphones qui s'en servent, leur taille par défaut correspond enfin à la grille prévue (Calendrier : 4 lignes au lieu de 5, Tâches : 1 ligne au lieu de 2).
 - Après une déconnexion ou en quittant l'espace, plus rien du couple ne reste sur le téléphone : l'app ne réaffiche plus l'ancien espace hors connexion, les widgets se vident et les rappels ne sonnent plus.
 - Premier lancement : l'écran d'accueil explique maintenant que l'espace se crée depuis le téléphone de la personne dont le cycle est suivi dans Wenn (elle en devient la titulaire), l'autre le rejoignant avec le code.
+- Si une image de thème a été choisie (dans Wenn ou sur un autre appareil), Réglages → « Couleurs de l'app » permet maintenant de revenir, sur ce téléphone, aux couleurs du fond d'écran (pour l'app comme pour les widgets).
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.

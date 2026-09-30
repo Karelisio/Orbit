@@ -39,6 +39,7 @@ const SHOW_PERIOD_KEY = "orbit-show-period-in-calendar";
 const SHOW_PERIOD_WIDGET_KEY = "orbit-show-period-in-widget";
 const NAV_TABS_KEY = "orbit-nav-tabs";
 const WIDGET_FONT_SCALE_KEY = "orbit-widget-font-scale";
+const PREFER_THEME_IMAGE_KEY = "orbit-prefer-theme-image";
 
 interface PreferencesContextValue {
   homeSections: HomeSectionsVisibility;
@@ -51,6 +52,14 @@ interface PreferencesContextValue {
   setNavTabVisible: (tab: NavTab, visible: boolean) => void;
   widgetFontScale: WidgetFontScale;
   setWidgetFontScale: (value: WidgetFontScale) => void;
+  /**
+   * Android seulement : quand une image de thème existe (choisie sur Wenn ou
+   * sur un autre appareil — profiles.theme_image_url est partagé avec Wenn,
+   * jamais effacé ici), l'app et ses widgets la suivent (vrai, comportement
+   * d'origine) ou suivent le fond d'écran du téléphone (faux).
+   */
+  preferThemeImage: boolean;
+  setPreferThemeImage: (value: boolean) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextValue | undefined>(undefined);
@@ -59,7 +68,9 @@ const PreferencesContext = createContext<PreferencesContextValue | undefined>(un
  * Préférences d'affichage propres à cet appareil (pas synchronisées entre
  * les deux comptes du couple, comme la taille d'UI sur Wenn) : stockées en
  * localStorage plutôt qu'en base, pas besoin de plus pour un simple réglage
- * d'affichage individuel.
+ * d'affichage individuel. Monté tout en haut (main.tsx), au-dessus du thème
+ * qui en dépend (preferThemeImage), et non plus seulement une fois l'espace
+ * chargé.
  */
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [homeSections, setHomeSections] = useState<HomeSectionsVisibility>(() => {
@@ -95,6 +106,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       return stored === "petite" || stored === "grande" ? stored : "normale";
     } catch {
       return "normale";
+    }
+  });
+
+  const [preferThemeImage, setPreferThemeImageState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(PREFER_THEME_IMAGE_KEY) !== "false";
+    } catch {
+      return true;
     }
   });
 
@@ -147,6 +166,14 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
   }, [widgetFontScale]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFER_THEME_IMAGE_KEY, String(preferThemeImage));
+    } catch {
+      // idem
+    }
+  }, [preferThemeImage]);
+
   function setHomeSectionVisible(section: keyof HomeSectionsVisibility, visible: boolean) {
     setHomeSections((prev) => ({ ...prev, [section]: visible }));
   }
@@ -168,6 +195,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         setNavTabVisible,
         widgetFontScale,
         setWidgetFontScale: setWidgetFontScaleState,
+        preferThemeImage,
+        setPreferThemeImage: setPreferThemeImageState,
       }}
     >
       {children}
