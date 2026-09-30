@@ -15,6 +15,7 @@ la vide.
 - Un événement « toute la journée » (un anniversaire par exemple) reste affiché dans les prochains événements (accueil et widgets) jusqu'au soir, au lieu de disparaître dès 9 h ou d'annoncer « dans 365 j ». Un anniversaire du 29 février apparaît le 28 les années non bissextiles.
 - Widgets Fusion et Journal : « Demain à 10:00 », « Hier », « Il y a 3 j »… se mettent à jour tout seuls au fil des heures, même app fermée (ils restaient figés jusqu'à la prochaine ouverture d'Orbit), le widget Fusion passe tout seul à l'événement suivant une fois le premier passé, et les dates sont en français (« 12 oct. »).
 - Les widgets ne sont plus reconstruits en boucle pendant que l'app est ouverte (moins de batterie), et ne passent plus un court instant au violet par défaut à l'ouverture de l'app.
+- Un lien du widget calendrier avec une date invalide ouvre simplement le calendrier (au lieu de l'écran d'erreur).
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.

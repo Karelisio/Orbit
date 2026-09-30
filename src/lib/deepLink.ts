@@ -1,6 +1,7 @@
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "./supabase";
+import { parseDateParam } from "./localDate";
 
 export const NATIVE_AUTH_REDIRECT_URL = "io.karelisio.orbit://login-callback";
 
@@ -16,7 +17,9 @@ async function handleUrl(url: string): Promise<void> {
     // Tap sur une case du widget calendrier (voir OrbitCalendarWidgetProvider.java) :
     // ouvre l'app directement sur ce jour, plutôt que sur l'accueil.
     if (parsed.host === "calendar") {
-      const date = parsed.searchParams.get("date");
+      // Date validée ici (et à nouveau par Calendar.tsx) : une date
+      // invalide ouvrait l'écran d'erreur au lieu du calendrier.
+      const date = parseDateParam(parsed.searchParams.get("date"));
       if (date) {
         window.location.hash = `#/calendar?date=${date}`;
         // HashRouter (react-router-dom) ne se resynchronise que sur

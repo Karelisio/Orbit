@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { addDays, addMonths, addYears, format } from "date-fns";
 import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
+import { parseDateParam } from "../src/lib/localDate.ts";
 import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
 import { eventTimeLabel, journalTimeLabel } from "../src/lib/widgetLabels.ts";
@@ -301,6 +302,17 @@ check("toujours cohérent : 0 ≤ mois < 12, jours ≥ 0, et on retombe sur aujo
       const rebuilt = addDays(addMonths(addYears(since, d.years), d.months), d.days);
       assert.equal(format(rebuilt, "yyyy-MM-dd"), format(now, "yyyy-MM-dd"), `${sinceStr} + ${n} j`);
     }
+  }
+});
+
+console.log("\nlien io.karelisio.orbit://calendar?date=...");
+check("date valide acceptée telle quelle", () => {
+  assert.equal(parseDateParam("2026-09-30"), "2026-09-30");
+  assert.equal(parseDateParam("2028-02-29"), "2028-02-29");
+});
+check("date invalide ignorée (le bug : RangeError, écran d'erreur)", () => {
+  for (const bad of ["2026-02-30", "2027-02-29", "2026-13-01", "2026-9-30", "abc", "", " 2026-09-30", "2026-09-30T10:00", null, undefined]) {
+    assert.equal(parseDateParam(bad as string | null | undefined), null, String(bad));
   }
 });
 
