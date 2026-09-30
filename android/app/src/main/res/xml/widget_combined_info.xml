@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Taille par défaut : une seule ligne de la grille du lanceur.
+  Taille par défaut : une seule ligne de la grille du lanceur, sur quatre
+  colonnes.
 
-  Deux règles se cumulent, et il faut que les DEUX disent "une ligne" :
+  Deux règles se cumulent, et il faut que les DEUX disent "une ligne" (et
+  "quatre colonnes" : minWidth = 70 x 4 - 30 = 250dp, comme
+  targetCellWidth ; les 180dp d'avant n'en réclamaient que 3) :
   - targetCellWidth/Height (Android 12+) : ce que les lanceurs récents
     utilisent en priorité. C'est ce qui fait que le widget Tâches, lui,
     s'est toujours posé sur une seule ligne.
@@ -16,7 +19,7 @@
   alors purement et simplement les poignées de redimensionnement.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="180dp"
+    android:minWidth="250dp"
     android:minHeight="40dp"
     android:minResizeWidth="110dp"
     android:minResizeHeight="40dp"
