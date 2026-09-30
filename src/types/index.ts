@@ -119,27 +119,99 @@ export interface OrbitEvent {
 }
 
 /**
- * Prochaine occurrence d'un événement à partir d'une date de référence :
- * la date exacte pour un événement simple, ou la même date (mois/jour)
- * projetée sur l'année en cours (ou la suivante si déjà passée) pour un
- * événement récurrent chaque année (anniversaires...).
+ * L'occurrence d'un événement annuel pour l'année `year` : même mois, même
+ * jour et même heure locale que la date d'origine. Règle unique pour le
+ * 29 février, partagée par nextEventOccurrence et eventOccursOnDay : il
+ * tombe le 28 février les années non bissextiles (avant, le calendrier ne
+ * l'affichait jamais ces années-là pendant que le rappel visait le 1er mars).
  */
-export function nextEventOccurrence(event: Pick<OrbitEvent, "starts_at" | "recurrence">, from: Date = new Date()): Date {
-  const start = new Date(event.starts_at);
-  if (event.recurrence !== "yearly") return start;
-  const projected = new Date(start);
-  projected.setFullYear(from.getFullYear());
-  if (projected.getTime() < from.getTime()) projected.setFullYear(from.getFullYear() + 1);
-  return projected;
+function yearlyOccurrence(start: Date, year: number): Date {
+  const month = start.getMonth();
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  return new Date(
+    year,
+    month,
+    Math.min(start.getDate(), lastDayOfMonth),
+    start.getHours(),
+    start.getMinutes(),
+    start.getSeconds(),
+    start.getMilliseconds()
+  );
 }
 
-/** Un événement récurrent tombe-t-il ce jour-là (n'importe quelle année) ? */
+/**
+ * Fin d'une occurrence qui commence à `occurrence` : un événement « toute la
+ * journée » reste d'actualité jusqu'au soir (23:59:59.999 local), un
+ * événement horaire jusqu'à son heure de début. Avant, une journée entière
+ * (un anniversaire, enregistré à 9 h par défaut) disparaissait des
+ * prochains événements dès 9 h le jour même, et sa version annuelle
+ * annonçait « dans 365 j ».
+ */
+export function occurrenceEnd(event: Pick<OrbitEvent, "all_day">, occurrence: Date): Date {
+  if (!event.all_day) return occurrence;
+  return new Date(occurrence.getFullYear(), occurrence.getMonth(), occurrence.getDate(), 23, 59, 59, 999);
+}
+
+/** Une occurrence est-elle encore à venir (ou en cours, pour une journée entière) à l'instant `now` ? */
+export function isOccurrenceUpcoming(event: Pick<OrbitEvent, "all_day">, occurrence: Date, now: Date): boolean {
+  return occurrenceEnd(event, occurrence).getTime() >= now.getTime();
+}
+
+/**
+ * Première occurrence annuelle qui satisfait `stillPending`, jamais avant la
+ * date d'origine de l'événement (un anniversaire créé pour l'an prochain ne
+ * compte pas déjà cette année).
+ */
+function nextYearlyOccurrence(startsAt: string, from: Date, stillPending: (occurrence: Date) => boolean): Date {
+  const start = new Date(startsAt);
+  const year = Math.max(from.getFullYear(), start.getFullYear());
+  const occurrence = yearlyOccurrence(start, year);
+  return stillPending(occurrence) ? occurrence : yearlyOccurrence(start, year + 1);
+}
+
+/**
+ * Prochaine occurrence d'un événement à partir d'une date de référence :
+ * la date exacte pour un événement simple, ou la même date (mois/jour)
+ * projetée sur l'année en cours — ou la suivante si celle de cette année
+ * est terminée (voir occurrenceEnd : une journée entière le reste jusqu'au
+ * soir) — pour un événement récurrent chaque année (anniversaires...).
+ */
+export function nextEventOccurrence(
+  event: Pick<OrbitEvent, "starts_at" | "recurrence" | "all_day">,
+  from: Date = new Date()
+): Date {
+  if (event.recurrence !== "yearly") return new Date(event.starts_at);
+  return nextYearlyOccurrence(event.starts_at, from, (occurrence) => isOccurrenceUpcoming(event, occurrence, from));
+}
+
+/**
+ * Prochaine occurrence pas encore COMMENCÉE : ce que visent les rappels (voir
+ * notifications.ts), avec la même sémantique qu'avant pour les journées
+ * entières (l'heure de starts_at telle quelle) — une fois la journée
+ * commencée, les rappels passent à l'occurrence de l'année suivante sans
+ * attendre minuit.
+ */
+export function nextEventStart(event: Pick<OrbitEvent, "starts_at" | "recurrence">, from: Date = new Date()): Date {
+  if (event.recurrence !== "yearly") return new Date(event.starts_at);
+  return nextYearlyOccurrence(event.starts_at, from, (occurrence) => occurrence.getTime() >= from.getTime());
+}
+
+function isSameLocalDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/**
+ * L'événement tombe-t-il ce jour-là (date locale) ? Un événement annuel
+ * compte chaque année à partir de sa date d'origine (29 février : le 28 les
+ * années non bissextiles, même règle que nextEventOccurrence).
+ */
 export function eventOccursOnDay(event: Pick<OrbitEvent, "starts_at" | "recurrence">, day: Date): boolean {
   const start = new Date(event.starts_at);
   if (event.recurrence === "yearly") {
-    return start.getMonth() === day.getMonth() && start.getDate() === day.getDate();
+    if (day.getFullYear() < start.getFullYear()) return false;
+    return isSameLocalDay(yearlyOccurrence(start, day.getFullYear()), day);
   }
-  return start.getFullYear() === day.getFullYear() && start.getMonth() === day.getMonth() && start.getDate() === day.getDate();
+  return isSameLocalDay(start, day);
 }
 
 export const TASK_RECURRENCE_OPTIONS = ["none", "daily", "weekly", "monthly"] as const;

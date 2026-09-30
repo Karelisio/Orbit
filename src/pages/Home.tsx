@@ -8,7 +8,7 @@ import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
 import { usePreferences } from "../context/PreferencesContext";
 import { useCouple } from "../context/CoupleContext";
-import { eventDisplayColor, nextEventOccurrence } from "../types";
+import { eventDisplayColor, isOccurrenceUpcoming, nextEventOccurrence } from "../types";
 
 export default function Home() {
   const { events } = useEvents();
@@ -18,9 +18,11 @@ export default function Home() {
 
   const upcomingEvents = useMemo(() => {
     const now = new Date();
+    // Une journée entière (anniversaire...) reste affichée jusqu'au soir,
+    // pas seulement jusqu'à son heure de début (voir occurrenceEnd).
     return events
       .map((event) => ({ event, occursAt: nextEventOccurrence(event, now) }))
-      .filter(({ occursAt }) => occursAt.getTime() >= now.getTime())
+      .filter(({ event, occursAt }) => isOccurrenceUpcoming(event, occursAt, now))
       .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime())
       .slice(0, 3);
   }, [events]);

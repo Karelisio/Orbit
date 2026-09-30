@@ -4,7 +4,7 @@ import {
   type LocalNotificationSchema,
   type PendingLocalNotificationSchema,
 } from "@capacitor/local-notifications";
-import { nextEventOccurrence, type OrbitEvent } from "../types";
+import { nextEventStart, type OrbitEvent } from "../types";
 
 /** Marqueur posé dans `extra` de chaque rappel d'événement (voir isOrbitReminder). */
 const ORBIT_EVENT_KIND = "orbit-event";
@@ -141,8 +141,11 @@ async function applyEventReminders(events: OrbitEvent[]): Promise<void> {
   for (const event of events) {
     if (event.reminder_minutes_before.length === 0) continue;
     // Même sémantique qu'avant pour les journées entières : l'heure de
-    // starts_at telle quelle. Un événement annuel vise sa prochaine occurrence.
-    const occurrence = nextEventOccurrence(event, new Date(now));
+    // starts_at telle quelle. Un événement annuel vise sa prochaine occurrence
+    // pas encore commencée (nextEventStart, et non nextEventOccurrence qui
+    // garde une journée entière « à venir » jusqu'au soir : les rappels de
+    // l'an prochain se programment donc dès que celle-ci a commencé).
+    const occurrence = nextEventStart(event, new Date(now));
     for (const minutesBefore of event.reminder_minutes_before) {
       const at = occurrence.getTime() - minutesBefore * 60_000;
       const id = reminderNotificationId(event.id, minutesBefore, occurrence.toISOString());

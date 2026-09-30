@@ -4,7 +4,14 @@ import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
-import { reminderLabel, nextEventOccurrence, eventOccursOnDay, taskRecurrenceLabel } from "../src/types/index.ts";
+import {
+  reminderLabel,
+  nextEventOccurrence,
+  nextEventStart,
+  eventOccursOnDay,
+  isOccurrenceUpcoming,
+  taskRecurrenceLabel,
+} from "../src/types/index.ts";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -17,6 +24,11 @@ async function checkAsync(name: string, fn: () => Promise<void>) {
   passed++;
   console.log("  ok  " + name);
 }
+
+// Dates construites en heure locale : les vérifications doivent passer quel
+// que soit le fuseau (TZ=Europe/Paris, TZ=America/Montreal...).
+const local = (y: number, m: number, d: number, h = 0, min = 0) => new Date(y, m - 1, d, h, min);
+const iso = (y: number, m: number, d: number, h = 9, min = 0) => local(y, m, d, h, min).toISOString();
 
 const expense = (amount: number, paid_by: string) =>
   ({ id: Math.random().toString(), couple_id: "c", description: "x", amount, category: "autre", paid_by, spent_at: "2026-09-20", created_by: paid_by, created_at: "" }) as never;
@@ -49,19 +61,19 @@ check("personnalisés lisibles (le bug : « 4320 min avant »)", () => {
 });
 
 console.log("\névénements récurrents");
-const birthday = { starts_at: "2019-09-08T09:00:00.000Z", recurrence: "yearly" } as never;
-const oneOff = { starts_at: "2026-09-25T09:00:00.000Z", recurrence: "none" } as never;
+const birthday = { starts_at: iso(2019, 9, 8), recurrence: "yearly" } as never;
+const oneOff = { starts_at: iso(2026, 9, 25), recurrence: "none" } as never;
 check("un anniversaire passé pointe sur l'occurrence de cette année", () => {
-  const next = nextEventOccurrence(birthday, new Date("2026-03-01T12:00:00"));
+  const next = nextEventOccurrence(birthday, local(2026, 3, 1, 12));
   assert.equal(next.getFullYear(), 2026);
   assert.equal(next.getMonth(), 8); // septembre
 });
 check("si l'occurrence de l'année est passée, on vise l'an prochain", () => {
-  const next = nextEventOccurrence(birthday, new Date("2026-10-01T12:00:00"));
+  const next = nextEventOccurrence(birthday, local(2026, 10, 1, 12));
   assert.equal(next.getFullYear(), 2027);
 });
 check("un événement simple garde sa date", () => {
-  assert.equal(nextEventOccurrence(oneOff, new Date("2026-01-01")).getTime(), new Date(oneOff.starts_at).getTime());
+  assert.equal(nextEventOccurrence(oneOff, local(2026, 1, 1)).getTime(), new Date(oneOff.starts_at).getTime());
 });
 check("l'anniversaire tombe le bon jour, n'importe quelle année", () => {
   assert.equal(eventOccursOnDay(birthday, new Date(2030, 8, 8)), true);
@@ -70,6 +82,57 @@ check("l'anniversaire tombe le bon jour, n'importe quelle année", () => {
 check("un événement simple ne tombe que son année", () => {
   assert.equal(eventOccursOnDay(oneOff, new Date(2026, 8, 25)), true);
   assert.equal(eventOccursOnDay(oneOff, new Date(2027, 8, 25)), false);
+});
+
+console.log("\njournées entières, anniversaires, 29 février (heure locale)");
+const allDayToday = { starts_at: iso(2026, 9, 30), recurrence: "none", all_day: true } as never;
+const birthdayAllDay = { starts_at: iso(1990, 9, 30), recurrence: "yearly", all_day: true } as never;
+const dentist = { starts_at: iso(2026, 9, 30, 9, 0), recurrence: "none", all_day: false } as never;
+check("une journée entière reste « à venir » jusqu'au soir (le bug : disparue dès 9 h)", () => {
+  const at15h = local(2026, 9, 30, 15);
+  assert.equal(isOccurrenceUpcoming(allDayToday, nextEventOccurrence(allDayToday, at15h), at15h), true);
+  const at2359 = local(2026, 9, 30, 23, 59);
+  assert.equal(isOccurrenceUpcoming(allDayToday, nextEventOccurrence(allDayToday, at2359), at2359), true);
+  const tomorrow = local(2026, 10, 1, 0, 1);
+  assert.equal(isOccurrenceUpcoming(allDayToday, nextEventOccurrence(allDayToday, tomorrow), tomorrow), false);
+});
+check("un événement horaire n'est plus « à venir » une fois commencé (inchangé)", () => {
+  const at10h = local(2026, 9, 30, 10);
+  assert.equal(isOccurrenceUpcoming(dentist, nextEventOccurrence(dentist, at10h), at10h), false);
+  const at8h = local(2026, 9, 30, 8);
+  assert.equal(isOccurrenceUpcoming(dentist, nextEventOccurrence(dentist, at8h), at8h), true);
+});
+check("anniversaire (journée entière) : aujourd'hui toute la journée, pas « dans 365 j »", () => {
+  const next = nextEventOccurrence(birthdayAllDay, local(2026, 9, 30, 15));
+  assert.equal(format(next, "yyyy-MM-dd"), "2026-09-30");
+  assert.equal(format(nextEventOccurrence(birthdayAllDay, local(2026, 10, 1, 0, 1)), "yyyy-MM-dd"), "2027-09-30");
+});
+check("rappels : visent l'occurrence pas encore commencée (sémantique inchangée)", () => {
+  assert.equal(format(nextEventStart(birthdayAllDay, local(2026, 9, 30, 8)), "yyyy-MM-dd HH:mm"), "2026-09-30 09:00");
+  assert.equal(format(nextEventStart(birthdayAllDay, local(2026, 9, 30, 15)), "yyyy-MM-dd HH:mm"), "2027-09-30 09:00");
+  assert.equal(nextEventStart(dentist, local(2026, 9, 30, 15)).getTime(), new Date(iso(2026, 9, 30, 9, 0)).getTime());
+});
+check("29 février : le 28 les années non bissextiles, partout pareil", () => {
+  const leapBirthday = { starts_at: iso(2024, 2, 29), recurrence: "yearly", all_day: true } as never;
+  assert.equal(format(nextEventOccurrence(leapBirthday, local(2027, 1, 10)), "yyyy-MM-dd"), "2027-02-28");
+  assert.equal(format(nextEventStart(leapBirthday, local(2027, 1, 10)), "yyyy-MM-dd"), "2027-02-28");
+  assert.equal(eventOccursOnDay(leapBirthday, local(2027, 2, 28)), true);
+  assert.equal(eventOccursOnDay(leapBirthday, local(2027, 3, 1)), false);
+  assert.equal(eventOccursOnDay(leapBirthday, local(2028, 2, 29)), true);
+  assert.equal(eventOccursOnDay(leapBirthday, local(2028, 2, 28)), false);
+  assert.equal(format(nextEventOccurrence(leapBirthday, local(2027, 3, 1)), "yyyy-MM-dd"), "2028-02-29");
+});
+check("jamais d'occurrence annuelle avant la date d'origine", () => {
+  const future = { starts_at: iso(2027, 3, 10), recurrence: "yearly", all_day: false } as never;
+  assert.equal(format(nextEventOccurrence(future, local(2026, 1, 1)), "yyyy-MM-dd"), "2027-03-10");
+  assert.equal(format(nextEventStart(future, local(2026, 9, 30)), "yyyy-MM-dd"), "2027-03-10");
+  assert.equal(eventOccursOnDay(future, local(2026, 3, 10)), false);
+  assert.equal(eventOccursOnDay(future, local(2027, 3, 10)), true);
+  assert.equal(eventOccursOnDay(future, local(2029, 3, 10)), true);
+});
+check("un anniversaire garde son heure locale d'une année sur l'autre (changement d'heure)", () => {
+  const winter = { starts_at: iso(2020, 1, 15, 9, 30), recurrence: "yearly", all_day: false } as never;
+  assert.equal(format(nextEventOccurrence(winter, local(2026, 7, 1)), "yyyy-MM-dd HH:mm"), "2027-01-15 09:30");
 });
 
 console.log("\nrécurrence des tâches");

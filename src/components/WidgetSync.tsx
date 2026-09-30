@@ -11,7 +11,7 @@ import { usePreferences, type WidgetFontScale } from "../context/PreferencesCont
 import { useThemeMode } from "../context/ThemeModeContext";
 import { syncWidgets } from "../lib/widgetSync";
 import { resyncEventReminders } from "../lib/notifications";
-import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
+import { eventDisplayColor, eventOccursOnDay, isOccurrenceUpcoming, nextEventOccurrence } from "../types";
 
 /**
  * Facteur manuel (Réglages > Widgets), composé avec l'ajustement automatique
@@ -92,9 +92,10 @@ export default function WidgetSync() {
 
   useEffect(() => {
     const now = new Date();
+    // Même règle que l'accueil : une journée entière reste « à venir » jusqu'au soir.
     const upcoming = events
       .map((event) => ({ event, occursAt: nextEventOccurrence(event, now) }))
-      .filter(({ occursAt }) => occursAt.getTime() >= now.getTime())
+      .filter(({ event, occursAt }) => isOccurrenceUpcoming(event, occursAt, now))
       .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime());
     const nextEvent = upcoming[0] ?? null;
     const pendingTasks = tasks.filter((t) => !t.done);
