@@ -1,8 +1,8 @@
-import { addDays, addMonths, addWeeks, format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { supabase } from "../lib/supabase";
 import { useRealtimeCollection } from "./useRealtimeCollection";
+import { monthlyAnchorDay, nextDueDate } from "../lib/taskRecurrence";
 import type { OrbitTask, TaskRecurrence } from "../types";
 
 export type NewTask = {
@@ -13,18 +13,14 @@ export type NewTask = {
   recurrenceInterval: number;
 };
 
-function nextDueDate(fromDate: string | null, recurrence: TaskRecurrence, interval: number): string {
-  const base = fromDate ? new Date(fromDate) : new Date();
-  switch (recurrence) {
-    case "daily":
-      return format(addDays(base, interval), "yyyy-MM-dd");
-    case "weekly":
-      return format(addWeeks(base, interval), "yyyy-MM-dd");
-    case "monthly":
-      return format(addMonths(base, interval), "yyyy-MM-dd");
-    default:
-      return format(base, "yyyy-MM-dd");
-  }
+/**
+ * La colonne facultative orbit_tasks.recurrence_day (jour d'ancrage d'une
+ * tâche mensuelle, voir lib/taskRecurrence.ts) n'est écrite que si elle
+ * existe déjà en base, c'est-à-dire si les lignes lues la contiennent : tant
+ * que la migration n'est pas passée, rien ne change pour les requêtes.
+ */
+function hasAnchorColumn(task: OrbitTask | undefined): boolean {
+  return task !== undefined && "recurrence_day" in task;
 }
 
 function sortTasks(a: OrbitTask, b: OrbitTask): number {
@@ -65,6 +61,13 @@ export function useTasks() {
   }
 
   async function updateTask(id: string, fields: Partial<NewTask>) {
+    const current = rows.find((t) => t.id === id);
+    // Nouvelle échéance ou nouvelle récurrence : l'ancien jour d'ancrage ne
+    // vaut plus, le prochain coche le reprendra de la nouvelle échéance.
+    const resetAnchor =
+      hasAnchorColumn(current) &&
+      ((fields.dueDate !== undefined && fields.dueDate !== current?.due_date) ||
+        (fields.recurrence !== undefined && fields.recurrence !== current?.recurrence));
     const { data, error } = await supabase
       .from("orbit_tasks")
       .update({
@@ -73,6 +76,7 @@ export function useTasks() {
         ...(fields.dueDate !== undefined && { due_date: fields.dueDate }),
         ...(fields.recurrence !== undefined && { recurrence: fields.recurrence }),
         ...(fields.recurrenceInterval !== undefined && { recurrence_interval: fields.recurrenceInterval }),
+        ...(resetAnchor && { recurrence_day: null }),
       })
       .eq("id", id)
       .select()
@@ -88,10 +92,16 @@ export function useTasks() {
   // Mise à jour optimiste, annulée avec un message si elle échoue (mutate).
   function toggleTask(task: OrbitTask) {
     if (task.recurrence !== "none") {
-      const due = nextDueDate(task.due_date, task.recurrence, task.recurrence_interval);
+      const anchorDay =
+        task.recurrence === "monthly" && task.due_date ? monthlyAnchorDay(task.due_date, task.recurrence_day) : undefined;
+      const due = nextDueDate(task.due_date, task.recurrence, task.recurrence_interval, new Date(), anchorDay);
+      // Jour d'ancrage gardé en base quand la colonne existe : sans lui, une
+      // échéance ramenée au 28 février repartait du 28 au coche suivant.
+      const patch =
+        anchorDay !== undefined && hasAnchorColumn(task) ? { due_date: due, recurrence_day: anchorDay } : { due_date: due };
       return mutate(
-        (prev) => prev.map((t) => (t.id === task.id ? { ...t, due_date: due } : t)).sort(sortTasks),
-        () => supabase.from("orbit_tasks").update({ due_date: due }).eq("id", task.id),
+        (prev) => prev.map((t) => (t.id === task.id ? { ...t, ...patch } : t)).sort(sortTasks),
+        () => supabase.from("orbit_tasks").update(patch).eq("id", task.id),
         "Tâche non mise à jour : vérifie ta connexion."
       );
     }

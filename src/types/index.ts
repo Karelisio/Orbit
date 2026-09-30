@@ -241,6 +241,12 @@ export interface OrbitTask {
   due_date: string | null;
   recurrence: TaskRecurrence;
   recurrence_interval: number;
+  /**
+   * Jour d'ancrage d'une tâche mensuelle (« le 31 »), colonne FACULTATIVE :
+   * absente de la ligne tant que la migration correspondante n'est pas
+   * passée — voir lib/taskRecurrence.ts et useTasks.ts.
+   */
+  recurrence_day?: number | null;
   done: boolean;
   done_at: string | null;
   created_by: string;

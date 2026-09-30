@@ -4,6 +4,7 @@ import { computeBalance, formatEuros, toCents } from "../src/lib/balances.ts";
 import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { parseDateParam } from "../src/lib/localDate.ts";
 import { revertOptimistic } from "../src/lib/optimistic.ts";
+import { monthlyAnchorDay, nextDueDate } from "../src/lib/taskRecurrence.ts";
 import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
 import { eventTimeLabel, journalTimeLabel } from "../src/lib/widgetLabels.ts";
@@ -189,6 +190,37 @@ check("libellés", () => {
   assert.equal(taskRecurrenceLabel("daily", 1), "Tous les jours");
   assert.equal(taskRecurrenceLabel("weekly", 2), "Toutes les 2 semaines");
   assert.equal(taskRecurrenceLabel("monthly", 3), "Tous les 3 mois");
+});
+check("échéance lue en date locale (le bug : new Date() à minuit UTC)", () => {
+  assert.equal(nextDueDate("2026-03-01", "monthly", 1, local(2026, 3, 1, 9)), "2026-04-01");
+  assert.equal(nextDueDate("2026-09-30", "daily", 1, local(2026, 9, 30, 23, 30)), "2026-10-01");
+});
+check("cochée à l'heure : un intervalle plus loin", () => {
+  assert.equal(nextDueDate("2026-09-30", "weekly", 1, local(2026, 9, 30, 9)), "2026-10-07");
+  assert.equal(nextDueDate("2026-09-30", "weekly", 2, local(2026, 9, 30, 9)), "2026-10-14");
+  assert.equal(nextDueDate("2026-10-05", "daily", 1, local(2026, 9, 30, 9)), "2026-10-06", "cochée en avance");
+  assert.equal(nextDueDate(null, "weekly", 1, local(2026, 9, 30, 9)), "2026-10-07", "sans échéance");
+});
+check("en retard : avance jusqu'à aujourd'hui au moins, pas d'un seul intervalle", () => {
+  assert.equal(nextDueDate("2026-09-01", "weekly", 1, local(2026, 9, 30, 9)), "2026-10-06");
+  assert.equal(nextDueDate("2026-09-28", "daily", 1, local(2026, 9, 30, 9)), "2026-09-30");
+  assert.equal(nextDueDate("2026-06-15", "monthly", 1, local(2026, 9, 30, 9)), "2026-10-15");
+});
+check("mensuelle : le jour d'ancrage tient (le bug : 31/01 -> 28/02 -> 28/03)", () => {
+  assert.equal(nextDueDate("2026-01-31", "monthly", 1, local(2026, 1, 31, 9)), "2026-02-28");
+  assert.equal(nextDueDate("2026-01-31", "monthly", 1, local(2026, 3, 15, 9)), "2026-03-31", "rattrapage en une fois");
+  const anchor = monthlyAnchorDay("2026-02-28", 31);
+  assert.equal(anchor, 31);
+  assert.equal(nextDueDate("2026-02-28", "monthly", 1, local(2026, 2, 28, 9), anchor), "2026-03-31");
+  assert.equal(nextDueDate("2026-03-31", "monthly", 1, local(2026, 3, 31, 9), monthlyAnchorDay("2026-03-31", 31)), "2026-04-30");
+  assert.equal(nextDueDate("2026-01-31", "monthly", 2, local(2026, 1, 31, 9)), "2026-03-31");
+});
+check("jour d'ancrage : repli sûr sans colonne, ancre périmée ignorée", () => {
+  assert.equal(monthlyAnchorDay("2026-02-28", null), 28, "sans la colonne : le jour de l'échéance");
+  assert.equal(monthlyAnchorDay("2026-02-28", 28), 28, "vraie tâche du 28");
+  assert.equal(monthlyAnchorDay("2026-06-15", 31), 15, "échéance changée depuis : ancre ignorée");
+  assert.equal(monthlyAnchorDay("2026-06-30", 31), 31, "30 juin = fin de mois, ancre 31 conservée");
+  assert.equal(monthlyAnchorDay("2028-02-29", 30), 30);
 });
 
 console.log("\nprédiction des règles");

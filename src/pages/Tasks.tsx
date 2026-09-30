@@ -23,7 +23,9 @@ export default function Tasks() {
   const [saving, setSaving] = useState(false);
 
   async function handleAdd() {
-    if (!title.trim()) return;
+    // Entrée pressée deux fois de suite : la première requête est encore en
+    // cours, la seconde créait un doublon.
+    if (!title.trim() || saving) return;
     setSaving(true);
     setError(null);
     const { error } = await addTask({
