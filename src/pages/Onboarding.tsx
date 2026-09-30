@@ -42,6 +42,12 @@ export default function Onboarding() {
             <button className="btn btn-secondary" onClick={() => setMode("join")}>
               Rejoindre avec un code d'invitation
             </button>
+            {/* Créer l'espace fait de son auteur·ice la titulaire dans Wenn
+                (seule à pouvoir saisir le cycle) : à dire avant, pas après. */}
+            <p style={{ color: "var(--md-sys-color-on-surface-variant)", fontSize: 13, margin: 0, textAlign: "center" }}>
+              L'espace se crée depuis le téléphone de la personne dont le cycle est suivi dans Wenn : elle en devient la
+              titulaire. L'autre le rejoint ensuite avec le code d'invitation.
+            </p>
             <button className="btn btn-text" onClick={() => signOut()}>
               Se déconnecter
             </button>
@@ -51,6 +57,10 @@ export default function Onboarding() {
         {mode === "create" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <h2 style={{ marginTop: 0 }}>Créer notre espace</h2>
+            <p style={{ color: "var(--md-sys-color-on-surface-variant)", marginTop: -8, fontSize: 14 }}>
+              Tu deviens titulaire de l'espace : c'est ton cycle que Wenn suivra. Si c'est ton/ta partenaire qui suit
+              son cycle dans Wenn, c'est à elle ou lui de créer l'espace ; toi, rejoins-le avec son code d'invitation.
+            </p>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom (ex: Notre couple)" />
             {error && <p style={{ color: "var(--md-sys-color-error)", fontSize: 13 }}>{error}</p>}
             <button className="btn btn-primary" onClick={handleCreate} disabled={loading}>
