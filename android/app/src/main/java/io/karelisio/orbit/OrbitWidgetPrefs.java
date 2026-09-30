@@ -23,8 +23,14 @@ final class OrbitWidgetPrefs {
      * entrées du mois affiché.
      */
     static final String KEY_EVENTS_CSV = "events_csv";
-    /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours de règles (Wenn), même fenêtre, désactivable dans Réglages. */
+    /**
+     * "aaaa-mm-jj;aaaa-mm-jj;..." des jours de règles enregistrés dans Wenn,
+     * même fenêtre, désactivable dans Réglages (point plein). Poussé par une
+     * version antérieure de l'app, il contient aussi les jours prévus.
+     */
     static final String KEY_PERIOD_DAYS_CSV = "period_days_csv";
+    /** Même format : jours de règles seulement prévus, hors jours enregistrés (simple contour). */
+    static final String KEY_PREDICTED_PERIOD_DAYS_CSV = "predicted_period_days_csv";
     /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours ayant au moins une tâche en attente, même fenêtre. */
     static final String KEY_TASK_DAYS_CSV = "task_days_csv";
 

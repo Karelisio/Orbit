@@ -78,7 +78,7 @@ export default function Calendar() {
     return eachDayOfInterval({ start, end });
   }, [month]);
 
-  const periodDates = useCyclePeriodDays(days[0], days[days.length - 1], showPeriodInCalendar);
+  const periodDays = useCyclePeriodDays(days[0], days[days.length - 1], showPeriodInCalendar);
 
   const selectedEvents = useMemo(() => eventsOnDay(events, new Date(selectedDate)), [events, selectedDate]);
   const selectedTasks = useMemo(() => tasksOnDay(tasks, selectedDate), [tasks, selectedDate]);
@@ -174,7 +174,17 @@ export default function Calendar() {
           const dateStr = format(date, "yyyy-MM-dd");
           const dayEvents = eventsOnDay(events, date);
           const dayTasks = tasksOnDay(tasks, dateStr);
-          const isPeriodDay = showPeriodInCalendar && periodDates.has(dateStr);
+          // Règles enregistrées dans Wenn (point plein) ou seulement prévues
+          // (simple contour) : les deux se ressemblaient, alors que Wenn les
+          // distingue.
+          const periodKind = !showPeriodInCalendar
+            ? null
+            : periodDays.recorded.has(dateStr)
+              ? "recorded"
+              : periodDays.predicted.has(dateStr)
+                ? "predicted"
+                : null;
+          const isPeriodDay = periodKind !== null;
           const classes = ["calendar-day"];
           if (!isSameMonth(date, month)) classes.push("outside");
           if (isToday(date)) classes.push("today");
@@ -191,7 +201,12 @@ export default function Calendar() {
               <span className="calendar-day-number">{format(date, "d")}</span>
               {(dayEvents.length > 0 || isPeriodDay) && (
                 <span className="calendar-day-dots">
-                  {isPeriodDay && <span className="dot" style={{ background: "#b3261e" }} title="Règles" />}
+                  {periodKind && (
+                    <span
+                      className={`dot dot-period${periodKind === "predicted" ? " predicted" : ""}`}
+                      title={periodKind === "predicted" ? "Règles prévues" : "Règles"}
+                    />
+                  )}
                   {dayEvents.slice(0, isPeriodDay ? 2 : 3).map((e) =>
                     e.category === "Anniversaire" ? (
                       <span key={e.id} className="event-cake" title={e.title}>

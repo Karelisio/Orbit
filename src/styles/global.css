@@ -383,6 +383,18 @@ textarea.input {
   background: var(--md-sys-color-primary);
 }
 
+/* Règles (Wenn) : point plein quand elles sont enregistrées, simple contour
+   quand elles sont seulement prévues (même distinction que Wenn). Couleur
+   fixe, comme le point du widget calendrier (widget_period_dot.xml). */
+.dot-period {
+  background: #b3261e;
+}
+
+.dot-period.predicted {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px #b3261e;
+}
+
 .event-cake {
   font-size: 8px;
   line-height: 1;

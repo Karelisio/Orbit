@@ -47,6 +47,9 @@ public class WidgetDataPlugin extends Plugin {
         String periodDaysCsv = call.getString("periodDaysCsv");
         editor.putString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV, periodDaysCsv != null ? periodDaysCsv : "");
 
+        String predictedPeriodDaysCsv = call.getString("predictedPeriodDaysCsv");
+        editor.putString(OrbitWidgetPrefs.KEY_PREDICTED_PERIOD_DAYS_CSV, predictedPeriodDaysCsv != null ? predictedPeriodDaysCsv : "");
+
         String taskDaysCsv = call.getString("taskDaysCsv");
         editor.putString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, taskDaysCsv != null ? taskDaysCsv : "");
 

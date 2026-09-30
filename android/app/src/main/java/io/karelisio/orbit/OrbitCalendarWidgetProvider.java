@@ -126,6 +126,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         SharedPreferences prefs = context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE);
         String eventsCsv = prefs.getString(OrbitWidgetPrefs.KEY_EVENTS_CSV, "");
         String periodDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV, "");
+        String predictedPeriodDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_PREDICTED_PERIOD_DAYS_CSV, "");
         String taskDaysCsv = prefs.getString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, "");
         int offset = prefs.getInt(OrbitWidgetPrefs.KEY_CAL_MONTH_OFFSET_PREFIX + appWidgetId, 0);
 
@@ -171,6 +172,7 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
         String monthKey = new SimpleDateFormat("yyyy-MM", Locale.FRENCH).format(shownMonth.getTime());
         Map<Integer, List<DayEvent>> events = parseEvents(eventsCsv, monthKey);
         Set<Integer> periodDays = parseDayList(periodDaysCsv, monthKey);
+        Set<Integer> predictedPeriodDays = parseDayList(predictedPeriodDaysCsv, monthKey);
         Set<Integer> taskDays = parseDayList(taskDaysCsv, monthKey);
 
         Calendar today = Calendar.getInstance();
@@ -223,7 +225,15 @@ public class OrbitCalendarWidgetProvider extends AppWidgetProvider {
                     theme.textOnSurface(cell, R.id.widget_cell_day);
                 }
 
-                cell.setViewVisibility(R.id.widget_cell_period_dot, periodDays.contains(day) ? View.VISIBLE : View.GONE);
+                // Règles enregistrées dans Wenn : point plein (fond par défaut
+                // de la vue) ; seulement prévues : simple contour, comme dans
+                // le calendrier de l'app.
+                boolean recordedPeriod = periodDays.contains(day);
+                boolean predictedPeriod = !recordedPeriod && predictedPeriodDays.contains(day);
+                cell.setViewVisibility(R.id.widget_cell_period_dot, recordedPeriod || predictedPeriod ? View.VISIBLE : View.GONE);
+                if (predictedPeriod) {
+                    cell.setInt(R.id.widget_cell_period_dot, "setBackgroundResource", R.drawable.widget_period_dot_predicted);
+                }
                 cell.setViewVisibility(R.id.widget_cell_task_dot, taskDays.contains(day) ? View.VISIBLE : View.GONE);
                 theme.tintPrimary(cell, R.id.widget_cell_task_dot);
 

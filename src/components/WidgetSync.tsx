@@ -78,7 +78,7 @@ export default function WidgetSync() {
   const now = new Date();
   const windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1 + WIDGET_MONTHS_AHEAD, 0);
-  const periodDates = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
+  const periodDays = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
 
   // Rappels d'événements resynchronisés au démarrage et à chaque changement
   // de la liste, y compris ceux faits par l'autre téléphone (reçus en temps
@@ -126,10 +126,12 @@ export default function WidgetSync() {
     }
     const eventsCsv = entries.join(";");
 
-    // Jours de règles (déjà enregistrées ou prédites, voir useCyclePeriodDays)
-    // sur la fenêtre poussée au widget, désactivable dans Réglages.
-    // useCyclePeriodDays filtre déjà sur [windowStart, windowEnd].
-    const periodDaysCsv = Array.from(periodDates).join(";");
+    // Jours de règles sur la fenêtre poussée au widget, désactivable dans
+    // Réglages : enregistrés d'un côté, seulement prévus de l'autre (point
+    // plein / simple contour sur le widget, comme dans l'app). Déjà filtrés
+    // sur [windowStart, windowEnd] par useCyclePeriodDays.
+    const periodDaysCsv = Array.from(periodDays.recorded).join(";");
+    const predictedPeriodDaysCsv = Array.from(periodDays.predicted).join(";");
 
     // Jours ayant au moins une tâche en attente, sur la même fenêtre : pas
     // besoin de boucler jour par jour, due_date est déjà une date absolue.
@@ -161,6 +163,7 @@ export default function WidgetSync() {
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsCsv,
       periodDaysCsv,
+      predictedPeriodDaysCsv,
       taskDaysCsv,
       journalContent: latestEntry ? sanitizeForWidget(latestEntry.content, 90) : null,
       journalAuthorLabel,
@@ -176,7 +179,7 @@ export default function WidgetSync() {
     couple,
     partnerId,
     user,
-    periodDates,
+    periodDays,
     themeVersion,
     seedColor,
     seedFollowsWallpaper,

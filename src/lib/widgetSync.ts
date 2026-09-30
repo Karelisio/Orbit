@@ -9,6 +9,7 @@ interface WidgetDataPlugin {
     nextTaskTitle?: string;
     eventsCsv: string;
     periodDaysCsv: string;
+    predictedPeriodDaysCsv: string;
     taskDaysCsv: string;
     journalContent?: string;
     journalAuthorLabel?: string;
@@ -70,8 +71,10 @@ export async function syncWidgets(data: {
   nextTaskTitle: string | null;
   /** "aaaa-mm-jj:titre:couleurHexSansDièse;..." sur une fenêtre de plusieurs mois à venir (voir WidgetSync.tsx). */
   eventsCsv: string;
-  /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours de règles (déjà enregistrées ou prédites) sur la même fenêtre. */
+  /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours de règles enregistrés dans Wenn sur la même fenêtre. */
   periodDaysCsv: string;
+  /** Même format : jours de règles seulement prévus (hors jours déjà enregistrés). */
+  predictedPeriodDaysCsv: string;
   /** "aaaa-mm-jj;aaaa-mm-jj;..." des jours ayant au moins une tâche en attente, sur la même fenêtre. */
   taskDaysCsv: string;
   /** Dernière entrée du journal, ou null s'il n'y en a aucune. */
@@ -99,6 +102,7 @@ export async function syncWidgets(data: {
       nextTaskTitle: data.nextTaskTitle ?? undefined,
       eventsCsv: data.eventsCsv,
       periodDaysCsv: data.periodDaysCsv,
+      predictedPeriodDaysCsv: data.predictedPeriodDaysCsv,
       taskDaysCsv: data.taskDaysCsv,
       journalContent: data.journalContent ?? undefined,
       journalAuthorLabel: data.journalAuthorLabel ?? undefined,
