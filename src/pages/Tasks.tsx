@@ -204,7 +204,14 @@ function TaskRow({
       <button className="btn-icon" onClick={onEdit} aria-label="Modifier">
         ✏️
       </button>
-      <button className="btn-icon" onClick={onDelete} aria-label="Supprimer">
+      <button
+        className="btn-icon"
+        onClick={() => {
+          // Suppression définitive, aussi chez l'autre : on demande d'abord.
+          if (window.confirm(`Supprimer la tâche « ${task.title} » ?`)) onDelete();
+        }}
+        aria-label="Supprimer"
+      >
         🗑️
       </button>
     </div>

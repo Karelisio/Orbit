@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { addDays, addMonths, addYears, format } from "date-fns";
-import { computeBalance } from "../src/lib/balances.ts";
+import { computeBalance, formatEuros, toCents } from "../src/lib/balances.ts";
 import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { parseDateParam } from "../src/lib/localDate.ts";
 import { revertOptimistic } from "../src/lib/optimistic.ts";
@@ -49,6 +49,29 @@ check("j'ai tout payé -> il/elle me doit la moitié", () => {
 check("à parts égales -> équilibré", () => {
   const b = computeBalance([expense(50, "me"), expense(50, "partner")], "me", "partner");
   assert.equal(b.balance, 0);
+  assert.equal(b.settled, true);
+});
+check("centimes exacts (le bug : 10,10 + 20,20 contre 30,30 -> « Tu dois 0.00 € »)", () => {
+  const b = computeBalance([expense(10.1, "me"), expense(20.2, "me"), expense(30.3, "partner")], "me", "partner");
+  assert.equal(b.balance, 0);
+  assert.equal(b.settled, true);
+  assert.equal(b.total, 60.6);
+  assert.equal(0.1 + 0.2 === 0.3, false, "rappel : les flottants ne tombent pas juste");
+});
+check("moins d'un centime d'écart : à jour ; au-delà : le montant exact", () => {
+  assert.equal(computeBalance([expense(0.01, "partner")], "me", "partner").settled, true);
+  const b = computeBalance([expense(0.03, "partner")], "me", "partner");
+  assert.equal(b.settled, false);
+  assert.equal(b.balance, 0.015);
+  const c = computeBalance([expense(19.99, "partner"), expense(5.01, "me")], "me", "partner");
+  assert.equal(c.balance, 7.49);
+});
+check("montants en centimes et format français", () => {
+  assert.equal(toCents(10.1), 1010);
+  assert.equal(toCents("12.34"), 1234);
+  const space = (text: string) => text.replace(/\s/g, " ");
+  assert.equal(space(formatEuros(1234.5)), "1 234,50 €");
+  assert.equal(space(formatEuros(0.5)), "0,50 €");
 });
 
 console.log("\nreminderLabel");

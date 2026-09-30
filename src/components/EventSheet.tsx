@@ -272,7 +272,13 @@ export default function EventSheet({ initialDate, event, onSave, onDelete, onClo
             {saving ? "Enregistrement..." : "Enregistrer"}
           </button>
           {onDelete && (
-            <button className="btn btn-danger" onClick={onDelete}>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                // Suppression définitive, aussi chez l'autre : on demande d'abord.
+                if (window.confirm(`Supprimer l'événement « ${event?.title ?? title} » ?`)) onDelete();
+              }}
+            >
               Supprimer l'événement
             </button>
           )}

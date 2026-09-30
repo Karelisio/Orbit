@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useExpenses } from "../hooks/useExpenses";
 import ExpenseSheet from "../components/ExpenseSheet";
-import { computeBalance } from "../lib/balances";
+import { computeBalance, formatEuros } from "../lib/balances";
 import { EXPENSE_CATEGORY_LABELS } from "../types";
 
 export default function Budget() {
@@ -33,17 +33,17 @@ export default function Budget() {
             Total dépensé
           </p>
           <p style={{ fontSize: 32, fontWeight: 800, margin: "4px 0", color: "var(--md-sys-color-primary)" }}>
-            {balance.total.toFixed(2)} €
+            {formatEuros(balance.total)}
           </p>
-          {balance.balance === 0 ? (
+          {balance.settled ? (
             <p style={{ margin: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>Vous êtes à jour.</p>
           ) : balance.balance > 0 ? (
             <p style={{ margin: 0, fontSize: 13 }}>
-              Tu dois <strong>{balance.balance.toFixed(2)} €</strong> à ton/ta partenaire
+              Tu dois <strong>{formatEuros(balance.balance)}</strong> à ton/ta partenaire
             </p>
           ) : (
             <p style={{ margin: 0, fontSize: 13 }}>
-              Ton/ta partenaire te doit <strong>{Math.abs(balance.balance).toFixed(2)} €</strong>
+              Ton/ta partenaire te doit <strong>{formatEuros(Math.abs(balance.balance))}</strong>
             </p>
           )}
         </div>
@@ -63,8 +63,14 @@ export default function Budget() {
                   {parseISO(expense.spent_at).toLocaleDateString("fr-FR")}
                 </p>
               </div>
-              <span style={{ fontWeight: 700 }}>{expense.amount.toFixed(2)} €</span>
-              <button className="btn-icon" onClick={() => deleteExpense(expense.id)} aria-label="Supprimer">
+              <span style={{ fontWeight: 700 }}>{formatEuros(Number(expense.amount))}</span>
+              <button
+                className="btn-icon"
+                onClick={() => {
+                  if (window.confirm(`Supprimer la dépense « ${expense.description} » ?`)) deleteExpense(expense.id);
+                }}
+                aria-label="Supprimer"
+              >
                 🗑️
               </button>
             </div>
