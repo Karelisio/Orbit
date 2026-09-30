@@ -18,7 +18,7 @@ la vide.
 - Un lien du widget calendrier avec une date invalide ouvre simplement le calendrier (au lieu de l'écran d'erreur).
 - En voyage à l'ouest de la France (Amériques…), les dates choisies (échéances, sélecteur de date, dépenses, jour sélectionné dans le calendrier) ne s'affichent plus avec un jour de décalage.
 - Connexion plus sûre : le lien reçu par e-mail ne fonctionne plus que sur le téléphone qui l'a demandé (l'ouvrir depuis l'appli mail de ce téléphone), et un message clair s'affiche s'il a expiré ou s'il est ouvert ailleurs. Rien ne change si tu es déjà connecté·e.
-- Sans connexion, une tâche cochée ou une dépense, une note, une tâche ou un événement supprimé revient tout de suite à sa place, avec un petit message « … vérifie ta connexion » (avant : ça disparaissait, puis revenait plus tard sans explication).
+- Sans connexion, une tâche cochée ou un élément supprimé (tâche, dépense, note, événement) revient tout de suite à sa place, avec un petit message « … vérifie ta connexion » (avant : il disparaissait, puis revenait plus tard sans explication).
 - Budget : les montants sont calculés au centime près et affichés à la française (« 1 234,50 € ») ; plus de « Tu dois 0.00 € » quand vous êtes en fait à jour. Supprimer une dépense, une tâche, une note ou un événement demande maintenant confirmation.
 - Tâches récurrentes : cocher une tâche en retard la reporte directement à sa prochaine échéance (au lieu d'avancer d'un seul cran à chaque fois). Appuyer deux fois sur Entrée ne crée plus la même tâche en double.
 - Widgets Calendrier et Tâches : sur les téléphones qui s'en servent, leur taille par défaut correspond enfin à la grille prévue (Calendrier : 4 lignes au lieu de 5, Tâches : 1 ligne au lieu de 2).
