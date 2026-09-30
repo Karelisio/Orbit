@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { format } from "date-fns";
+import { addDays, addMonths, addYears, format } from "date-fns";
 import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
+import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
 import { reminderLabel, nextEventOccurrence, eventOccursOnDay, taskRecurrenceLabel } from "../src/types/index.ts";
 
 let passed = 0;
@@ -127,6 +128,45 @@ check("la médiane ignore un cycle aberrant", () => {
   const s = computeCycleSummary(periodDays(["2026-06-01", "2026-06-29", "2026-08-13", "2026-09-10"]));
   assert.equal(s.averageCycleLength, 28);
   assert.equal(s.nextPeriodStart, "2026-10-08");
+});
+
+console.log("\ncompteur « Ensemble depuis »");
+const together = (since: string, now: Date) => formatTogetherDuration(togetherDuration(since, now));
+check("durées pleines, pas des changements d'année (le bug : « 1 an, 15 jours »)", () => {
+  assert.equal(together("2025-12-15", new Date(2026, 8, 30, 15, 0)), "9 mois, 15 jours");
+});
+check("anniversaire pile : une année pleine", () => {
+  assert.equal(together("2025-09-30", new Date(2026, 8, 30, 8, 0)), "1 an");
+  assert.equal(together("2025-09-30", new Date(2026, 8, 29, 23, 59)), "11 mois, 30 jours");
+});
+check("premier jour : « 0 jour », 1 jour au total", () => {
+  const d = togetherDuration("2026-09-30", new Date(2026, 8, 30, 0, 5));
+  assert.equal(formatTogetherDuration(d), "0 jour");
+  assert.equal(d.totalDays, 1);
+});
+check("jours au total, premier jour compris", () => {
+  assert.equal(togetherDuration("2025-12-15", new Date(2026, 8, 30, 12, 0)).totalDays, 290);
+});
+check("fins de mois et 29 février", () => {
+  assert.equal(together("2026-01-31", new Date(2026, 2, 1)), "1 mois, 1 jour");
+  assert.equal(together("2024-02-29", new Date(2025, 1, 28)), "1 an");
+  assert.equal(together("2023-06-10", new Date(2026, 8, 12)), "3 ans, 3 mois, 2 jours");
+});
+check("date future : rien de négatif", () => {
+  assert.deepEqual(togetherDuration("2027-01-01", new Date(2026, 8, 30)), { years: 0, months: 0, days: 0, totalDays: 0 });
+});
+check("toujours cohérent : 0 ≤ mois < 12, jours ≥ 0, et on retombe sur aujourd'hui", () => {
+  for (let s = 0; s < 800; s += 7) {
+    const since = addDays(new Date(2023, 0, 1), s);
+    const sinceStr = format(since, "yyyy-MM-dd");
+    for (let n = 0; n < 1200; n += 13) {
+      const now = addDays(since, n);
+      const d = togetherDuration(sinceStr, now);
+      assert.ok(d.months >= 0 && d.months < 12 && d.days >= 0, `${sinceStr} + ${n} j`);
+      const rebuilt = addDays(addMonths(addYears(since, d.years), d.months), d.days);
+      assert.equal(format(rebuilt, "yyyy-MM-dd"), format(now, "yyyy-MM-dd"), `${sinceStr} + ${n} j`);
+    }
+  }
 });
 
 console.log(`\n${passed} vérifications OK\n`);

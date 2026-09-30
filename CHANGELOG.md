@@ -7,6 +7,7 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- « Ensemble depuis » compte maintenant des durées pleines : ensemble depuis le 15 décembre, on voit « 9 mois, 15 jours » le 30 septembre (et plus « 1 an, 15 jours »).
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.
