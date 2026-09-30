@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { differenceInCalendarDays, eachDayOfInterval, format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
@@ -9,6 +10,7 @@ import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences, type WidgetFontScale } from "../context/PreferencesContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { syncWidgets } from "../lib/widgetSync";
+import { resyncEventReminders } from "../lib/notifications";
 import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
 
 /**
@@ -54,10 +56,13 @@ function sanitizeForWidget(text: string, maxLength = 18): string {
   return text.replace(/[:;]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
-/** Tient les widgets d'écran d'accueil Android à jour à chaque changement de données. */
+/**
+ * Tient les widgets d'écran d'accueil Android à jour à chaque changement de
+ * données — et les rappels d'événements programmés sur ce téléphone.
+ */
 export default function WidgetSync() {
   const { user } = useAuth();
-  const { events } = useEvents();
+  const { events, loading: eventsLoading } = useEvents();
   const { tasks } = useTasks();
   const { entries: journalEntries } = useJournal();
   const { couple, partnerId } = useCouple();
@@ -74,6 +79,16 @@ export default function WidgetSync() {
   const windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1 + WIDGET_MONTHS_AHEAD, 0);
   const periodDates = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
+
+  // Rappels d'événements resynchronisés au démarrage et à chaque changement
+  // de la liste, y compris ceux faits par l'autre téléphone (reçus en temps
+  // réel) : voir resyncEventReminders. Debounce : une rafale de changements
+  // (cache puis réseau, échos temps réel) ne donne qu'une seule passe.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || eventsLoading) return;
+    const timer = setTimeout(() => void resyncEventReminders(events), 1500);
+    return () => clearTimeout(timer);
+  }, [events, eventsLoading]);
 
   useEffect(() => {
     const now = new Date();

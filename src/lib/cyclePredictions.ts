@@ -11,13 +11,32 @@ interface MinimalCycleDay {
   flow: string | null;
 }
 
+/**
+ * Seuls ces niveaux de flux comptent comme des règles pour la prédiction
+ * (débuts de règles et durée des règles) : un spotting, souvent isolé en
+ * milieu de cycle, devenait sinon un « début de règles » et décalait la
+ * prochaine date d'environ deux semaines. Même règle côté Wenn.
+ */
+const PERIOD_FLOWS = new Set(["leger", "moyen", "abondant"]);
+
+function isPeriodDay(day: MinimalCycleDay): boolean {
+  return day.flow !== null && PERIOD_FLOWS.has(day.flow);
+}
+
 function toDate(dateStr: string): Date {
   return parseISO(dateStr);
 }
 
+/** Médiane : un cycle inhabituel isolé ne tire pas la durée retenue comme le ferait une moyenne. */
+function median(values: number[]): number {
+  const sorted = values.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
 function getPeriodStarts(days: MinimalCycleDay[]): string[] {
   const periodDates = days
-    .filter((d) => d.flow)
+    .filter(isPeriodDay)
     .map((d) => d.date)
     .sort();
 
@@ -46,7 +65,7 @@ export interface CycleSummary {
 
 function computeAveragePeriodLength(days: MinimalCycleDay[], fallback: number): number {
   const sortedFlowDays = days
-    .filter((d) => d.flow)
+    .filter(isPeriodDay)
     .map((d) => d.date)
     .sort();
 
@@ -82,9 +101,7 @@ export function computeCycleSummary(
   }
 
   const recentLengths = cycleLengths.slice(-6);
-  const averageCycleLength = recentLengths.length
-    ? Math.round(recentLengths.reduce((a, b) => a + b, 0) / recentLengths.length)
-    : fallbackCycleLength;
+  const averageCycleLength = recentLengths.length ? Math.round(median(recentLengths)) : fallbackCycleLength;
   const averagePeriodLength = computeAveragePeriodLength(days, fallbackPeriodLength);
 
   const lastPeriodStart = starts.length ? starts[starts.length - 1] : null;

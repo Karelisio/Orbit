@@ -14,9 +14,11 @@ interface MinimalCycleDay {
  * dates — utilisé pour un affichage discret dans le calendrier d'Orbit,
  * activable/désactivable dans Réglages. Orbit n'écrit jamais dans cette table.
  *
- * Combine les jours déjà enregistrés (flow non nul) et les jours prédits
- * (projection du cycle moyen, comme Wenn) : sans la prédiction, seuls les
- * mois déjà vécus affichaient quelque chose, jamais les mois à venir.
+ * Combine les jours déjà enregistrés (flow non nul, spotting compris : simple
+ * affichage de ce qui a été saisi) et les jours prédits (projection du cycle
+ * moyen, comme Wenn — spotting exclu, voir cyclePredictions.ts) : sans la
+ * prédiction, seuls les mois déjà vécus affichaient quelque chose, jamais
+ * les mois à venir.
  *
  * L'historique complet n'est chargé qu'une fois par couple : changer de mois
  * ne refait plus la requête, seul le filtrage local est recalculé.

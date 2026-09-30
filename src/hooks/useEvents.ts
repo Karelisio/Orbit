@@ -2,7 +2,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { supabase } from "../lib/supabase";
 import { useRealtimeCollection } from "./useRealtimeCollection";
-import { cancelEventNotifications, scheduleEventNotifications } from "../lib/notifications";
+import { requestNotificationPermission } from "../lib/notifications";
 import type { OrbitEvent } from "../types";
 
 export type NewEvent = Pick<
@@ -32,6 +32,11 @@ export function useEvents() {
   // Ajout/modif optimistes : sans ça, l'app (et le widget, qui réagit au
   // même état `events`) n'affichaient le changement qu'au retour de l'écho
   // temps réel Supabase, avec un délai réseau perceptible.
+  //
+  // Les rappels ne se programment plus ici, au coup par coup : WidgetSync.tsx
+  // resynchronise tous ceux de ce téléphone à chaque changement de `events`,
+  // même venu de l'autre (voir resyncEventReminders). Seule la permission se
+  // demande encore ici, au moment où un rappel est choisi.
   async function addEvent(fields: NewEvent) {
     if (!couple || !user) return { error: "Aucun couple lié" };
     const { data, error } = await supabase
@@ -42,21 +47,16 @@ export function useEvents() {
     if (error) return { error: error.message };
     const created = data as OrbitEvent;
     setRows((prev) => (prev.some((e) => e.id === created.id) ? prev : [...prev, created].sort(sortEvents)));
-    await scheduleEventNotifications(created);
+    if (created.reminder_minutes_before.length > 0) await requestNotificationPermission();
     return { error: null };
   }
 
   async function updateEvent(id: string, fields: Partial<NewEvent>) {
-    // Les rappels retirés doivent être annulés à partir de l'ANCIENNE liste :
-    // scheduleEventNotifications n'annule que les ids dérivés des rappels
-    // qu'on lui passe, donc sans ça un rappel supprimé continuait à sonner.
-    const previous = rows.find((e) => e.id === id);
     const { data, error } = await supabase.from("orbit_events").update(fields).eq("id", id).select().single();
     if (error) return { error: error.message };
     const updated = data as OrbitEvent;
     setRows((prev) => prev.map((e) => (e.id === id ? updated : e)).sort(sortEvents));
-    if (previous) await cancelEventNotifications(previous);
-    await scheduleEventNotifications(updated);
+    if (updated.reminder_minutes_before.length > 0) await requestNotificationPermission();
     return { error: null };
   }
 
@@ -64,7 +64,6 @@ export function useEvents() {
     setRows((prev) => prev.filter((e) => e.id !== event.id));
     const { error } = await supabase.from("orbit_events").delete().eq("id", event.id);
     if (error) return { error: error.message };
-    await cancelEventNotifications(event);
     return { error: null };
   }
 

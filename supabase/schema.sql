@@ -409,3 +409,53 @@ alter table public.orbit_events
 -- Les événements déjà catégorisés "Anniversaire" comptent désormais chaque
 -- année automatiquement, sans avoir à les rouvrir un par un pour l'activer.
 update public.orbit_events set recurrence = 'yearly' where category = 'Anniversaire' and recurrence = 'none';
+
+-- ---------------------------------------------------------------------------
+-- Migration additive : "Ensemble depuis" pour les deux membres, journal
+-- (appliquée sur le projet le 2026-09-30, avec le durcissement de couples /
+-- join_couple décrit en fin du schema.sql de Wenn)
+-- ---------------------------------------------------------------------------
+-- "Ensemble depuis" modifiable par les deux membres (la policy UPDATE de
+-- couples est réservée à la titulaire).
+create or replace function public.set_together_since(p_date date)
+returns public.couples
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_couple public.couples;
+begin
+  if v_uid is null then
+    raise exception 'Connexion requise';
+  end if;
+
+  update public.couples set together_since = p_date
+    where owner_id = v_uid or partner_id = v_uid
+  returning * into v_couple;
+
+  if v_couple.id is null then
+    raise exception 'Aucun espace lié';
+  end if;
+
+  return v_couple;
+end;
+$$;
+
+revoke execute on function public.set_together_since(date) from public, anon;
+grant execute on function public.set_together_since(date) to authenticated;
+
+-- Journal Orbit : l'auteur ne peut plus déplacer une entrée vers un autre
+-- espace (la policy UPDATE n'avait pas de WITH CHECK d'appartenance).
+drop policy if exists "orbit_journal_entries: author update" on public.orbit_journal_entries;
+create policy "orbit_journal_entries: author update"
+  on public.orbit_journal_entries for update
+  using (author_id = auth.uid())
+  with check (
+    author_id = auth.uid()
+    and exists (
+      select 1 from public.couples c
+      where c.id = orbit_journal_entries.couple_id
+        and (c.owner_id = auth.uid() or c.partner_id = auth.uid())
+    )
+  );
