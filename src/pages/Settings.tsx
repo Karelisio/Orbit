@@ -282,11 +282,24 @@ export default function Settings() {
   }
 
   async function handleLeaveCouple() {
-    const warning =
-      role === "owner"
-        ? "Quitter supprimera définitivement cet espace Orbit (événements, tâches, budget, journal). Le lien avec ton/ta partenaire sera aussi rompu, y compris côté Wenn. Continuer ?"
-        : "Tu vas te délier de cet espace. Les données de la titulaire ne sont pas affectées. Continuer ?";
-    if (!window.confirm(warning)) return;
+    if (role === "owner") {
+      // Côté titulaire, leave_couple() supprime la ligne `couples` : tout ce
+      // qui s'y rattache part en cascade, Orbit ET tout l'historique de cycle
+      // de Wenn (même espace partagé). D'où l'avertissement complet, puis une
+      // confirmation tapée à la main plutôt qu'un simple « OK ».
+      const warning =
+        "Quitter supprimera définitivement cet espace partagé, et avec lui :\n" +
+        "• toutes les données Orbit (événements, tâches, budget, journal) ;\n" +
+        "• tout l'historique de cycle de Wenn (règles, symptômes, notes).\n\n" +
+        "Le lien avec ton/ta partenaire sera aussi rompu, sur Orbit comme sur Wenn.\n\n" +
+        "Pense d'abord à exporter une sauvegarde depuis Wenn (Réglages → Sauvegarde → Exporter mes données).\n\n" +
+        "Continuer ?";
+      if (!window.confirm(warning)) return;
+      const typed = window.prompt("Pour confirmer la suppression définitive, tape SUPPRIMER :");
+      if (typed?.trim().toUpperCase() !== "SUPPRIMER") return;
+    } else if (!window.confirm("Tu vas te délier de cet espace. Les données de la titulaire ne sont pas affectées. Continuer ?")) {
+      return;
+    }
     setLeaving(true);
     const { error } = await leaveCouple();
     setLeaving(false);
