@@ -9,7 +9,10 @@
 -- À exécuter dans le SQL Editor du projet Supabase partagé, une fois, sur un
 -- projet où le schéma de Wenn existe déjà. Les évolutions suivantes de ce
 -- fichier s'ajoutent en fin de fichier comme blocs additifs (voir CLAUDE.md
--- de Wenn pour la convention : jamais rejouer tout le fichier).
+-- de Wenn pour la convention : jamais rejouer tout le fichier sur le projet
+-- en service). Le fichier reste néanmoins rejouable sans erreur (policies
+-- supprimées avant d'être recréées, ajouts à la publication realtime
+-- conditionnels), pour un nouveau projet ou une copie de test.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -49,6 +52,7 @@ create index if not exists orbit_events_couple_starts_idx on public.orbit_events
 
 alter table public.orbit_events enable row level security;
 
+drop policy if exists "orbit_events: select member" on public.orbit_events;
 create policy "orbit_events: select member"
   on public.orbit_events for select
   using (
@@ -59,6 +63,7 @@ create policy "orbit_events: select member"
     )
   );
 
+drop policy if exists "orbit_events: member write" on public.orbit_events;
 create policy "orbit_events: member write"
   on public.orbit_events for all
   using (
@@ -96,6 +101,7 @@ create table if not exists public.orbit_event_categories (
 
 alter table public.orbit_event_categories enable row level security;
 
+drop policy if exists "orbit_event_categories: select member" on public.orbit_event_categories;
 create policy "orbit_event_categories: select member"
   on public.orbit_event_categories for select
   using (
@@ -106,6 +112,7 @@ create policy "orbit_event_categories: select member"
     )
   );
 
+drop policy if exists "orbit_event_categories: member write" on public.orbit_event_categories;
 create policy "orbit_event_categories: member write"
   on public.orbit_event_categories for all
   using (
@@ -147,6 +154,7 @@ create index if not exists orbit_tasks_couple_idx on public.orbit_tasks (couple_
 
 alter table public.orbit_tasks enable row level security;
 
+drop policy if exists "orbit_tasks: select member" on public.orbit_tasks;
 create policy "orbit_tasks: select member"
   on public.orbit_tasks for select
   using (
@@ -157,6 +165,7 @@ create policy "orbit_tasks: select member"
     )
   );
 
+drop policy if exists "orbit_tasks: member write" on public.orbit_tasks;
 create policy "orbit_tasks: member write"
   on public.orbit_tasks for all
   using (
@@ -195,6 +204,7 @@ create index if not exists orbit_journal_couple_idx on public.orbit_journal_entr
 
 alter table public.orbit_journal_entries enable row level security;
 
+drop policy if exists "orbit_journal_entries: select member" on public.orbit_journal_entries;
 create policy "orbit_journal_entries: select member"
   on public.orbit_journal_entries for select
   using (
@@ -205,6 +215,7 @@ create policy "orbit_journal_entries: select member"
     )
   );
 
+drop policy if exists "orbit_journal_entries: member insert" on public.orbit_journal_entries;
 create policy "orbit_journal_entries: member insert"
   on public.orbit_journal_entries for insert
   with check (
@@ -216,10 +227,12 @@ create policy "orbit_journal_entries: member insert"
     )
   );
 
+drop policy if exists "orbit_journal_entries: author update" on public.orbit_journal_entries;
 create policy "orbit_journal_entries: author update"
   on public.orbit_journal_entries for update
   using (author_id = auth.uid());
 
+drop policy if exists "orbit_journal_entries: author delete" on public.orbit_journal_entries;
 create policy "orbit_journal_entries: author delete"
   on public.orbit_journal_entries for delete
   using (author_id = auth.uid());
@@ -248,6 +261,7 @@ create index if not exists orbit_expenses_couple_idx on public.orbit_expenses (c
 
 alter table public.orbit_expenses enable row level security;
 
+drop policy if exists "orbit_expenses: select member" on public.orbit_expenses;
 create policy "orbit_expenses: select member"
   on public.orbit_expenses for select
   using (
@@ -258,6 +272,7 @@ create policy "orbit_expenses: select member"
     )
   );
 
+drop policy if exists "orbit_expenses: member write" on public.orbit_expenses;
 create policy "orbit_expenses: member write"
   on public.orbit_expenses for all
   using (
@@ -277,12 +292,23 @@ create policy "orbit_expenses: member write"
 
 -- ---------------------------------------------------------------------------
 -- Realtime : activer la réplication sur les tables Orbit
+-- (idempotent : « alter publication ... add table » échoue si la table y
+-- est déjà, ce qui interrompait tout le script rejoué — ou même exécuté une
+-- seule fois, orbit_event_categories étant ajoutée une seconde fois plus bas)
 -- ---------------------------------------------------------------------------
-alter publication supabase_realtime add table public.orbit_events;
-alter publication supabase_realtime add table public.orbit_event_categories;
-alter publication supabase_realtime add table public.orbit_tasks;
-alter publication supabase_realtime add table public.orbit_journal_entries;
-alter publication supabase_realtime add table public.orbit_expenses;
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['orbit_events', 'orbit_event_categories', 'orbit_tasks', 'orbit_journal_entries', 'orbit_expenses'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- Migration additive : date d'échéance + récurrence des tâches
@@ -357,7 +383,15 @@ create policy "orbit_event_categories: member write"
     )
   );
 
-alter publication supabase_realtime add table public.orbit_event_categories;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'orbit_event_categories'
+  ) then
+    alter publication supabase_realtime add table public.orbit_event_categories;
+  end if;
+end $$;
 
 -- Fige la couleur des événements déjà créés (jusqu'ici toujours color=null,
 -- la couleur venait de l'enum de catégorie côté client) avant que ce mapping
