@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { App } from "@capacitor/app";
 import { differenceInCalendarDays, format as formatDate, parseISO } from "date-fns";
 import { useCouple } from "../context/CoupleContext";
 import { supabase } from "../lib/supabase";
@@ -63,13 +64,36 @@ export function useCycleStatus(): CycleStatus {
     }
 
     load();
+
+    // Rechargement groupé (debounce) : une rafale de suppressions (espace
+    // supprimé, en cascade) ou de reprises ne donne qu'une seule requête.
+    let reloadTimer: ReturnType<typeof setTimeout> | undefined;
+    function scheduleReload() {
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(load, 1000);
+    }
+
+    // Nom de channel unique (comme useRealtimeCollection) : Supabase
+    // réutiliserait sinon le channel précédent encore en cours de fermeture.
     const channel = supabase
-      .channel(`orbit-cycle-${couple.id}`)
+      .channel(`orbit-cycle-${couple.id}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "cycle_days", filter: `couple_id=eq.${couple.id}` }, load)
+      // Un DELETE n'est jamais livré sur un abonnement filtré (voir
+      // useRealtimeCollection) : écouté à part, sans filtre — seul l'id
+      // arrive, d'où un simple rechargement.
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "cycle_days" }, scheduleReload)
       .subscribe();
+
+    // Retour au premier plan : rattrape ce que le temps réel a pu manquer
+    // pendant que l'app dormait.
+    const appStateListener = App.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) scheduleReload();
+    });
 
     return () => {
       cancelled = true;
+      clearTimeout(reloadTimer);
+      void appStateListener.then((handle) => handle.remove());
       supabase.removeChannel(channel);
     };
   }, [couple?.id]);

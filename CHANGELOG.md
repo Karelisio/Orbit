@@ -11,6 +11,7 @@ la vide.
 - Prochaines règles (widget cycle, calendrier) : un spotting n'est plus pris pour un début de règles (il pouvait décaler la date prévue d'environ deux semaines), et un cycle inhabituel isolé ne fausse plus la durée de cycle prise en compte.
 - L'app ne se recharge plus d'elle-même de temps en temps (écran « Chargement... » qui faisait perdre une saisie en cours), et se remet à jour en silence quand on revient dessus.
 - Rappels d'événements : ils sonnent maintenant sur les deux téléphones (plus seulement sur celui qui a créé l'événement), suivent les modifications et suppressions faites par l'autre, reviennent chaque année pour les anniversaires, et se remettent en place tout seuls sur un nouveau téléphone.
+- Une dépense, une tâche, un événement ou une note supprimés par l'un disparaissent maintenant aussi tout de suite chez l'autre (ils restaient affichés jusqu'au redémarrage de l'app), et tout se remet à jour quand on revient sur l'app.
 
 ## v1.0.38 — 2026-09-24
 - Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.
