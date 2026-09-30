@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
-import { differenceInCalendarDays, eachDayOfInterval, format } from "date-fns";
+import { eachDayOfInterval, format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
@@ -10,6 +10,7 @@ import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences, type WidgetFontScale } from "../context/PreferencesContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { syncWidgets } from "../lib/widgetSync";
+import { eventTimeLabel, journalTimeLabel } from "../lib/widgetLabels";
 import { resyncEventReminders } from "../lib/notifications";
 import { eventDisplayColor, eventOccursOnDay, isOccurrenceUpcoming, nextEventOccurrence } from "../types";
 
@@ -26,24 +27,12 @@ const WIDGET_FONT_SCALE_FACTORS: Record<WidgetFontScale, number> = {
   grande: 1.25,
 };
 
-function eventTimeLabel(startsAt: string, allDay: boolean): string {
-  const date = new Date(startsAt);
-  const days = differenceInCalendarDays(date, new Date());
-  const time = allDay ? "" : ` à ${format(date, "HH:mm")}`;
-  if (days <= 0) return `Aujourd'hui${time}`;
-  if (days === 1) return `Demain${time}`;
-  if (days < 7) return `Dans ${days} j${time}`;
-  return format(date, "d MMM") + time;
-}
-
-/** Symétrique de eventTimeLabel, mais pour une date passée (dernière note du journal). */
-function journalTimeLabel(createdAt: string): string {
-  const days = differenceInCalendarDays(new Date(), new Date(createdAt));
-  if (days <= 0) return "Aujourd'hui";
-  if (days === 1) return "Hier";
-  if (days < 7) return `Il y a ${days} j`;
-  return format(new Date(createdAt), "d MMM");
-}
+/**
+ * Prochaines occurrences poussées au widget Fusion : plusieurs, et pas
+ * seulement la première, pour que le widget puisse passer tout seul à la
+ * suivante quand celle-ci est passée alors que l'app est fermée.
+ */
+const WIDGET_NEXT_EVENTS = 10;
 
 /**
  * Nettoie un texte pour l'encodage compact envoyé au widget natif (retire les
@@ -98,6 +87,15 @@ export default function WidgetSync() {
       .filter(({ event, occursAt }) => isOccurrenceUpcoming(event, occursAt, now))
       .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime());
     const nextEvent = upcoming[0] ?? null;
+    // Dates absolues (ms epoch) et non des libellés : le widget recalcule
+    // « Demain à 10:00 » / « Aujourd'hui » à chaque rendu (voir
+    // OrbitWidgetLabels.java), au lieu de garder un texte figé au moment de
+    // la synchro.
+    const nextEventsJson = JSON.stringify(
+      upcoming
+        .slice(0, WIDGET_NEXT_EVENTS)
+        .map(({ event, occursAt }) => ({ t: event.title, s: occursAt.getTime(), a: event.all_day }))
+    );
     const pendingTasks = tasks.filter((t) => !t.done);
 
     // Événements du jour affichés en pastilles empilées sur le widget
@@ -159,7 +157,8 @@ export default function WidgetSync() {
 
     syncWidgets({
       nextEventTitle: nextEvent?.event.title ?? null,
-      nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt.toISOString(), nextEvent.event.all_day) : null,
+      nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt, nextEvent.event.all_day, now) : null,
+      nextEventsJson,
       pendingTasksCount: pendingTasks.length,
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsCsv,
@@ -168,7 +167,8 @@ export default function WidgetSync() {
       taskDaysCsv,
       journalContent: latestEntry ? sanitizeForWidget(latestEntry.content, 90) : null,
       journalAuthorLabel,
-      journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,
+      journalTimeLabel: latestEntry ? journalTimeLabel(new Date(latestEntry.created_at), now) : null,
+      journalCreatedAt: latestEntry ? String(new Date(latestEntry.created_at).getTime()) : null,
       seedColor,
       seedFollowsWallpaper,
       fontScale: WIDGET_FONT_SCALE_FACTORS[widgetFontScale],

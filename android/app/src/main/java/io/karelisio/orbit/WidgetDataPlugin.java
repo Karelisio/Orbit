@@ -32,6 +32,16 @@ public class WidgetDataPlugin extends Plugin {
             editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_EVENT, false);
         }
 
+        // Dates absolues des prochaines occurrences : le libellé relatif
+        // (« Demain à 10:00 ») est recalculé à chaque rendu du widget, et
+        // n'est plus figé jusqu'à la prochaine ouverture de l'app.
+        String nextEventsJson = call.getString("nextEventsJson");
+        if (nextEventsJson != null) {
+            editor.putString(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON, nextEventsJson);
+        } else {
+            editor.remove(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON);
+        }
+
         Integer pendingTasksCount = call.getInt("pendingTasksCount");
         editor.putInt(OrbitWidgetPrefs.KEY_PENDING_TASKS_COUNT, pendingTasksCount != null ? pendingTasksCount : 0);
 
@@ -59,6 +69,7 @@ public class WidgetDataPlugin extends Plugin {
             editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT, journalContent);
             editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL, call.getString("journalAuthorLabel", ""));
             editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL, call.getString("journalTimeLabel", ""));
+            editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_CREATED_AT, call.getString("journalCreatedAt", ""));
         } else {
             editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, false);
         }

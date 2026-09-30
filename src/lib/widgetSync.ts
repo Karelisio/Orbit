@@ -5,6 +5,7 @@ interface WidgetDataPlugin {
   update(data: {
     nextEventTitle?: string;
     nextEventTimeLabel?: string;
+    nextEventsJson: string;
     pendingTasksCount: number;
     nextTaskTitle?: string;
     eventsCsv: string;
@@ -14,6 +15,7 @@ interface WidgetDataPlugin {
     journalContent?: string;
     journalAuthorLabel?: string;
     journalTimeLabel?: string;
+    journalCreatedAt?: string;
     primaryColor?: string;
     onPrimaryColor?: string;
     primaryContainerColor?: string;
@@ -66,7 +68,16 @@ function themeColorsForWidgets(seedColor: string) {
 
 export async function syncWidgets(data: {
   nextEventTitle: string | null;
+  /** Libellé figé au moment de la synchro : simple repli, le widget recalcule le sien depuis nextEventsJson. */
   nextEventTimeLabel: string | null;
+  /**
+   * Prochaines occurrences, JSON `[{"t": titre, "s": début en ms epoch, "a": journée entière}]`,
+   * dans l'ordre : le widget Fusion affiche la première pas encore passée,
+   * avec un libellé relatif recalculé à chaque rendu (OrbitWidgetLabels.java).
+   * Une chaîne plutôt qu'un tableau ou des nombres : côté Java, PluginCall
+   * ne relit un nombre que selon son type exact (Integer/Long/Double).
+   */
+  nextEventsJson: string;
   pendingTasksCount: number;
   nextTaskTitle: string | null;
   /** "aaaa-mm-jj:titre:couleurHexSansDièse;..." sur une fenêtre de plusieurs mois à venir (voir WidgetSync.tsx). */
@@ -80,7 +91,10 @@ export async function syncWidgets(data: {
   /** Dernière entrée du journal, ou null s'il n'y en a aucune. */
   journalContent: string | null;
   journalAuthorLabel: string | null;
+  /** Libellé figé (repli), voir journalCreatedAt. */
   journalTimeLabel: string | null;
+  /** Date de la note en ms epoch, en chaîne : « Hier »/« Il y a 3 j » recalculé à chaque rendu du widget. */
+  journalCreatedAt: string | null;
   /**
    * Couleur source du thème courant (voir ThemeModeContext.seedColor) : sert
    * uniquement à dériver la palette de repli ci-dessous (image de thème
@@ -98,6 +112,7 @@ export async function syncWidgets(data: {
     await WidgetData.update({
       nextEventTitle: data.nextEventTitle ?? undefined,
       nextEventTimeLabel: data.nextEventTimeLabel ?? undefined,
+      nextEventsJson: data.nextEventsJson,
       pendingTasksCount: data.pendingTasksCount,
       nextTaskTitle: data.nextTaskTitle ?? undefined,
       eventsCsv: data.eventsCsv,
@@ -107,6 +122,7 @@ export async function syncWidgets(data: {
       journalContent: data.journalContent ?? undefined,
       journalAuthorLabel: data.journalAuthorLabel ?? undefined,
       journalTimeLabel: data.journalTimeLabel ?? undefined,
+      journalCreatedAt: data.journalCreatedAt ?? undefined,
       ...themeColorsForWidgets(data.seedColor),
       fontScale: data.fontScale,
       seedFollowsWallpaper: data.seedFollowsWallpaper,

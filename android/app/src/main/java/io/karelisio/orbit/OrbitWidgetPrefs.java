@@ -5,7 +5,17 @@ final class OrbitWidgetPrefs {
     static final String NAME = "OrbitWidgetPrefs";
     static final String KEY_HAS_EVENT = "has_event";
     static final String KEY_EVENT_TITLE = "event_title";
+    /** Libellé figé au moment de la synchro : repli seulement, quand KEY_NEXT_EVENTS_JSON est absente. */
     static final String KEY_EVENT_TIME_LABEL = "event_time_label";
+    /**
+     * JSON `[{"t": titre, "s": début en ms epoch, "a": journée entière}, ...]`
+     * des prochaines occurrences, dans l'ordre (voir WidgetSync.tsx) : le
+     * widget Fusion prend au rendu la première pas encore passée et recalcule
+     * son libellé relatif (OrbitWidgetLabels). Absente tant qu'une version
+     * antérieure de l'app a poussé les données : repli sur les deux clés
+     * ci-dessus.
+     */
+    static final String KEY_NEXT_EVENTS_JSON = "next_events_json";
     static final String KEY_PENDING_TASKS_COUNT = "pending_tasks_count";
     static final String KEY_NEXT_TASK_TITLE = "next_task_title";
     /**
@@ -37,7 +47,10 @@ final class OrbitWidgetPrefs {
     static final String KEY_HAS_JOURNAL = "has_journal";
     static final String KEY_JOURNAL_CONTENT = "journal_content";
     static final String KEY_JOURNAL_AUTHOR_LABEL = "journal_author_label";
+    /** Libellé figé au moment de la synchro : repli seulement, quand KEY_JOURNAL_CREATED_AT est absente. */
     static final String KEY_JOURNAL_TIME_LABEL = "journal_time_label";
+    /** Date de la dernière note, ms epoch en chaîne : « Hier »/« Il y a 3 j » recalculé à chaque rendu. */
+    static final String KEY_JOURNAL_CREATED_AT = "journal_created_at";
 
     /**
      * Suffixe de la variante sombre de chaque couleur de palette ci-dessous :

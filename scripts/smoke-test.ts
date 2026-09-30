@@ -4,6 +4,7 @@ import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
+import { eventTimeLabel, journalTimeLabel } from "../src/lib/widgetLabels.ts";
 import {
   reminderLabel,
   nextEventOccurrence,
@@ -133,6 +134,28 @@ check("jamais d'occurrence annuelle avant la date d'origine", () => {
 check("un anniversaire garde son heure locale d'une année sur l'autre (changement d'heure)", () => {
   const winter = { starts_at: iso(2020, 1, 15, 9, 30), recurrence: "yearly", all_day: false } as never;
   assert.equal(format(nextEventOccurrence(winter, local(2026, 7, 1)), "yyyy-MM-dd HH:mm"), "2027-01-15 09:30");
+});
+
+console.log("\nlibellés relatifs des widgets (référence de OrbitWidgetLabels.java)");
+check("prochain événement : aujourd'hui, demain, dans N j, date", () => {
+  const now = local(2026, 9, 29, 11, 0); // mardi 11:00
+  assert.equal(eventTimeLabel(local(2026, 9, 29, 18, 30), false, now), "Aujourd'hui à 18:30");
+  assert.equal(eventTimeLabel(local(2026, 9, 30, 10, 0), false, now), "Demain à 10:00");
+  assert.equal(eventTimeLabel(local(2026, 9, 30, 9, 0), true, now), "Demain");
+  assert.equal(eventTimeLabel(local(2026, 10, 2, 9, 0), true, now), "Dans 3 j");
+  assert.equal(eventTimeLabel(local(2026, 10, 12, 20, 15), false, now), "12 oct. à 20:15");
+});
+check("le libellé suit l'heure qu'il est (le bug : « Demain à 10:00 » figé le lendemain)", () => {
+  const dentist = local(2026, 9, 30, 10, 0);
+  assert.equal(eventTimeLabel(dentist, false, local(2026, 9, 29, 11, 0)), "Demain à 10:00");
+  assert.equal(eventTimeLabel(dentist, false, local(2026, 9, 30, 8, 0)), "Aujourd'hui à 10:00");
+});
+check("dernière note : aujourd'hui, hier, il y a N j, date (mois en français)", () => {
+  const now = local(2026, 9, 30, 9, 0);
+  assert.equal(journalTimeLabel(local(2026, 9, 30, 0, 5), now), "Aujourd'hui");
+  assert.equal(journalTimeLabel(local(2026, 9, 29, 23, 50), now), "Hier");
+  assert.equal(journalTimeLabel(local(2026, 9, 26, 12, 0), now), "Il y a 4 j");
+  assert.equal(journalTimeLabel(local(2026, 2, 5, 12, 0), now), "5 févr.");
 });
 
 console.log("\nrécurrence des tâches");

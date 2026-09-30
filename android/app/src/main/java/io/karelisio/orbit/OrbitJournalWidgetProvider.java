@@ -40,7 +40,7 @@ public class OrbitJournalWidgetProvider extends AppWidgetProvider {
         } else {
             String content = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT, "");
             String author = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL, "");
-            String time = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL, "");
+            String time = journalTimeLabel(prefs);
             views.setTextViewText(R.id.widget_journal_content, content);
             views.setTextViewText(R.id.widget_journal_footer, author.isEmpty() ? time : author + " · " + time);
         }
@@ -60,6 +60,24 @@ public class OrbitJournalWidgetProvider extends AppWidgetProvider {
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    /**
+     * « Hier », « Il y a 3 j »... recalculé à chaque rendu depuis la date de
+     * la note (OrbitWidgetLabels), au lieu du texte figé au moment de la
+     * synchro — gardé en repli pour des données poussées par une version
+     * antérieure de l'app.
+     */
+    private static String journalTimeLabel(SharedPreferences prefs) {
+        String createdAt = prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_CREATED_AT, "");
+        if (createdAt != null && !createdAt.isEmpty()) {
+            try {
+                return OrbitWidgetLabels.journalTimeLabel(Long.parseLong(createdAt), System.currentTimeMillis());
+            } catch (NumberFormatException ignored) {
+                // date illisible : repli sur le texte figé
+            }
+        }
+        return prefs.getString(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL, "");
     }
 
     @Override
