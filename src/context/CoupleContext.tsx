@@ -131,7 +131,9 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
   }
 
   async function joinCouple(inviteCode: string) {
-    const { data, error } = await supabase.rpc("join_couple", { p_invite_code: inviteCode.trim() });
+    // Code stocké en minuscules (affiché en majuscules par CSS) : un clavier
+    // qui capitalise la saisie le rendait « invalide ».
+    const { data, error } = await supabase.rpc("join_couple", { p_invite_code: inviteCode.trim().toLowerCase() });
     if (error) return { error: error.message };
     setCouple(data as Couple);
     return { error: null };
