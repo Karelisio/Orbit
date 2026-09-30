@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import { App } from "@capacitor/app";
 import type { PluginListenerHandle } from "@capacitor/core";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import { fetchAllRows, supabase } from "../lib/supabase";
 
 interface WithId {
   id: string;
@@ -78,26 +78,28 @@ function isLive(store: CollectionStore): boolean {
   return stores.get(store.key) === store;
 }
 
-/** Charge (ou recharge) toute la collection depuis le serveur. */
+/**
+ * Charge (ou recharge) toute la collection depuis le serveur, page par page
+ * (plafond silencieux de 1000 lignes par lecture, voir fetchAllRows) dans un
+ * ordre stable (id) — le tri d'affichage reste fait ici par sortBy.
+ */
 function load(store: CollectionStore): void {
-  supabase
-    .from(store.table)
-    .select("*")
-    .eq("couple_id", store.coupleId)
-    .then(
-      ({ data, error }) => {
-        if (!isLive(store)) return;
-        // hors ligne / erreur réseau : on garde le cache déjà affiché
-        if (error || !data) {
-          publish(store, { ...store.snapshot, loading: false });
-          return;
-        }
-        publishRows(store, (data as WithId[]).slice().sort(store.sortBy));
-      },
-      () => {
-        if (isLive(store)) publish(store, { ...store.snapshot, loading: false });
+  fetchAllRows<WithId>((from, to) =>
+    supabase.from(store.table).select("*").eq("couple_id", store.coupleId).order("id").range(from, to)
+  ).then(
+    ({ data, error }) => {
+      if (!isLive(store)) return;
+      // hors ligne / erreur réseau : on garde le cache déjà affiché
+      if (error || !data) {
+        publish(store, { ...store.snapshot, loading: false });
+        return;
       }
-    );
+      publishRows(store, data.slice().sort(store.sortBy));
+    },
+    () => {
+      if (isLive(store)) publish(store, { ...store.snapshot, loading: false });
+    }
+  );
 }
 
 /** Retire une ligne supprimée (écho temps réel) si elle est chez nous, cache local compris. */

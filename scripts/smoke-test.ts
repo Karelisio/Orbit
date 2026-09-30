@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 import { addDays, addMonths, addYears, format } from "date-fns";
 import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
+import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
 import { reminderLabel, nextEventOccurrence, eventOccursOnDay, taskRecurrenceLabel } from "../src/types/index.ts";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
   fn();
+  passed++;
+  console.log("  ok  " + name);
+}
+async function checkAsync(name: string, fn: () => Promise<void>) {
+  await fn();
   passed++;
   console.log("  ok  " + name);
 }
@@ -167,6 +173,36 @@ check("toujours cohérent : 0 ≤ mois < 12, jours ≥ 0, et on retombe sur aujo
       assert.equal(format(rebuilt, "yyyy-MM-dd"), format(now, "yyyy-MM-dd"), `${sinceStr} + ${n} j`);
     }
   }
+});
+
+console.log("\nlecture paginée (plafond de 1000 lignes de PostgREST)");
+function fakeTable(total: number, failAtFrom = -1) {
+  const calls: [number, number][] = [];
+  const build = (from: number, to: number) => {
+    calls.push([from, to]);
+    if (from === failAtFrom) return Promise.resolve({ data: null, error: { message: "Failed to fetch" } });
+    const rows = Array.from({ length: Math.max(0, Math.min(to, total - 1) - from + 1) }, (_, i) => ({ id: String(from + i) }));
+    return Promise.resolve({ data: rows, error: null });
+  };
+  return { calls, build };
+}
+await checkAsync("2500 lignes : trois pages, rien ne manque", async () => {
+  const t = fakeTable(2500);
+  const { data, error } = await fetchAllRows(t.build);
+  assert.equal(error, null);
+  assert.equal(data?.length, 2500);
+  assert.deepEqual(t.calls, [[0, 999], [1000, 1999], [2000, 2999]]);
+});
+await checkAsync("pile 1000 lignes : une page vide confirme la fin", async () => {
+  const t = fakeTable(1000);
+  assert.equal((await fetchAllRows(t.build)).data?.length, 1000);
+  assert.equal(t.calls.length, 2);
+});
+await checkAsync("une erreur réseau en cours de route est remontée telle quelle", async () => {
+  const t = fakeTable(2500, 1000);
+  const { data, error } = await fetchAllRows(t.build);
+  assert.equal(data, null);
+  assert.deepEqual(error, { message: "Failed to fetch" });
 });
 
 console.log(`\n${passed} vérifications OK\n`);

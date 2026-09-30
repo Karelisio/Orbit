@@ -1,5 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Lecture paginée (plafond de 1000 lignes de PostgREST) : module séparé,
+// sans dépendance au client, pour rester testable (scripts/smoke-test.ts).
+export { fetchAllRows } from "./paging";
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
