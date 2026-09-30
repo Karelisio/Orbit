@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { parseISO } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
 import { useExpenses } from "../hooks/useExpenses";
@@ -59,7 +60,7 @@ export default function Budget() {
                 <p style={{ margin: "2px 0 0", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)" }}>
                   {EXPENSE_CATEGORY_LABELS[expense.category as keyof typeof EXPENSE_CATEGORY_LABELS] ?? expense.category} ·{" "}
                   {expense.paid_by === user?.id ? "payé par moi" : "payé par partenaire"} ·{" "}
-                  {new Date(expense.spent_at).toLocaleDateString("fr-FR")}
+                  {parseISO(expense.spent_at).toLocaleDateString("fr-FR")}
                 </p>
               </div>
               <span style={{ fontWeight: 700 }}>{expense.amount.toFixed(2)} €</span>

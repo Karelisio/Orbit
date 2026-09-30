@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
@@ -194,7 +194,7 @@ function TaskRow({
           {(task.due_date || isRecurring) && (
             <span style={{ display: "block", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)", marginTop: 2 }}>
               {isRecurring && "🔁 "}
-              {task.due_date ? format(new Date(task.due_date), "d MMM", { locale: fr }) : ""}
+              {task.due_date ? format(parseISO(task.due_date), "d MMM", { locale: fr }) : ""}
               {isRecurring && task.due_date ? " · " : ""}
               {isRecurring ? taskRecurrenceLabel(task.recurrence, task.recurrence_interval) : ""}
             </span>
