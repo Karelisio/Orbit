@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Base unie du fond de tuile, teintée au runtime avec la couleur
-  primary-container de l'app (OrbitWidgetTheme.applyTileBackground).
-
-  C'est volontairement l'app qui fournit la couleur, et non la palette
-  système @android:color/system_accent1_* utilisée auparavant : cette
-  dernière suit le thème du constructeur (HyperOS, One UI...) et pouvait
-  donner un fond marron pendant que l'app, elle, tirait sa palette de la
-  couleur dominante du fond d'écran. Les deux divergeaient visiblement.
+  Base unie du fond de tuile. Sa couleur vient de la teinte posée sur la vue
+  qui l'affiche (android:backgroundTint="@color/widget_dyn_primary_container"
+  dans les layouts des widgets) : la couleur système dynamique, résolue et
+  repeinte par le lanceur lui-même (values-v31 / values-night-v31) — les
+  mêmes tons que l'app (DynamicColorPlugin), donc jamais de divergence.
+  OrbitWidgetTheme.applyTileBackground ne la remplace que si une image de
+  thème est choisie dans l'app (palette poussée par WidgetSync.tsx). Le
+  violet ci-dessous n'est qu'un repli, jamais visible une fois teinté.
 
   Le <solid> explicite est indispensable : un <shape> sans lui se remplit
   d'une couleur opaque arbitraire dès qu'on lui applique un tint.

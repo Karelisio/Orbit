@@ -66,7 +66,6 @@ final class OrbitWidgetPrefs {
     static final String KEY_COLOR_ON_PRIMARY_CONTAINER = "color_on_primary_container";
     static final String KEY_COLOR_ON_SURFACE = "color_on_surface";
     static final String KEY_COLOR_ON_SURFACE_VARIANT = "color_on_surface_variant";
-    static final String KEY_COLOR_TERTIARY = "color_tertiary";
 
     /**
      * Vrai sauf quand la copine a choisi une image de thème dans l'app. Dans

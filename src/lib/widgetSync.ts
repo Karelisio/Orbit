@@ -22,14 +22,12 @@ interface WidgetDataPlugin {
     onPrimaryContainerColor?: string;
     onSurfaceColor?: string;
     onSurfaceVariantColor?: string;
-    tertiaryColor?: string;
     darkPrimaryColor?: string;
     darkOnPrimaryColor?: string;
     darkPrimaryContainerColor?: string;
     darkOnPrimaryContainerColor?: string;
     darkOnSurfaceColor?: string;
     darkOnSurfaceVariantColor?: string;
-    darkTertiaryColor?: string;
     fontScale: number;
     seedFollowsWallpaper: boolean;
   }): Promise<void>;
@@ -53,7 +51,6 @@ function themeColorsForWidgets(seedColor: string) {
     darkOnPrimaryContainerColor: palette.onPrimaryContainer,
     darkOnSurfaceColor: palette.onSurface,
     darkOnSurfaceVariantColor: palette.onSurfaceVariant,
-    darkTertiaryColor: palette.tertiary,
   });
   return {
     primaryColor: light.primary,
@@ -62,7 +59,6 @@ function themeColorsForWidgets(seedColor: string) {
     onPrimaryContainerColor: light.onPrimaryContainer,
     onSurfaceColor: light.onSurface,
     onSurfaceVariantColor: light.onSurfaceVariant,
-    tertiaryColor: light.tertiary,
     ...prefixDark(dark),
   };
 }
