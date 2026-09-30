@@ -256,6 +256,23 @@ rencontrés :
   sans ça, Android retombe sur une icône système générique, jamais sur
   l'icône colorée de l'app (interdite pour une icône de notif).
 
+Les rappels ne se programment **jamais au coup par coup** (création/
+modification) : `resyncEventReminders(events)`, appelée par `WidgetSync.tsx`
+(debounce 1,5 s) au démarrage et à chaque changement de `events` — y compris
+ceux de l'autre téléphone reçus en temps réel —, aligne les alarmes de CE
+téléphone sur la liste partagée (ids déterministes `événement|minutes|
+occurrence`, `extra.kind = 'orbit-event'`, prochaine occurrence via
+`nextEventOccurrence` pour les annuels). Sans ça, seul le téléphone qui
+créait l'événement sonnait, un déplacement/suppression par l'autre laissait
+sonner l'ancienne alarme, et un anniversaire ne sonnait qu'une fois.
+
+Temps réel : Supabase ne livre **jamais un DELETE sur un abonnement filtré**
+(`couple_id=eq...`, l'ancienne ligne ne contient que la clé primaire) —
+`useRealtimeCollection`/`useCycleStatus` écoutent donc les DELETE à part,
+sans filtre (id seulement), et rechargent au retour au premier plan.
+`CoupleContext` dépend de `user?.id` et non de l'objet `user` (recréé à
+chaque rafraîchissement de jeton, ce qui démontait toute l'app).
+
 ## Mise à jour in-app — piège CORS déjà résolu, ne pas régresser
 
 `src/lib/appUpdate.ts` télécharge l'APK avec `CapacitorHttp.request()`, **pas**
