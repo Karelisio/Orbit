@@ -16,6 +16,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl ?? "", supabaseAnonKey ?? "", {
   auth: {
+    // Flux PKCE pour le lien magique : le lien ne contient plus qu'un code,
+    // échangeable seulement avec le vérificateur gardé sur l'appareil qui a
+    // demandé le lien (voir deepLink.ts) — plus de jetons de session en
+    // clair dans une URL, ni de lien forgé qui connecterait l'app au compte
+    // de quelqu'un d'autre. Les sessions déjà ouvertes ne sont pas touchées.
+    flowType: "pkce",
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,

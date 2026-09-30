@@ -2,7 +2,14 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Capacitor } from "@capacitor/core";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-import { NATIVE_AUTH_REDIRECT_URL } from "../lib/deepLink";
+import {
+  NATIVE_AUTH_REDIRECT_URL,
+  clearAuthLinkError,
+  clearPendingLogin,
+  getAuthLinkError,
+  markPendingLogin,
+  subscribeAuthLinkError,
+} from "../lib/deepLink";
 import type { Profile } from "../types";
 
 interface AuthContextValue {
@@ -10,6 +17,8 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  /** Lien de connexion refusé (ouvert sur un autre téléphone, expiré...), à afficher sur l'écran de connexion. */
+  authLinkError: string | null;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -21,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authLinkError, setAuthLinkError] = useState<string | null>(getAuthLinkError);
 
   async function loadProfile(userId: string) {
     const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -34,16 +44,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
         loadProfile(newSession.user.id);
       } else {
         setProfile(null);
       }
+      // Connecté (ou déconnecté) : un éventuel ancien message de lien refusé
+      // n'a plus lieu d'être sur le prochain écran de connexion.
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") clearAuthLinkError();
+      if (event === "SIGNED_IN") clearPendingLogin();
     });
+    const unsubscribeLinkError = subscribeAuthLinkError(setAuthLinkError);
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      sub.subscription.unsubscribe();
+      unsubscribeLinkError();
+    };
   }, []);
 
   async function signInWithMagicLink(email: string) {
@@ -51,10 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // (voir lib/deepLink.ts) — sinon Supabase retombe sur son "Site URL" par
     // défaut, celui de Wenn, et le lien magique rouvre Wenn au lieu d'Orbit.
     const emailRedirectTo = Capacitor.isNativePlatform() ? NATIVE_AUTH_REDIRECT_URL : window.location.origin;
+    clearAuthLinkError();
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo },
     });
+    // Flux PKCE (voir lib/supabase.ts) : le vérificateur du code est gardé
+    // sur CE téléphone, seul capable d'utiliser le lien envoyé.
+    if (!error) markPendingLogin();
     return { error: error?.message ?? null };
   }
 
@@ -73,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         profile,
         loading,
+        authLinkError,
         signInWithMagicLink,
         signOut,
         refreshProfile,

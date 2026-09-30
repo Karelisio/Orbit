@@ -17,6 +17,7 @@ la vide.
 - Les widgets ne sont plus reconstruits en boucle pendant que l'app est ouverte (moins de batterie), et ne passent plus un court instant au violet par défaut à l'ouverture de l'app.
 - Un lien du widget calendrier avec une date invalide ouvre simplement le calendrier (au lieu de l'écran d'erreur).
 - En voyage à l'ouest de la France (Amériques…), les dates choisies (échéances, sélecteur de date, dépenses, jour sélectionné dans le calendrier) ne s'affichent plus avec un jour de décalage.
+- Connexion plus sûre : le lien reçu par e-mail ne fonctionne plus que sur le téléphone qui l'a demandé (l'ouvrir depuis l'appli mail de ce téléphone), et un message clair s'affiche s'il a expiré ou s'il est ouvert ailleurs. Rien ne change si tu es déjà connecté·e.
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.
