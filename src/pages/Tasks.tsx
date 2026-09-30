@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useAuth } from "../context/AuthContext";
@@ -21,21 +21,29 @@ export default function Tasks() {
   const [showOptions, setShowOptions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Entrée pressée deux fois de suite : la première requête est encore en
+  // cours, la seconde créait un doublon. Garde dans une ref plutôt que dans
+  // l'état `saving`, qui peut ne pas encore être à jour entre deux appuis.
+  const addingRef = useRef(false);
 
   async function handleAdd() {
-    // Entrée pressée deux fois de suite : la première requête est encore en
-    // cours, la seconde créait un doublon.
-    if (!title.trim() || saving) return;
+    if (!title.trim() || addingRef.current) return;
+    addingRef.current = true;
     setSaving(true);
     setError(null);
-    const { error } = await addTask({
-      title: title.trim(),
-      assignedTo: assignee,
-      dueDate: dueDate || null,
-      recurrence,
-      recurrenceInterval: recurrence === "none" ? 1 : recurrenceInterval,
-    });
-    setSaving(false);
+    let error: string | null;
+    try {
+      ({ error } = await addTask({
+        title: title.trim(),
+        assignedTo: assignee,
+        dueDate: dueDate || null,
+        recurrence,
+        recurrenceInterval: recurrence === "none" ? 1 : recurrenceInterval,
+      }));
+    } finally {
+      addingRef.current = false;
+      setSaving(false);
+    }
     if (error) {
       setError(error);
       return;
