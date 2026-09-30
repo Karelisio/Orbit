@@ -9,6 +9,7 @@ la vide.
 ## Non publié
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.
 - Prochaines règles (widget cycle, calendrier) : un spotting n'est plus pris pour un début de règles (il pouvait décaler la date prévue d'environ deux semaines), et un cycle inhabituel isolé ne fausse plus la durée de cycle prise en compte.
+- L'app ne se recharge plus d'elle-même de temps en temps (écran « Chargement... » qui faisait perdre une saisie en cours), et se remet à jour en silence quand on revient dessus.
 
 ## v1.0.38 — 2026-09-24
 - Voile des widgets adouci : la couleur dynamique du fond est maintenant lavée sur toute la tuile (avant : seulement en bas), pour un rendu plus doux et uniforme.

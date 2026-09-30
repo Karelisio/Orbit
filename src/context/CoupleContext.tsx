@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { App } from "@capacitor/app";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import type { Couple } from "../types";
@@ -47,39 +48,63 @@ function writeCoupleCache(userId: string, couple: Couple): void {
  */
 export function CoupleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  // L'id et pas l'objet `user` : Supabase recrée ce dernier à chaque
+  // événement d'auth (TOKEN_REFRESHED environ toutes les heures), ce qui
+  // relançait le chargement — et CoupleGate démontait alors toute l'app.
+  const userId = user?.id ?? null;
   const [couple, setCouple] = useState<Couple | null>(null);
   const [loading, setLoading] = useState(true);
+  // Compte pour lequel l'espace a déjà été chargé une première fois.
+  const loadedForRef = useRef<string | null>(null);
 
   const loadCouple = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
+      loadedForRef.current = null;
       setCouple(null);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    // Affichage immédiat depuis le dernier couple connu (lancement hors
-    // ligne) pendant que le réseau répond, ou à la place s'il ne répond pas.
-    const cached = readCoupleCache(user.id);
-    if (cached) setCouple(cached);
+    // Écran « Chargement... » seulement au premier chargement (ou changement
+    // de compte) : les rechargements suivants se font en silence, sans
+    // démonter l'app (feuille d'édition ouverte perdue, etc.).
+    if (loadedForRef.current !== userId) {
+      setLoading(true);
+      // Affichage immédiat depuis le dernier couple connu (lancement hors
+      // ligne) pendant que le réseau répond, ou à la place s'il ne répond pas.
+      setCouple(readCoupleCache(userId));
+    }
     try {
       const { data, error } = await supabase
         .from("couples")
         .select("*")
-        .or(`owner_id.eq.${user.id},partner_id.eq.${user.id}`)
+        .or(`owner_id.eq.${userId},partner_id.eq.${userId}`)
         .maybeSingle();
       if (!error) {
         setCouple((data as Couple) ?? null);
-        if (data) writeCoupleCache(user.id, data as Couple);
+        if (data) writeCoupleCache(userId, data as Couple);
       }
     } catch {
       // hors ligne : on garde le cache déjà affiché s'il existe
     } finally {
+      loadedForRef.current = userId;
       setLoading(false);
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     loadCouple();
+  }, [loadCouple]);
+
+  // Retour au premier plan : rechargement silencieux, pour rattraper un
+  // changement fait pendant que l'app dormait (espace supprimé ou quitté par
+  // l'autre, date modifiée...).
+  useEffect(() => {
+    const listener = App.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) loadCouple();
+    });
+    return () => {
+      void listener.then((handle) => handle.remove());
+    };
   }, [loadCouple]);
 
   useEffect(() => {
