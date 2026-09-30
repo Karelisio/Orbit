@@ -6,9 +6,12 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Une seule exécution à la fois par branche : deux pushes rapprochés sur
+# main ne publient jamais deux releases en parallèle (le second attend, rien
+# n'est annulé en cours de route — une release à moitié publiée serait pire).
 concurrency:
   group: build-android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-android:
@@ -26,11 +29,90 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # 22 : `npm run check` exécute scripts/smoke-test.ts avec
+          # --experimental-strip-types.
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
+
+      # Numéro de la prochaine version, calculé sans rien pousser : le tag et
+      # la Release ne sont créés, et le CHANGELOG archivé, qu'après un build
+      # signé réussi (avant, un build raté laissait un tag orphelin et des
+      # notes archivées que personne ne verrait). Release seulement sur main
+      # (push ou lancement manuel) ou sur un tag v* poussé à la main ; sur une
+      # branche de travail, build de vérification sans tag, release ni push.
+      - name: Determine version
+        id: version
+        run: |
+          RELEASE=false
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="$GITHUB_REF_NAME"
+            RELEASE=true
+          else
+            # Seuls les tags vX.Y.Z comptent (un éventuel v1.2.3-test est ignoré).
+            LATEST_TAG=$(git tag --list "v*" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+            if [ -z "$LATEST_TAG" ]; then
+              TAG="v1.0.0"
+            else
+              IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG#v}"
+              TAG="v$(( 10#$MAJOR )).$(( 10#$MINOR )).$(( 10#$PATCH + 1 ))"
+            fi
+            if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+              RELEASE=true
+              # Job relancé sur un commit déjà publié : simple build.
+              ALREADY=$(git tag --points-at "$GITHUB_SHA" --list "v*" | head -n1)
+              if [ -n "$ALREADY" ]; then
+                echo "::notice::$GITHUB_SHA est déjà publié ($ALREADY) : pas de nouvelle release."
+                RELEASE=false
+              fi
+            fi
+          fi
+          if ! [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Tag de version invalide : $TAG (attendu vX.Y.Z)."
+            exit 1
+          fi
+          # 10# : un « 08 » serait sinon lu en octal par l'arithmétique bash.
+          MAJOR=$(( 10#${BASH_REMATCH[1]} ))
+          MINOR=$(( 10#${BASH_REMATCH[2]} ))
+          PATCH=$(( 10#${BASH_REMATCH[3]} ))
+          if (( MINOR > 999 || PATCH > 999 )); then
+            echo "::error::$TAG : mineur et patch doivent rester sous 1000 (versionCode)."
+            exit 1
+          fi
+          # versionCode dérivé de la version : toujours croissant d'une release
+          # à l'autre, et bien au-dessus des anciens codes (numéro d'exécution
+          # de la CI, quelques centaines) — Android refuse une mise à jour dont
+          # le versionCode est plus petit que celui installé.
+          VERSION_CODE=$(( MAJOR * 1000000 + MINOR * 1000 + PATCH ))
+          if [ "$RELEASE" = "true" ]; then
+            VERSION_NAME="${TAG#v}"
+          else
+            VERSION_NAME="${TAG#v}-dev.${GITHUB_SHA::7}"
+          fi
+          {
+            echo "tag=$TAG"
+            echo "release=$RELEASE"
+            echo "code=$VERSION_CODE"
+            echo "name=$VERSION_NAME"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version : $VERSION_NAME (code $VERSION_CODE), release : $RELEASE"
+
+      # Notes = « ## Non publié » du commit construit, moins ce qui est déjà
+      # archivé sur main (release concurrente), ou la note par défaut.
+      # Lecture seule ici : l'archivage n'a lieu qu'après la publication.
+      - name: Extract release notes
+        if: steps.version.outputs.release == 'true'
+        run: |
+          git fetch --quiet origin main
+          git show origin/main:CHANGELOG.md > "$RUNNER_TEMP/main-changelog.md"
+          node scripts/archive-changelog.cjs notes CHANGELOG.md "$RUNNER_TEMP/main-changelog.md" > "$RUNNER_TEMP/release-notes.md"
+          echo "Notes de version :"
+          cat "$RUNNER_TEMP/release-notes.md"
+
+      - name: Type check & smoke tests
+        run: npm run check
 
       - name: Build React frontend
         env:
@@ -41,67 +123,16 @@ jobs:
       - name: Sync Capacitor (Android)
         run: npx cap sync android
 
-      # Détermine (et, sur un push main, crée + pousse) le tag de release à
-      # publier. Un tag poussé ici avec le token par défaut ne redéclenche PAS
-      # ce workflow (limitation GitHub Actions anti-boucle) : la Release est
-      # donc publiée directement dans CE run, pas via un second déclenchement.
-      - name: Determine release tag
-        id: release_tag
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-        run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-          else
-            LATEST_TAG=$(git tag --list "v*" --sort=-v:refname | head -n1)
-            if [ -z "$LATEST_TAG" ]; then
-              TAG="v1.0.0"
-            else
-              IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST_TAG#v}"
-              TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-            fi
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag "$TAG"
-            git push origin "$TAG"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Tag de release : $TAG"
-
-      - name: Archive changelog "Non publié"
-        id: changelog
-        if: steps.release_tag.outputs.tag != ''
-        run: |
-          DATE=$(date +%Y-%m-%d)
-          node scripts/archive-changelog.cjs "${{ steps.release_tag.outputs.tag }}" "$DATE"
-          {
-            echo "notes<<EOF_NOTES"
-            cat changelog-notes.txt
-            echo "EOF_NOTES"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Commit archived changelog
-        if: steps.release_tag.outputs.tag != '' && github.ref == 'refs/heads/main'
-        run: |
-          if ! git diff --quiet -- CHANGELOG.md; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add CHANGELOG.md
-            git commit -m "Changelog : ${{ steps.release_tag.outputs.tag }}"
-            git push origin HEAD:main
-          fi
-
       - name: Stamp app version
         working-directory: android
+        env:
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
-          VERSION_CODE="${{ github.run_number }}"
-          RELEASE_TAG="${{ steps.release_tag.outputs.tag }}"
-          if [ -n "$RELEASE_TAG" ]; then
-            VERSION_NAME="${RELEASE_TAG#v}"
-          else
-            VERSION_NAME="0.0.0-${GITHUB_SHA::7}"
-          fi
-          sed -i "s/versionCode 1/versionCode $VERSION_CODE/" app/build.gradle
+          sed -i "s/versionCode 1$/versionCode $VERSION_CODE/" app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"$VERSION_NAME\"/" app/build.gradle
+          grep -q "versionCode $VERSION_CODE$" app/build.gradle || { echo "::error::versionCode non tamponné dans app/build.gradle"; exit 1; }
+          grep -q "versionName \"$VERSION_NAME\"" app/build.gradle || { echo "::error::versionName non tamponné dans app/build.gradle"; exit 1; }
           echo "Version: code=$VERSION_CODE name=$VERSION_NAME"
 
       - name: Setup JDK 21
@@ -113,11 +144,33 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # Sans ces secrets, Gradle produisait sans rien dire un APK non signé...
+      # qui était publié, et que le téléphone refuse en mise à jour.
+      - name: Check signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          MISSING=""
+          for NAME in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!NAME}" ]; then MISSING="$MISSING $NAME"; fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Secret(s) de signature manquant(s) :$MISSING. À ajouter dans Settings > Secrets and variables > Actions (voir README) : sans eux l'APK ne serait pas signé et ne pourrait pas mettre à jour l'app installée."
+            exit 1
+          fi
+
       - name: Decode Android keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "${{ github.workspace }}/android/app/release.keystore"
+          if [ ! -s "${{ github.workspace }}/android/app/release.keystore" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 ne donne aucun keystore une fois décodé."
+            exit 1
+          fi
 
       - name: Build signed release APK
         working-directory: android
@@ -135,7 +188,12 @@ jobs:
       - name: Locate APK
         id: apk
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" ! -name "*unsigned*" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::Aucun APK signé produit (seulement app-release-unsigned.apk ?)."
+            find android/app/build/outputs/apk -name "*.apk" || true
+            exit 1
+          fi
           cp "$APK_PATH" "orbit-release.apk"
 
       - name: Upload APK artifact
@@ -145,10 +203,49 @@ jobs:
           path: orbit-release.apk
           retention-days: 30
 
+      # Tag créé par la Release elle-même, sur le commit construit (et non
+      # sur la pointe de main, qui a pu avancer pendant le build). Un tag
+      # poussé avec le jeton par défaut ne redéclenche pas ce workflow.
       - name: Publish GitHub Release
-        if: steps.release_tag.outputs.tag != ''
+        if: steps.version.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_tag.outputs.tag }}
-          body: ${{ steps.changelog.outputs.notes }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          body_path: ${{ runner.temp }}/release-notes.md
           files: orbit-release.apk
+          fail_on_unmatched_files: true
+
+      # Seulement une fois la Release publiée : « ## Non publié » ->
+      # « ## vX.Y.Z — DATE » sur le main À JOUR (et pas sur le commit
+      # construit, peut-être dépassé). Si main bouge entre-temps, on refait
+      # l'archivage sur la nouvelle pointe et on repousse — l'équivalent d'un
+      # pull --rebase, sans conflit possible sur CHANGELOG.md.
+      - name: Archive changelog
+        if: steps.version.outputs.release == 'true' && github.ref == 'refs/heads/main'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # app/build.gradle a été tamponné plus haut : rien de local à garder.
+          git reset --hard --quiet
+          DATE=$(date +%Y-%m-%d)
+          for ATTEMPT in 1 2 3 4 5; do
+            git fetch --quiet origin main
+            git checkout --quiet -B changelog-archive origin/main
+            node scripts/archive-changelog.cjs archive CHANGELOG.md "$TAG" "$DATE" "$RUNNER_TEMP/release-notes.md"
+            git add CHANGELOG.md
+            if git diff --cached --quiet; then
+              echo "CHANGELOG déjà archivé pour $TAG."
+              exit 0
+            fi
+            git commit --quiet -m "Changelog : $TAG"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "main a bougé pendant l'archivage, nouvel essai ($ATTEMPT)..."
+            sleep $(( ATTEMPT * 5 ))
+          done
+          echo "::error::Archivage du CHANGELOG impossible à pousser sur main : la Release $TAG est publiée, archiver « ## Non publié » à la main."
+          exit 1

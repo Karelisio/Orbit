@@ -142,18 +142,29 @@ sert de garde-fou.
 
 ## CI/CD & signature Android
 
-Le workflow `.github/workflows/build-android.yml` :
-1. build le frontend React (secrets `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`),
-2. `npx cap sync android`,
-3. archive la section `## Non publié` de `CHANGELOG.md` sous le tag de
-   version (`scripts/archive-changelog.cjs`), la vide, et repousse ce commit
-   directement sur `main` — ces notes deviennent le corps de la Release
-   GitHub, affiché dans Réglages > Mises à jour côté app,
-4. décode `ANDROID_KEYSTORE_BASE64` en fichier `.keystore`,
-5. build et signe l'APK release (`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`),
-6. publie l'APK en artifact GitHub Actions à chaque push sur `main`, et en
-   Release GitHub sur les tags `v*`.
+Le workflow `.github/workflows/build-android.yml`, à chaque push sur `main`
+(une exécution à la fois) :
+1. calcule la prochaine version (dernier tag `vX.Y.Z` + 1 patch, sans rien
+   pousser) ; `versionCode` = X × 1 000 000 + Y × 1 000 + Z,
+2. extrait les notes de la section `## Non publié` de `CHANGELOG.md`
+   (`scripts/archive-changelog.cjs notes`, « Corrections et améliorations
+   internes. » si elle est vide),
+3. `npm run check` (types + tests, Node 22), build du frontend React
+   (secrets `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`), `npx cap sync android`,
+4. s'arrête avec un message clair si un secret de signature manque (sinon
+   Gradle produirait un APK non signé), décode `ANDROID_KEYSTORE_BASE64` et
+   build l'APK release signé (`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+   `ANDROID_KEY_PASSWORD`), publié aussi en artifact GitHub Actions,
+5. seulement alors, crée la Release GitHub et son tag sur le commit construit,
+   avec ces notes (affichées dans Réglages > Mises à jour côté app),
+6. archive `## Non publié` sous `## vX.Y.Z — DATE` et repousse ce commit
+   « Changelog : vX.Y.Z » sur `main` (refait sur la pointe de `main` si elle a
+   bougé entre-temps).
+
+Un build raté ne laisse ni tag ni notes archivées. Lancé sur une autre
+branche (workflow_dispatch), il ne fait que construire l'APK (versionName
+`X.Y.Z-dev.<sha>`), sans tag, release ni push. Un tag `v*` poussé à la main
+publie la Release de ce tag, sans archivage.
 
 **Avant de commiter un changement visible par l'utilisatrice**, ajouter une
 puce sous `## Non publié` dans `CHANGELOG.md`. Comme la CI repousse un commit

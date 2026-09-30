@@ -284,9 +284,20 @@ le téléchargement recassera.
 ## Workflow Git/CI — à suivre à chaque changement
 
 La branche de travail est `claude/orbit-couple-calendar-ftaa40`. Le push sur
-`main` déclenche le build + un **auto-tag patch** + une **Release GitHub**
-(APK signé), en lisant `## Non publié` de `CHANGELOG.md`, en l'archivant
-sous `## vX.Y.Z — DATE`, puis en repoussant ce commit directement sur `main`.
+`main` déclenche, dans cet ordre (`build-android.yml`) : calcul de la
+prochaine version (patch + 1, rien de poussé ; `versionCode` = majeur ×
+1 000 000 + mineur × 1 000 + patch, toujours au-dessus des anciens codes
+tirés du numéro d'exécution), extraction des notes de `## Non publié`
+(`scripts/archive-changelog.cjs notes`, « Corrections et améliorations
+internes. » si vide), `npm run check` (Node 22), build web, arrêt net si
+un secret de signature manque, APK signé, puis seulement **Release GitHub +
+tag** sur le commit construit (`target_commitish`), et enfin archivage de
+`## Non publié` sous `## vX.Y.Z — DATE` (`archive-changelog.cjs archive`),
+refait sur la pointe de `main` et repoussé avec nouvel essai si `main` a
+bougé. Un build raté ne laisse donc ni tag orphelin ni notes archivées ;
+deux exécutions sur `main` ne se chevauchent jamais (`concurrency`, sans
+annulation). Sur une branche de travail : build de vérification seulement
+(versionName `X.Y.Z-dev.<sha>`), ni tag, ni release, ni push.
 
 1. Avant de commiter un changement visible, ajouter une puce sous
    `## Non publié` dans `CHANGELOG.md`.
