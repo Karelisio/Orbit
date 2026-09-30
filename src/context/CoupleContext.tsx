@@ -109,8 +109,12 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!couple) return;
+    // Nom de canal unique (comme useRealtimeCollection) : sur un remontage
+    // rapide, Supabase réutiliserait le canal précédent encore en cours de
+    // fermeture et le .on() suivant lèverait « tried to subscribe multiple
+    // times ».
     const channel = supabase
-      .channel(`orbit-couple-${couple.id}`)
+      .channel(`orbit-couple-${couple.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "couples", filter: `id=eq.${couple.id}` },
