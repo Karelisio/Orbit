@@ -56,7 +56,13 @@ export default function Journal() {
                 </p>
               </div>
               {entry.author_id === user?.id && (
-                <button className="btn-icon" onClick={() => deleteEntry(entry.id)} aria-label="Supprimer">
+                <button
+                  className="btn-icon"
+                  onClick={() => {
+                    if (window.confirm("Supprimer cette note du journal ?")) deleteEntry(entry.id);
+                  }}
+                  aria-label="Supprimer"
+                >
                   🗑️
                 </button>
               )}

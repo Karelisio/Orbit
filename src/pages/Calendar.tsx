@@ -10,6 +10,7 @@ import {
   isSameDay,
   isSameMonth,
   isToday,
+  parseISO,
   setMonth as setDateMonth,
   setYear,
   startOfMonth,
@@ -23,6 +24,7 @@ import { usePreferences } from "../context/PreferencesContext";
 import { useCouple } from "../context/CoupleContext";
 import EventSheet from "../components/EventSheet";
 import TaskSheet from "../components/TaskSheet";
+import { parseDateParam } from "../lib/localDate";
 import { eventDisplayColor, eventOccursOnDay, type OrbitEvent, type OrbitTask } from "../types";
 
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
@@ -50,9 +52,14 @@ export default function Calendar() {
   const { showPeriodInCalendar } = usePreferences();
   const { couple } = useCouple();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialDateParam = searchParams.get("date");
-  const [month, setMonth] = useState(() => (initialDateParam ? new Date(initialDateParam) : new Date()));
+  // Validée dès l'état initial (et pas seulement dans l'effet ci-dessous) :
+  // une date invalide levait un RangeError au premier rendu, avant l'effet.
+  const initialDateParam = parseDateParam(searchParams.get("date"));
+  const [month, setMonth] = useState(() => (initialDateParam ? parseISO(initialDateParam) : new Date()));
   const [selectedDate, setSelectedDate] = useState(() => initialDateParam ?? format(new Date(), "yyyy-MM-dd"));
+  // Jour sélectionné en date LOCALE : new Date("aaaa-mm-jj") est lu à minuit
+  // UTC, soit la veille à l'ouest de Greenwich (mauvais jour affiché).
+  const selectedDay = useMemo(() => parseISO(selectedDate), [selectedDate]);
   const [sheet, setSheet] = useState<"none" | "new" | OrbitEvent>("none");
   const [taskSheet, setTaskSheet] = useState<"none" | OrbitTask>("none");
   const [quickJumpOpen, setQuickJumpOpen] = useState(false);
@@ -63,12 +70,14 @@ export default function Calendar() {
   // ouverte en arrière-plan). Consommé puis retiré pour ne pas rejouer au
   // prochain changement de mois manuel.
   useEffect(() => {
-    const dateParam = searchParams.get("date");
-    if (!dateParam) return;
-    const parsed = new Date(dateParam);
-    if (Number.isNaN(parsed.getTime())) return;
-    setMonth(parsed);
-    setSelectedDate(dateParam);
+    const rawDate = searchParams.get("date");
+    if (!rawDate) return;
+    const dateParam = parseDateParam(rawDate);
+    if (dateParam) {
+      setMonth(parseISO(dateParam));
+      setSelectedDate(dateParam);
+    }
+    // Retiré même invalide : ignoré, sans le garder dans l'URL.
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
@@ -78,9 +87,9 @@ export default function Calendar() {
     return eachDayOfInterval({ start, end });
   }, [month]);
 
-  const periodDates = useCyclePeriodDays(days[0], days[days.length - 1], showPeriodInCalendar);
+  const periodDays = useCyclePeriodDays(days[0], days[days.length - 1], showPeriodInCalendar);
 
-  const selectedEvents = useMemo(() => eventsOnDay(events, new Date(selectedDate)), [events, selectedDate]);
+  const selectedEvents = useMemo(() => eventsOnDay(events, selectedDay), [events, selectedDay]);
   const selectedTasks = useMemo(() => tasksOnDay(tasks, selectedDate), [tasks, selectedDate]);
 
   return (
@@ -174,11 +183,21 @@ export default function Calendar() {
           const dateStr = format(date, "yyyy-MM-dd");
           const dayEvents = eventsOnDay(events, date);
           const dayTasks = tasksOnDay(tasks, dateStr);
-          const isPeriodDay = showPeriodInCalendar && periodDates.has(dateStr);
+          // Règles enregistrées dans Wenn (point plein) ou seulement prévues
+          // (simple contour) : les deux se ressemblaient, alors que Wenn les
+          // distingue.
+          const periodKind = !showPeriodInCalendar
+            ? null
+            : periodDays.recorded.has(dateStr)
+              ? "recorded"
+              : periodDays.predicted.has(dateStr)
+                ? "predicted"
+                : null;
+          const isPeriodDay = periodKind !== null;
           const classes = ["calendar-day"];
           if (!isSameMonth(date, month)) classes.push("outside");
           if (isToday(date)) classes.push("today");
-          if (isSameDay(date, new Date(selectedDate))) classes.push("selected");
+          if (isSameDay(date, selectedDay)) classes.push("selected");
           return (
             <button key={dateStr} className={classes.join(" ")} onClick={() => setSelectedDate(dateStr)}>
               {dayTasks.length > 0 && (
@@ -191,7 +210,12 @@ export default function Calendar() {
               <span className="calendar-day-number">{format(date, "d")}</span>
               {(dayEvents.length > 0 || isPeriodDay) && (
                 <span className="calendar-day-dots">
-                  {isPeriodDay && <span className="dot" style={{ background: "#b3261e" }} title="Règles" />}
+                  {periodKind && (
+                    <span
+                      className={`dot dot-period${periodKind === "predicted" ? " predicted" : ""}`}
+                      title={periodKind === "predicted" ? "Règles prévues" : "Règles"}
+                    />
+                  )}
                   {dayEvents.slice(0, isPeriodDay ? 2 : 3).map((e) =>
                     e.category === "Anniversaire" ? (
                       <span key={e.id} className="event-cake" title={e.title}>
@@ -211,7 +235,7 @@ export default function Calendar() {
       <div style={{ marginTop: 20 }}>
         <div className="row">
           <p className="section-title" style={{ margin: 0 }}>
-            {format(new Date(selectedDate), "EEEE d MMMM", { locale: fr })}
+            {format(selectedDay, "EEEE d MMMM", { locale: fr })}
           </p>
           <button className="btn-icon" onClick={() => setSheet("new")} aria-label="Ajouter un événement">
             ＋

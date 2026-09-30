@@ -96,7 +96,13 @@ export default function TaskSheet({ task, onSave, onDelete, onClose }: TaskSheet
             {saving ? "Enregistrement..." : "Enregistrer"}
           </button>
           {onDelete && (
-            <button className="btn btn-danger" onClick={onDelete}>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                // Suppression définitive, aussi chez l'autre : on demande d'abord.
+                if (window.confirm(`Supprimer la tâche « ${task?.title ?? title} » ?`)) onDelete();
+              }}
+            >
               Supprimer la tâche
             </button>
           )}

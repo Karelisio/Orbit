@@ -15,6 +15,7 @@ import { supabase } from "../lib/supabase";
 import { isExactAlarmGranted, openExactAlarmSettings, requestNotificationPermission } from "../lib/notifications";
 import { checkForUpdate, downloadAndInstallUpdate, openUpdateDownload, type UpdateCheckResult } from "../lib/appUpdate";
 import { clearLastCrash, getLastCrash, type CrashReport } from "../lib/crashLog";
+import { showToast } from "../lib/toast";
 
 const HOME_SECTION_LABELS: Record<keyof HomeSectionsVisibility, string> = {
   together: "Compteur jours ensemble",
@@ -188,9 +189,15 @@ function CrashCard() {
       <div style={{ display: "flex", gap: 8 }}>
         <button
           className="btn btn-secondary"
-          onClick={() => {
-            navigator.clipboard?.writeText(crash.trace);
-            setCopied(true);
+          onClick={async () => {
+            // Presse-papiers indisponible ou refusé par la WebView : dire
+            // quoi faire plutôt qu'afficher « Copié » à tort.
+            try {
+              await navigator.clipboard.writeText(crash.trace);
+              setCopied(true);
+            } catch {
+              showToast("Copie impossible : fais plutôt une capture d'écran du rapport.");
+            }
           }}
         >
           {copied ? "Copié ✅" : "Copier"}
@@ -224,6 +231,8 @@ export default function Settings() {
     setNavTabVisible,
     widgetFontScale,
     setWidgetFontScale,
+    preferThemeImage,
+    setPreferThemeImage,
   } = usePreferences();
 
   const [uploading, setUploading] = useState(false);
@@ -270,9 +279,15 @@ export default function Settings() {
 
   async function copyInviteCode() {
     if (!couple) return;
-    await navigator.clipboard.writeText(couple.invite_code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    // Sans ce catch, un presse-papiers indisponible ou refusé laissait une
+    // promesse rejetée sans le moindre retour à l'écran.
+    try {
+      await navigator.clipboard.writeText(couple.invite_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      showToast("Copie impossible : recopie le code à la main.");
+    }
   }
 
   async function handleEnableNotifications() {
@@ -343,6 +358,27 @@ export default function Settings() {
           <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
             {uploading ? "Chargement..." : "Choisir une image"}
           </button>
+        </div>
+      )}
+
+      {Capacitor.getPlatform() === "android" && profile?.theme_image_url && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 className="section-title">Couleurs de l'app</h3>
+          <p style={{ marginTop: 0, fontSize: 13, color: "var(--md-sys-color-on-surface-variant)" }}>
+            Une image de thème a été choisie (dans Wenn ou sur un autre appareil). Sur ce téléphone, les couleurs d'Orbit
+            et de ses widgets suivent :
+          </p>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className={`chip${!preferThemeImage ? " selected" : ""}`} onClick={() => setPreferThemeImage(false)}>
+              Le fond d'écran
+            </button>
+            <button className={`chip${preferThemeImage ? " selected" : ""}`} onClick={() => setPreferThemeImage(true)}>
+              L'image choisie
+            </button>
+          </div>
+          <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)" }}>
+            Propre à cet appareil ; l'image reste enregistrée pour Wenn et les autres appareils.
+          </p>
         </div>
       )}
 

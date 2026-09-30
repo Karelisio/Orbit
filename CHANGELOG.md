@@ -7,6 +7,25 @@ automatiquement cette section sous le numéro de version à chaque release et
 la vide.
 
 ## Non publié
+- « Ensemble depuis » compte maintenant des durées pleines : ensemble depuis le 15 décembre, on voit « 9 mois, 15 jours » le 30 septembre (et plus « 1 an, 15 jours »).
+- Plus rien ne manque dans les très longues listes (au-delà de 1000 éléments, par exemple plusieurs années d'historique de cycle) : tout est maintenant chargé.
+- Une saisie faite dans Wenn (règles ajoutées, modifiées ou effacées) apparaît maintenant tout de suite dans le calendrier et le widget calendrier d'Orbit, sans avoir à redémarrer Orbit.
+- Widget cycle de l'accueil : pendant les règles, il affiche bien « Règles en cours » (il annonçait « Prochaines règles dans 26 j »), et quand la date prévue est passée sans nouvelles règles, il affiche « Règles en retard » (au lieu de « Règles en cours »).
+- Calendrier (app et widget) : les règles seulement prévues s'affichent maintenant avec un petit rond vide, et celles vraiment enregistrées dans Wenn avec un point plein (les deux étaient identiques).
+- Un événement « toute la journée » (un anniversaire par exemple) reste affiché dans les prochains événements (accueil et widgets) jusqu'au soir, au lieu de disparaître dès 9 h ou d'annoncer « dans 365 j ». Un anniversaire du 29 février apparaît le 28 les années non bissextiles.
+- Widgets Fusion et Journal : « Demain à 10:00 », « Hier », « Il y a 3 j »… se mettent à jour tout seuls au fil des heures, même app fermée (ils restaient figés jusqu'à la prochaine ouverture d'Orbit), le widget Fusion passe tout seul à l'événement suivant une fois le premier passé, et les dates sont en français (« 12 oct. »).
+- Les widgets ne sont plus reconstruits en boucle pendant que l'app est ouverte (moins de batterie), et ne passent plus un court instant au violet par défaut à l'ouverture de l'app.
+- Un lien du widget calendrier avec une date invalide ouvre simplement le calendrier (au lieu de l'écran d'erreur).
+- En voyage à l'ouest de la France (Amériques…), les dates choisies (échéances, sélecteur de date, dépenses, jour sélectionné dans le calendrier) ne s'affichent plus avec un jour de décalage.
+- Connexion plus sûre : le lien reçu par e-mail ne fonctionne plus que sur le téléphone qui l'a demandé (l'ouvrir depuis l'appli mail de ce téléphone), et un message clair s'affiche s'il a expiré ou s'il est ouvert ailleurs. Rien ne change si tu es déjà connecté·e.
+- Sans connexion, une tâche cochée ou un élément supprimé (tâche, dépense, note, événement) revient tout de suite à sa place, avec un petit message « … vérifie ta connexion » (avant : il disparaissait, puis revenait plus tard sans explication).
+- Budget : les montants sont calculés au centime près et affichés à la française (« 1 234,50 € ») ; plus de « Tu dois 0.00 € » quand vous êtes en fait à jour. Supprimer une dépense, une tâche, une note ou un événement demande maintenant confirmation.
+- Tâches récurrentes : cocher une tâche en retard la reporte directement à sa prochaine échéance (au lieu d'avancer d'un seul cran à chaque fois). Appuyer deux fois sur Entrée ne crée plus la même tâche en double.
+- Widgets Calendrier et Tâches : sur les téléphones qui s'en servent, leur taille par défaut correspond enfin à la grille prévue (Calendrier : 4 lignes au lieu de 5, Tâches : 1 ligne au lieu de 2).
+- Après une déconnexion ou en quittant l'espace, plus rien du couple ne reste sur le téléphone : l'app ne réaffiche plus l'ancien espace hors connexion, les widgets se vident et les rappels ne sonnent plus.
+- Premier lancement : l'écran d'accueil explique maintenant que l'espace se crée depuis le téléphone de la personne dont le cycle est suivi dans Wenn (elle en devient la titulaire), l'autre le rejoignant avec le code.
+- Si une image de thème a été choisie (dans Wenn ou sur un autre appareil), Réglages → « Couleurs de l'app » permet maintenant de revenir, sur ce téléphone, aux couleurs du fond d'écran (pour l'app comme pour les widgets).
+- Réglages : si la copie du code d'invitation (ou d'un rapport de fermeture) échoue, un message le dit au lieu de ne rien faire.
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.

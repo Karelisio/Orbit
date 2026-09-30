@@ -8,6 +8,7 @@ import {
   isSameDay,
   isSameMonth,
   isToday,
+  parseISO,
   setMonth as setDateMonth,
   setYear,
   startOfMonth,
@@ -26,6 +27,10 @@ interface DateFieldProps {
 }
 
 /**
+ * `value` est une date locale "aaaa-mm-jj", toujours lue avec parseISO :
+ * new Date("aaaa-mm-jj") la lit à minuit UTC, soit la veille à l'ouest de
+ * Greenwich (jour affiché et jour surligné décalés).
+ *
  * Remplace `<input type="date">` : le date-picker natif Android rend un
  * dialogue cassé (vide, mal dimensionné) dans la WebView de Capacitor. Cette
  * mini-grille MD3 réutilise les styles/comportement du calendrier principal.
@@ -34,7 +39,7 @@ interface DateFieldProps {
  */
 export default function DateField({ value, onChange, placeholder = "Choisir une date", clearLabel = "Aucune date" }: DateFieldProps) {
   const [open, setOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => (value ? new Date(value) : new Date()));
+  const [viewMonth, setViewMonth] = useState(() => (value ? parseISO(value) : new Date()));
 
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 }),
@@ -53,11 +58,11 @@ export default function DateField({ value, onChange, placeholder = "Choisir une 
         className="input"
         style={{ textAlign: "left", cursor: "pointer" }}
         onClick={() => {
-          setViewMonth(value ? new Date(value) : new Date());
+          setViewMonth(value ? parseISO(value) : new Date());
           setOpen((v) => !v);
         }}
       >
-        {value ? format(new Date(value), "d MMMM yyyy", { locale: fr }) : placeholder}
+        {value ? format(parseISO(value), "d MMMM yyyy", { locale: fr }) : placeholder}
       </button>
 
       {open && (
@@ -108,7 +113,7 @@ export default function DateField({ value, onChange, placeholder = "Choisir une 
               const classes = ["calendar-day"];
               if (!isSameMonth(date, viewMonth)) classes.push("outside");
               if (isToday(date)) classes.push("today");
-              if (value && isSameDay(date, new Date(value))) classes.push("selected");
+              if (value && isSameDay(date, parseISO(value))) classes.push("selected");
               return (
                 <button key={date.toISOString()} type="button" className={classes.join(" ")} onClick={() => pick(date)}>
                   <span className="calendar-day-number">{format(date, "d")}</span>

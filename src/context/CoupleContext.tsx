@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { App } from "@capacitor/app";
 import { supabase } from "../lib/supabase";
+import { purgeLocalSpaceData } from "../lib/localData";
 import { useAuth } from "./AuthContext";
 import type { Couple } from "../types";
 
@@ -82,6 +83,10 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       if (!error) {
         setCouple((data as Couple) ?? null);
         if (data) writeCoupleCache(userId, data as Couple);
+        // Plus d'espace pour ce compte (quitté ou supprimé depuis l'autre
+        // téléphone) alors que ce téléphone en gardait une copie : on efface
+        // tout ce qui en restait ici (sinon réaffiché au lancement hors ligne).
+        else if (readCoupleCache(userId)) purgeLocalSpaceData();
       }
     } catch {
       // hors ligne : on garde le cache déjà affiché s'il existe
@@ -109,8 +114,12 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!couple) return;
+    // Nom de canal unique (comme useRealtimeCollection) : sur un remontage
+    // rapide, Supabase réutiliserait le canal précédent encore en cours de
+    // fermeture et le .on() suivant lèverait « tried to subscribe multiple
+    // times ».
     const channel = supabase
-      .channel(`orbit-couple-${couple.id}`)
+      .channel(`orbit-couple-${couple.id}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "couples", filter: `id=eq.${couple.id}` },
@@ -143,6 +152,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.rpc("leave_couple");
     if (error) return { error: error.message };
     setCouple(null);
+    purgeLocalSpaceData();
     return { error: null };
   }
 

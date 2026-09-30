@@ -2,7 +2,9 @@ import { useCallback, useSyncExternalStore } from "react";
 import { App } from "@capacitor/app";
 import type { PluginListenerHandle } from "@capacitor/core";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
+import { fetchAllRows, supabase } from "../lib/supabase";
+import { revertOptimistic } from "../lib/optimistic";
+import { showToast } from "../lib/toast";
 
 interface WithId {
   id: string;
@@ -18,6 +20,8 @@ interface CollectionStore {
   table: string;
   coupleId: string;
   sortBy: (a: WithId, b: WithId) => number;
+  /** Colonnes gardées (null : toutes), voir CollectionOptions.columns. */
+  columns: readonly string[] | null;
   snapshot: Snapshot;
   listeners: Set<() => void>;
   channel: RealtimeChannel | null;
@@ -73,31 +77,53 @@ function publishRows(store: CollectionStore, rows: WithId[]): void {
   publish(store, { rows, loading: false });
 }
 
+/** Ne garde que les colonnes demandées d'une ligne reçue en temps réel (qui arrive toujours complète). */
+function project(store: CollectionStore, row: WithId): WithId {
+  if (!store.columns) return row;
+  const source = row as unknown as Record<string, unknown>;
+  const picked: Record<string, unknown> = {};
+  for (const column of store.columns) picked[column] = source[column];
+  return picked as unknown as WithId;
+}
+
 /** Vrai tant que ce store est bien celui enregistré (il a pu être relâché entre-temps). */
 function isLive(store: CollectionStore): boolean {
   return stores.get(store.key) === store;
 }
 
-/** Charge (ou recharge) toute la collection depuis le serveur. */
+/**
+ * Charge (ou recharge) toute la collection depuis le serveur, page par page
+ * (plafond silencieux de 1000 lignes par lecture, voir fetchAllRows) dans un
+ * ordre stable (id) — le tri d'affichage reste fait ici par sortBy.
+ */
 function load(store: CollectionStore): void {
-  supabase
-    .from(store.table)
-    .select("*")
-    .eq("couple_id", store.coupleId)
-    .then(
-      ({ data, error }) => {
-        if (!isLive(store)) return;
-        // hors ligne / erreur réseau : on garde le cache déjà affiché
-        if (error || !data) {
-          publish(store, { ...store.snapshot, loading: false });
-          return;
-        }
-        publishRows(store, (data as WithId[]).slice().sort(store.sortBy));
-      },
-      () => {
-        if (isLive(store)) publish(store, { ...store.snapshot, loading: false });
+  fetchAllRows<WithId>((from, to) =>
+    supabase
+      .from(store.table)
+      .select<string, WithId>(store.columns ? store.columns.join(",") : "*")
+      .eq("couple_id", store.coupleId)
+      .order("id")
+      .range(from, to)
+  ).then(
+    ({ data, error }) => {
+      if (!isLive(store)) return;
+      // hors ligne / erreur réseau : on garde le cache déjà affiché
+      if (error || !data) {
+        publish(store, { ...store.snapshot, loading: false });
+        return;
       }
-    );
+      publishRows(store, data.slice().sort(store.sortBy));
+    },
+    () => {
+      if (isLive(store)) publish(store, { ...store.snapshot, loading: false });
+    }
+  );
+}
+
+/** Annule une écriture optimiste qui a échoué (voir revertOptimistic), cache local compris. */
+function revert(store: CollectionStore, before: WithId[], after: WithId[]): void {
+  const rows = revertOptimistic(store.snapshot.rows, before, after);
+  if (rows) publishRows(store, rows.slice().sort(store.sortBy));
 }
 
 /** Retire une ligne supprimée (écho temps réel) si elle est chez nous, cache local compris. */
@@ -128,7 +154,7 @@ function start(store: CollectionStore): void {
           return;
         }
 
-        const incoming = payload.new as WithId;
+        const incoming = project(store, payload.new as WithId);
         const exists = current.some((row) => row.id === incoming.id);
         const next = exists ? current.map((row) => (row.id === incoming.id ? incoming : row)) : [...current, incoming];
         publishRows(store, next.slice().sort(store.sortBy));
@@ -157,7 +183,12 @@ function start(store: CollectionStore): void {
   });
 }
 
-function acquire(table: string, coupleId: string, sortBy: (a: WithId, b: WithId) => number): CollectionStore {
+function acquire(
+  table: string,
+  coupleId: string,
+  sortBy: (a: WithId, b: WithId) => number,
+  columns: readonly string[] | null
+): CollectionStore {
   const key = storeKey(table, coupleId);
   let store = stores.get(key);
 
@@ -169,6 +200,7 @@ function acquire(table: string, coupleId: string, sortBy: (a: WithId, b: WithId)
       table,
       coupleId,
       sortBy,
+      columns,
       snapshot: { rows: cached, loading: cached.length === 0 },
       listeners: new Set(),
       channel: null,
@@ -193,34 +225,48 @@ function release(store: CollectionStore): void {
   if (isLive(store)) stores.delete(store.key);
 }
 
+export interface CollectionOptions {
+  /**
+   * Colonnes à lire et à garder (id compris), toutes par défaut. Sert à
+   * cycle_days (Wenn) : Orbit n'a besoin que de date/flow, pas des
+   * symptômes ni des notes — ni en mémoire, ni dans le cache local. Une
+   * même table doit toujours être demandée avec les mêmes colonnes (un seul
+   * store par table et par couple).
+   */
+  columns?: readonly string[];
+}
+
 /**
  * Charge une table filtrée par couple_id puis la garde synchronisée en temps
  * réel (INSERT/UPDATE/DELETE, et rechargement au retour au premier plan) —
  * factorise ce qui serait sinon dupliqué à l'identique dans
- * useEvents/useTasks/useJournal/useExpenses.
+ * useEvents/useTasks/useJournal/useExpenses, et sert aussi de source unique
+ * pour les jours de cycle de Wenn (useCycleDays).
  *
  * Les données sont mises en cache dans localStorage et réaffichées avant même
  * la réponse réseau (lancement hors ligne). Écrire hors ligne reste impossible
  * et remonte l'erreur : pas de file d'attente à resynchroniser, pour éviter
- * les doublons/conflits sur des données partagées en temps réel.
+ * les doublons/conflits sur des données partagées en temps réel. Une écriture
+ * optimiste qui échoue est annulée à l'écran avec un message (voir mutate).
  */
 export function useRealtimeCollection<T extends WithId>(
   table: string,
   coupleId: string | null,
-  sortBy: (a: T, b: T) => number
+  sortBy: (a: T, b: T) => number,
+  options: CollectionOptions = {}
 ) {
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       if (!coupleId) return () => {};
-      const store = acquire(table, coupleId, sortBy as (a: WithId, b: WithId) => number);
+      const store = acquire(table, coupleId, sortBy as (a: WithId, b: WithId) => number, options.columns ?? null);
       store.listeners.add(onStoreChange);
       return () => {
         store.listeners.delete(onStoreChange);
         release(store);
       };
     },
-    // sortBy est hors dépendances : il est recréé à chaque rendu par certains
-    // appelants, et reste le même pour une table donnée (un seul hook par table).
+    // sortBy et options sont hors dépendances : recréés à chaque rendu par
+    // certains appelants, ils restent les mêmes pour une table donnée.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [table, coupleId]
   );
@@ -243,5 +289,39 @@ export function useRealtimeCollection<T extends WithId>(
     [table, coupleId]
   );
 
-  return { rows: snapshot.rows as T[], loading: snapshot.loading, setRows };
+  /**
+   * Écriture optimiste avec retour en arrière : `optimistic` s'affiche tout
+   * de suite (page + widget), puis `request` part au serveur. Si elle échoue
+   * (hors ligne, refus...), les lignes touchées reprennent leur état d'avant
+   * et un message court le dit. Avant, une tâche cochée ou une dépense
+   * supprimée hors ligne disparaissait, puis revenait sans explication au
+   * rechargement suivant — les appelants ignoraient le résultat.
+   */
+  const mutate = useCallback(
+    async (
+      optimistic: (prev: T[]) => T[],
+      request: () => PromiseLike<{ error: { message: string } | null }>,
+      failureMessage: string
+    ): Promise<{ error: string | null }> => {
+      const store = coupleId ? stores.get(storeKey(table, coupleId)) : undefined;
+      const before = store?.snapshot.rows ?? null;
+      const after = store && before ? (optimistic(before as T[]) as WithId[]) : null;
+      if (store && after) publishRows(store, after);
+
+      let error: string | null = null;
+      try {
+        error = (await request()).error?.message ?? null;
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      if (error) {
+        if (store && before && after && isLive(store)) revert(store, before, after);
+        showToast(failureMessage);
+      }
+      return { error };
+    },
+    [table, coupleId]
+  );
+
+  return { rows: snapshot.rows as T[], loading: snapshot.loading, setRows, mutate };
 }

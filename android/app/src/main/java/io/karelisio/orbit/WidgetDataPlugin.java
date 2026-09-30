@@ -32,6 +32,16 @@ public class WidgetDataPlugin extends Plugin {
             editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_EVENT, false);
         }
 
+        // Dates absolues des prochaines occurrences : le libellé relatif
+        // (« Demain à 10:00 ») est recalculé à chaque rendu du widget, et
+        // n'est plus figé jusqu'à la prochaine ouverture de l'app.
+        String nextEventsJson = call.getString("nextEventsJson");
+        if (nextEventsJson != null) {
+            editor.putString(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON, nextEventsJson);
+        } else {
+            editor.remove(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON);
+        }
+
         Integer pendingTasksCount = call.getInt("pendingTasksCount");
         editor.putInt(OrbitWidgetPrefs.KEY_PENDING_TASKS_COUNT, pendingTasksCount != null ? pendingTasksCount : 0);
 
@@ -47,6 +57,9 @@ public class WidgetDataPlugin extends Plugin {
         String periodDaysCsv = call.getString("periodDaysCsv");
         editor.putString(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV, periodDaysCsv != null ? periodDaysCsv : "");
 
+        String predictedPeriodDaysCsv = call.getString("predictedPeriodDaysCsv");
+        editor.putString(OrbitWidgetPrefs.KEY_PREDICTED_PERIOD_DAYS_CSV, predictedPeriodDaysCsv != null ? predictedPeriodDaysCsv : "");
+
         String taskDaysCsv = call.getString("taskDaysCsv");
         editor.putString(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV, taskDaysCsv != null ? taskDaysCsv : "");
 
@@ -56,6 +69,7 @@ public class WidgetDataPlugin extends Plugin {
             editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT, journalContent);
             editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL, call.getString("journalAuthorLabel", ""));
             editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL, call.getString("journalTimeLabel", ""));
+            editor.putString(OrbitWidgetPrefs.KEY_JOURNAL_CREATED_AT, call.getString("journalCreatedAt", ""));
         } else {
             editor.putBoolean(OrbitWidgetPrefs.KEY_HAS_JOURNAL, false);
         }
@@ -75,7 +89,6 @@ public class WidgetDataPlugin extends Plugin {
         putColorIfPresent(call, editor, "onPrimaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER);
         putColorIfPresent(call, editor, "onSurfaceColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE);
         putColorIfPresent(call, editor, "onSurfaceVariantColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT);
-        putColorIfPresent(call, editor, "tertiaryColor", OrbitWidgetPrefs.KEY_COLOR_TERTIARY);
 
         // Même palette en variante sombre : les widgets reçoivent les deux et
         // laissent Android trancher selon le mode nuit du lanceur, de sorte
@@ -87,7 +100,6 @@ public class WidgetDataPlugin extends Plugin {
         putColorIfPresent(call, editor, "darkOnPrimaryContainerColor", OrbitWidgetPrefs.KEY_COLOR_ON_PRIMARY_CONTAINER + dark);
         putColorIfPresent(call, editor, "darkOnSurfaceColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE + dark);
         putColorIfPresent(call, editor, "darkOnSurfaceVariantColor", OrbitWidgetPrefs.KEY_COLOR_ON_SURFACE_VARIANT + dark);
-        putColorIfPresent(call, editor, "darkTertiaryColor", OrbitWidgetPrefs.KEY_COLOR_TERTIARY + dark);
 
         editor.apply();
 
@@ -95,6 +107,38 @@ public class WidgetDataPlugin extends Plugin {
         // l'app, et une erreur ici (RemoteViews trop lourdes, mémoire...)
         // fermerait l'app entière. Les données sont déjà enregistrées, un
         // widget non rafraîchi se rattrapera au cycle suivant.
+        refreshQuietly(context);
+        call.resolve();
+    }
+
+    /**
+     * Vide le contenu des widgets (événements, tâches, journal, jours de
+     * règles et de tâches) à la déconnexion ou en quittant l'espace (voir
+     * lib/localData.ts) : sinon ils continuaient d'afficher les données du
+     * couple. Couleurs, taille du texte et mois affiché restent ; chaque
+     * widget retombe sur son affichage « vide » par défaut.
+     */
+    @PluginMethod
+    public void clear(PluginCall call) {
+        Context context = getContext();
+        context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(OrbitWidgetPrefs.KEY_HAS_EVENT)
+            .remove(OrbitWidgetPrefs.KEY_EVENT_TITLE)
+            .remove(OrbitWidgetPrefs.KEY_EVENT_TIME_LABEL)
+            .remove(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON)
+            .remove(OrbitWidgetPrefs.KEY_PENDING_TASKS_COUNT)
+            .remove(OrbitWidgetPrefs.KEY_NEXT_TASK_TITLE)
+            .remove(OrbitWidgetPrefs.KEY_EVENTS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_PREDICTED_PERIOD_DAYS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_HAS_JOURNAL)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_CREATED_AT)
+            .apply();
         refreshQuietly(context);
         call.resolve();
     }

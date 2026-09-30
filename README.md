@@ -16,56 +16,69 @@ en app Android avec Capacitor.
   app fermée (AlarmManager natif, pas un timer JS).
 - Material Design 3 / Material You (thème dynamique à partir du fond d'écran
   Android, ou d'une image choisie sur iOS/web).
-- CI/CD : GitHub Actions build + signe l'APK à chaque push sur `main`, publie
-  une Release GitHub sur les tags `v*`.
+- CI/CD : GitHub Actions build + signe l'APK à chaque push sur `main`, puis
+  publie une Release GitHub taguée (voir plus bas).
 
 ## Repo map
 
 ```
 src/
-  context/     AuthContext (session Supabase), CoupleContext (lien de couple,
-               réutilise la table "couples" de Wenn), ThemeModeContext,
-               PreferencesContext (sections d'accueil masquables, affichage
-               des règles dans le calendrier — préférences par appareil)
-  hooks/       useRealtimeCollection (fetch + sync temps réel générique),
-               useEvents, useTasks, useJournal, useExpenses, useCycleStatus
-               (lecture seule de cycle_days, widget dashboard),
-               useCyclePeriodDays (lecture seule, overlay calendrier)
+  context/     AuthContext (session Supabase, lien magique PKCE),
+               CoupleContext (lien de couple, réutilise la table "couples"
+               de Wenn), ThemeModeContext, PreferencesContext (préférences
+               par appareil : sections d'accueil, onglets, règles dans le
+               calendrier et le widget, texte des widgets, couleurs)
+  hooks/       useRealtimeCollection (fetch paginé + sync temps réel
+               générique, écritures optimistes annulées en cas d'échec),
+               useEvents, useTasks, useJournal, useExpenses,
+               useEventCategories, useCycleDays (lecture seule de
+               cycle_days, source unique), useCycleStatus (widget de
+               l'accueil), useCyclePeriodDays (overlay calendrier et widget)
   pages/       Home (dashboard), Calendar, Tasks, Budget, Journal, Settings,
                Login, Onboarding
   components/  BottomNav, TogetherCounter, CycleWidget, EventSheet,
-               ExpenseSheet, WidgetSync (pousse les données vers les widgets
-               Android)
-  lib/         supabase, materialYou, wallpaperColor, notifications,
-               cyclePredictions (calcul de phase, adapté de Wenn), balances
-               (calcul budget partagé), appUpdate (mise à jour in-app),
-               widgetSync, deepLink
+               TaskSheet, ExpenseSheet, Toast, WidgetSync (pousse les
+               données vers les widgets Android)
+  lib/         supabase (+ paging), materialYou, dynamicColor, wallpaperColor,
+               notifications, cyclePredictions (prédiction et phase, adapté
+               de Wenn), balances (budget partagé, en centimes),
+               taskRecurrence, togetherSince, widgetSync + widgetLabels,
+               localData, localDate, optimistic, toast, appUpdate (mise à
+               jour in-app), crashLog, deepLink
 
 android/app/src/main/java/io/karelisio/orbit/
   MainActivity.java              enregistre les plugins Capacitor custom
-  WallpaperColorPlugin.java      lit la couleur dominante du fond d'écran (thème)
+  DynamicColorPlugin.java        couleurs système dynamiques (Android 12+)
+  WallpaperColorPlugin.java      couleur dominante du fond d'écran (avant Android 12)
   ApkInstallerPlugin.java        lance l'installeur système pour l'APK téléchargé
+  CrashLogPlugin.java            garde la dernière fermeture brutale (Réglages)
   WidgetDataPlugin.java          pont JS -> widgets (SharedPreferences + refresh)
   OrbitWidgetPrefs.java          clés SharedPreferences partagées
-  OrbitCalendarWidgetProvider.java  widget mini calendrier du mois (grille dessinée)
+  OrbitWidgetTheme.java          couleurs et taille du texte des widgets
+  OrbitWidgetLabels.java         libellés relatifs recalculés à chaque rendu
+  OrbitCalendarWidgetProvider.java  widget mini calendrier du mois
   OrbitTasksWidgetProvider.java     widget "tâches en attente"
-  OrbitCombinedWidgetProvider.java  widget fusionnant calendrier + tâches
+  OrbitCombinedWidgetProvider.java  widget "Fusion" : événement + tâches + journal
+  OrbitJournalWidgetProvider.java   widget dernière note du journal
 
 supabase/schema.sql   tables propres à Orbit (additif à celui de Wenn, voir plus bas)
 ```
 
-## Widgets Android (trois, au choix dans le sélecteur de widgets)
+## Widgets Android (quatre, au choix dans le sélecteur de widgets)
 
-Les trois lisent les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites
-par `WidgetDataPlugin.update()` côté natif, appelé depuis `WidgetSync.tsx`
-(monté dans `AppShell`) à chaque changement d'événements ou de tâches.
-Le widget "Calendrier" dessine une vraie mini-grille du mois (jour du jour
-surligné, petit point sous les jours avec événement) sur un `Bitmap`/`Canvas`
-— un `RemoteViews` ne peut pas héberger de vue custom, même technique que le
-widget "Orbite" de Wenn. Toute nouvelle donnée à exposer à un widget suit le
-même chemin que sur Wenn : calculer dans `WidgetSync.tsx` → ajouter un champ
-à `WidgetDataPlugin.update()` (JS + Java) → lire depuis `SharedPreferences`
-dans le(s) `AppWidgetProvider`.
+Calendrier, Tâches, Fusion (événement + tâches + journal) et Journal lisent
+les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites par
+`WidgetDataPlugin.update()` côté natif, appelé depuis `WidgetSync.tsx`
+(monté dans `AppShell`) à chaque changement de données. Le widget
+"Calendrier" construit une vraie mini-grille du mois en vues natives (une
+case par jour : jour du jour surligné, pastilles d'événements, points de
+tâches et de règles — plein si enregistrées, contour si prévues). Les
+libellés relatifs (« Demain à 10:00 », « Hier ») sont recalculés à chaque
+rendu à partir de dates absolues (`OrbitWidgetLabels`). Toute nouvelle
+donnée à exposer à un widget suit le même chemin que sur Wenn : calculer
+dans `WidgetSync.tsx` → ajouter un champ à `WidgetDataPlugin.update()`
+(JS + Java) → lire depuis `SharedPreferences` dans le(s)
+`AppWidgetProvider`.
 
 ## Mise à jour in-app
 
@@ -87,10 +100,12 @@ saisie, et pour que les deux comptes du couple soient les mêmes des deux côté
   il l'est automatiquement dans Orbit (même compte Supabase Auth).
 - Le widget de cycle d'Orbit lit `cycle_days` en **lecture seule** (mêmes
   policies RLS "select member" que Wenn) — Orbit n'y écrit jamais.
-- `supabase/schema.sql` d'Orbit n'ajoute que les tables propres à Orbit
-  (`orbit_events`, `orbit_tasks`, `orbit_journal_entries`, `orbit_expenses`)
-  et une colonne additive sur `couples` (`together_since`, pour le compteur
-  "jours ensemble").
+- `supabase/schema.sql` d'Orbit n'ajoute que les cinq tables propres à
+  Orbit (`orbit_events`, `orbit_event_categories`, `orbit_tasks`,
+  `orbit_journal_entries`, `orbit_expenses`), une colonne additive sur
+  `couples` (`together_since`, pour le compteur "jours ensemble") et la
+  fonction `set_together_since`. Le fichier se rejoue sans erreur (policies
+  et publication realtime idempotentes).
 
 **Procédure** (à faire une fois, sur le projet Supabase existant, dans le SQL
 Editor) : coller le contenu de `supabase/schema.sql` de ce dépôt. Comme pour
@@ -114,6 +129,11 @@ fois, dans le dashboard Supabase :** Authentication → URL Configuration →
 Redirect URLs → ajouter `io.karelisio.orbit://login-callback`. Ça n'affecte
 en rien la configuration existante de Wenn (liste additive).
 
+La connexion utilise le flux PKCE (`src/lib/supabase.ts`) : le lien reçu
+ne fonctionne que sur l'appareil qui l'a demandé (il faut l'ouvrir depuis
+l'appli mail de ce téléphone), et l'app n'accepte jamais de jetons de
+session bruts dans une URL (`src/lib/deepLink.ts`).
+
 ### Variables d'environnement
 
 Copie `.env.example` en `.env`. Les valeurs par défaut pointent déjà vers le
@@ -132,8 +152,10 @@ npm run dev
 ```bash
 npm run build       # build web (tsc + vite)
 npm run cap:sync    # copie le build dans android/ et synchronise les plugins
-npm run check       # types + tests de la logique pure (soldes, prédiction de cycle,
-                    # récurrences, libellés de rappel) — nécessite Node 22+
+npm run check       # types + tests de la logique pure (soldes, prédiction et phase
+                    # du cycle, occurrences d'événements, récurrence des tâches,
+                    # libellés des widgets...) — nécessite Node 22+ ; à lancer
+                    # aussi avec TZ=Europe/Paris et TZ=America/Montreal
 ```
 
 `scripts/smoke-test.ts` fige notamment le **sens du solde du budget** (qui doit
@@ -142,18 +164,29 @@ sert de garde-fou.
 
 ## CI/CD & signature Android
 
-Le workflow `.github/workflows/build-android.yml` :
-1. build le frontend React (secrets `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`),
-2. `npx cap sync android`,
-3. archive la section `## Non publié` de `CHANGELOG.md` sous le tag de
-   version (`scripts/archive-changelog.cjs`), la vide, et repousse ce commit
-   directement sur `main` — ces notes deviennent le corps de la Release
-   GitHub, affiché dans Réglages > Mises à jour côté app,
-4. décode `ANDROID_KEYSTORE_BASE64` en fichier `.keystore`,
-5. build et signe l'APK release (`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-   `ANDROID_KEY_PASSWORD`),
-6. publie l'APK en artifact GitHub Actions à chaque push sur `main`, et en
-   Release GitHub sur les tags `v*`.
+Le workflow `.github/workflows/build-android.yml`, à chaque push sur `main`
+(une exécution à la fois) :
+1. calcule la prochaine version (dernier tag `vX.Y.Z` + 1 patch, sans rien
+   pousser) ; `versionCode` = X × 1 000 000 + Y × 1 000 + Z,
+2. extrait les notes de la section `## Non publié` de `CHANGELOG.md`
+   (`scripts/archive-changelog.cjs notes`, « Corrections et améliorations
+   internes. » si elle est vide),
+3. `npm run check` (types + tests, Node 22), build du frontend React
+   (secrets `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`), `npx cap sync android`,
+4. s'arrête avec un message clair si un secret de signature manque (sinon
+   Gradle produirait un APK non signé), décode `ANDROID_KEYSTORE_BASE64` et
+   build l'APK release signé (`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
+   `ANDROID_KEY_PASSWORD`), publié aussi en artifact GitHub Actions,
+5. seulement alors, crée la Release GitHub et son tag sur le commit construit,
+   avec ces notes (affichées dans Réglages > Mises à jour côté app),
+6. archive `## Non publié` sous `## vX.Y.Z — DATE` et repousse ce commit
+   « Changelog : vX.Y.Z » sur `main` (refait sur la pointe de `main` si elle a
+   bougé entre-temps).
+
+Un build raté ne laisse ni tag ni notes archivées. Lancé sur une autre
+branche (workflow_dispatch), il ne fait que construire l'APK (versionName
+`X.Y.Z-dev.<sha>`), sans tag, release ni push. Un tag `v*` poussé à la main
+publie la Release de ce tag, sans archivage.
 
 **Avant de commiter un changement visible par l'utilisatrice**, ajouter une
 puce sous `## Non publié` dans `CHANGELOG.md`. Comme la CI repousse un commit
@@ -198,5 +231,6 @@ mises à jour s'installent sans désinstallation préalable.
   réel est donc très courte, ce qui est suffisant pour un usage à deux
   personnes (pas de fusion à trois voies).
 - Rappels d'événements : jusqu'à plusieurs rappels par événement (15 min / 1 h
-  / 1 jour avant), planifiés comme notifications locales natives dès la
-  création/modification de l'événement.
+  / 1 jour avant, ou personnalisés), notifications locales natives que
+  chaque téléphone resynchronise sur la liste partagée à chaque changement
+  (y compris ceux faits par l'autre), anniversaires compris.

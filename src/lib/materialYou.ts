@@ -37,7 +37,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Les sept couleurs dont les widgets natifs ont besoin (voir OrbitWidgetPrefs.java). */
+/** Les six couleurs dont les widgets natifs ont besoin (voir OrbitWidgetPrefs.java). */
 export interface WidgetPalette {
   primary: string;
   onPrimary: string;
@@ -45,7 +45,6 @@ export interface WidgetPalette {
   onPrimaryContainer: string;
   onSurface: string;
   onSurfaceVariant: string;
-  tertiary: string;
 }
 
 /**
@@ -66,7 +65,6 @@ export function widgetPalettesFromSeed(hex: string): { light: WidgetPalette; dar
     onPrimaryContainer: hexFromArgb(scheme.onPrimaryContainer),
     onSurface: hexFromArgb(scheme.onSurface),
     onSurfaceVariant: hexFromArgb(scheme.onSurfaceVariant),
-    tertiary: hexFromArgb(scheme.tertiary),
   });
   return { light: pick(theme.schemes.light), dark: pick(theme.schemes.dark) };
 }

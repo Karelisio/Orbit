@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { format } from "date-fns";
+import { useRef, useState } from "react";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useAuth } from "../context/AuthContext";
 import { useCouple } from "../context/CoupleContext";
@@ -21,19 +21,29 @@ export default function Tasks() {
   const [showOptions, setShowOptions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Entrée pressée deux fois de suite : la première requête est encore en
+  // cours, la seconde créait un doublon. Garde dans une ref plutôt que dans
+  // l'état `saving`, qui peut ne pas encore être à jour entre deux appuis.
+  const addingRef = useRef(false);
 
   async function handleAdd() {
-    if (!title.trim()) return;
+    if (!title.trim() || addingRef.current) return;
+    addingRef.current = true;
     setSaving(true);
     setError(null);
-    const { error } = await addTask({
-      title: title.trim(),
-      assignedTo: assignee,
-      dueDate: dueDate || null,
-      recurrence,
-      recurrenceInterval: recurrence === "none" ? 1 : recurrenceInterval,
-    });
-    setSaving(false);
+    let error: string | null;
+    try {
+      ({ error } = await addTask({
+        title: title.trim(),
+        assignedTo: assignee,
+        dueDate: dueDate || null,
+        recurrence,
+        recurrenceInterval: recurrence === "none" ? 1 : recurrenceInterval,
+      }));
+    } finally {
+      addingRef.current = false;
+      setSaving(false);
+    }
     if (error) {
       setError(error);
       return;
@@ -194,7 +204,7 @@ function TaskRow({
           {(task.due_date || isRecurring) && (
             <span style={{ display: "block", fontSize: 12, color: "var(--md-sys-color-on-surface-variant)", marginTop: 2 }}>
               {isRecurring && "🔁 "}
-              {task.due_date ? format(new Date(task.due_date), "d MMM", { locale: fr }) : ""}
+              {task.due_date ? format(parseISO(task.due_date), "d MMM", { locale: fr }) : ""}
               {isRecurring && task.due_date ? " · " : ""}
               {isRecurring ? taskRecurrenceLabel(task.recurrence, task.recurrence_interval) : ""}
             </span>
@@ -204,7 +214,14 @@ function TaskRow({
       <button className="btn-icon" onClick={onEdit} aria-label="Modifier">
         ✏️
       </button>
-      <button className="btn-icon" onClick={onDelete} aria-label="Supprimer">
+      <button
+        className="btn-icon"
+        onClick={() => {
+          // Suppression définitive, aussi chez l'autre : on demande d'abord.
+          if (window.confirm(`Supprimer la tâche « ${task.title} » ?`)) onDelete();
+        }}
+        aria-label="Supprimer"
+      >
         🗑️
       </button>
     </div>

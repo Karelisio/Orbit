@@ -27,7 +27,7 @@ function sortEvents(a: OrbitEvent, b: OrbitEvent): number {
 export function useEvents() {
   const { user } = useAuth();
   const { couple } = useCouple();
-  const { rows, loading, setRows } = useRealtimeCollection<OrbitEvent>("orbit_events", couple?.id ?? null, sortEvents);
+  const { rows, loading, setRows, mutate } = useRealtimeCollection<OrbitEvent>("orbit_events", couple?.id ?? null, sortEvents);
 
   // Ajout/modif optimistes : sans ça, l'app (et le widget, qui réagit au
   // même état `events`) n'affichaient le changement qu'au retour de l'écho
@@ -60,11 +60,13 @@ export function useEvents() {
     return { error: null };
   }
 
-  async function deleteEvent(event: OrbitEvent) {
-    setRows((prev) => prev.filter((e) => e.id !== event.id));
-    const { error } = await supabase.from("orbit_events").delete().eq("id", event.id);
-    if (error) return { error: error.message };
-    return { error: null };
+  // Suppression optimiste, annulée avec un message si elle échoue (voir mutate).
+  function deleteEvent(event: OrbitEvent) {
+    return mutate(
+      (prev) => prev.filter((e) => e.id !== event.id),
+      () => supabase.from("orbit_events").delete().eq("id", event.id),
+      "Événement non supprimé : vérifie ta connexion."
+    );
   }
 
   return { events: rows, loading, addEvent, updateEvent, deleteEvent };

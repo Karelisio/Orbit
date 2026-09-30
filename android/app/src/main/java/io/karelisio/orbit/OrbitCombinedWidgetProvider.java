@@ -11,6 +11,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
+import org.json.JSONException;
+
 /**
  * Widget "Fusion" : calendrier + tâches + journal dans un seul widget, pour
  * qui ne veut placer qu'une seule tuile sur son écran d'accueil.
@@ -36,13 +38,7 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_combined);
 
-        if (!hasEvent) {
-            views.setTextViewText(R.id.widget_combined_event, "📅 Aucun événement à venir");
-        } else {
-            String title = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_TITLE, "");
-            String timeLabel = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_TIME_LABEL, "");
-            views.setTextViewText(R.id.widget_combined_event, "📅 " + title + " — " + timeLabel);
-        }
+        views.setTextViewText(R.id.widget_combined_event, eventLine(prefs, hasEvent));
 
         views.setTextViewText(
             R.id.widget_combined_tasks,
@@ -71,6 +67,29 @@ public class OrbitCombinedWidgetProvider extends AppWidgetProvider {
 
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context, appWidgetId));
         appWidgetManager.updateAppWidget(appWidgetId, views);
+    }
+
+    /**
+     * Ligne « prochain événement », avec un libellé relatif recalculé à
+     * chaque rendu (OrbitWidgetLabels) : le rafraîchissement périodique
+     * (updatePeriodMillis) le remet à jour sans l'app, et passe tout seul à
+     * l'événement suivant une fois celui-ci passé. Repli sur le texte figé
+     * poussé par une version antérieure de l'app (ou illisible).
+     */
+    private static String eventLine(SharedPreferences prefs, boolean hasEvent) {
+        String nextEventsJson = prefs.getString(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON, null);
+        if (nextEventsJson != null) {
+            try {
+                OrbitWidgetLabels.NextEvent next = OrbitWidgetLabels.firstUpcoming(nextEventsJson, System.currentTimeMillis());
+                return next == null ? "📅 Aucun événement à venir" : "📅 " + next.title + " — " + next.timeLabel;
+            } catch (JSONException ignored) {
+                // données illisibles : repli sur le texte figé ci-dessous
+            }
+        }
+        if (!hasEvent) return "📅 Aucun événement à venir";
+        String title = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_TITLE, "");
+        String timeLabel = prefs.getString(OrbitWidgetPrefs.KEY_EVENT_TIME_LABEL, "");
+        return "📅 " + title + " — " + timeLabel;
     }
 
     @Override

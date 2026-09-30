@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { signInWithMagicLink } = useAuth();
+  const { signInWithMagicLink, authLinkError } = useAuth();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,10 +26,19 @@ export default function Login() {
         <h1 style={{ margin: "0 0 4px" }}>Orbit</h1>
         <p style={{ color: "var(--md-sys-color-on-surface-variant)", marginTop: 0 }}>Le calendrier de votre couple.</p>
 
+        {authLinkError && (
+          <p role="alert" style={{ color: "var(--md-sys-color-error)", fontSize: 14, margin: "12px 0 0" }}>
+            {authLinkError}
+          </p>
+        )}
+
         {sent ? (
           <div>
             <p>
-              Un lien de connexion a été envoyé à <strong>{email}</strong>. Ouvre-le depuis ton téléphone pour te connecter.
+              Un lien de connexion a été envoyé à <strong>{email}</strong>.{" "}
+              {Capacitor.isNativePlatform()
+                ? "Ouvre-le sur ce téléphone, depuis ton appli mail : il ne fonctionne que sur l'appareil qui l'a demandé."
+                : "Ouvre-le dans ce navigateur : il ne fonctionne que sur l'appareil qui l'a demandé."}
             </p>
             <button className="btn btn-text" onClick={() => setSent(false)}>
               Utiliser une autre adresse

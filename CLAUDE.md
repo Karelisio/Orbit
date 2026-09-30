@@ -23,38 +23,49 @@ répondre en français, court et direct.**
 
 ```
 src/
-  context/       AuthContext, CoupleContext (couple lié, rôle owner/partner),
-                 ThemeModeContext (clair/sombre/système), PreferencesContext
-                 (réglages par appareil, localStorage : sections visibles,
-                 onglets, règles dans calendrier/widget...)
+  context/       AuthContext (session, lien magique PKCE), CoupleContext
+                 (couple lié, rôle owner/partner), ThemeModeContext
+                 (clair/sombre/système), PreferencesContext (réglages par
+                 appareil, localStorage : sections visibles, onglets, règles
+                 dans calendrier/widget, texte des widgets, image de thème ou
+                 fond d'écran — monté tout en haut, dans main.tsx)
   pages/         Home, Calendar, Tasks, Budget, Journal, Settings, Login,
                  Onboarding
-  components/    EventSheet/ExpenseSheet (saisie), BottomNav, WidgetSync
-                 (pousse les données vers les widgets Android), CycleWidget
-                 (résumé du cycle de la copine, lu depuis Wenn), OrbitLogo
+  components/    EventSheet/TaskSheet/ExpenseSheet (saisie), BottomNav,
+                 WidgetSync (pousse les données vers les widgets Android),
+                 CycleWidget (résumé du cycle de la copine, lu depuis Wenn),
+                 TogetherCounter, Toast (messages courts), OrbitLogo
   hooks/         useEvents, useTasks, useExpenses, useJournal,
-                 useEventCategories, useCyclePeriodDays (règles Wenn),
-                 useRealtimeCollection (base commune Supabase Realtime)
-  lib/           balances (calcul du solde du budget partagé), cyclePredictions
-                 (prédiction règles, lu depuis les données Wenn),
+                 useEventCategories, useRealtimeCollection (base commune
+                 Supabase Realtime), useCycleDays (source unique de
+                 cycle_days, Wenn) + useCyclePeriodDays / useCycleStatus
+  lib/           balances (solde du budget, en centimes), cyclePredictions
+                 (prédiction et phase du cycle, depuis les données Wenn),
                  deepLink (liens io.karelisio.orbit://...), notifications
-                 (rappels d'événements), widgetSync, materialYou,
+                 (rappels d'événements), widgetSync + widgetLabels, paging
+                 (lecture paginée), optimistic + toast (écritures optimistes
+                 annulées), localData (purge locale), localDate,
+                 taskRecurrence, togetherSince, materialYou, dynamicColor,
                  wallpaperColor, appUpdate, crashLog, supabase
-  types/index.ts Types + constantes partagées
+  types/index.ts Types + constantes partagées (occurrences d'événements...)
 
 android/app/src/main/java/io/karelisio/orbit/
   MainActivity.java              enregistre les plugins Capacitor custom
-  WidgetDataPlugin.java          pont JS -> widgets (SharedPreferences + refresh)
+  WidgetDataPlugin.java          pont JS -> widgets (SharedPreferences + refresh, clear)
   OrbitCalendarWidgetProvider.java  widget mini-calendrier du mois
   OrbitTasksWidgetProvider.java     widget tâches en attente
-  OrbitCombinedWidgetProvider.java  widget fusion calendrier + tâches
+  OrbitCombinedWidgetProvider.java  widget fusion événement + tâches + journal
+  OrbitJournalWidgetProvider.java   widget dernière note du journal
   OrbitWidgetPrefs.java / OrbitWidgetTheme.java  clés partagées + thème Material You des widgets
+  OrbitWidgetLabels.java         libellés relatifs (« Demain à 10:00 »...) recalculés à chaque rendu
+  DynamicColorPlugin.java        couleurs système dynamiques (Android 12+) pour l'app
   CrashLogPlugin.java            capture les fermetures brutales de l'app (voir plus bas)
   ApkInstallerPlugin.java        lance l'installeur système pour l'APK téléchargé
-  WallpaperColorPlugin.java      lit la couleur dominante du fond d'écran (thème)
+  WallpaperColorPlugin.java      couleur dominante du fond d'écran (thème, avant Android 12)
 
-supabase/schema.sql   schéma complet + policies RLS + migrations additives en fin de fichier
+supabase/schema.sql   schéma complet + policies RLS + migrations additives en fin de fichier (rejouable)
 CHANGELOG.md           source des notes de version (voir workflow ci-dessous)
+scripts/               smoke-test.ts (`npm run check`), archive-changelog.cjs (CI)
 ```
 
 ## Modèle de données / comptes
@@ -69,15 +80,41 @@ CHANGELOG.md           source des notes de version (voir workflow ci-dessous)
   Les événements "Anniversaire" (ou avec récurrence annuelle activée)
   comptent chaque année sans recréation (voir `nextEventOccurrence`/
   `eventOccursOnDay` dans `types/index.ts`).
+- Les événements « toute la journée » restent « à venir » jusqu'au soir
+  (`occurrenceEnd`/`isOccurrenceUpcoming`, accueil et widgets), et non
+  jusqu'à leur heure de début (9 h par défaut). Un 29 février annuel tombe
+  le 28 les années non bissextiles (`yearlyOccurrence`, commun à
+  `nextEventOccurrence` et `eventOccursOnDay`), jamais avant la date
+  d'origine. Les rappels visent `nextEventStart` (prochaine occurrence pas
+  encore commencée).
 - Budget partagé : dépenses assignées, solde calculé par `lib/balances.ts`
-  (qui doit combien à qui).
+  (qui doit combien à qui) en centimes entiers (`toCents`), affiché avec
+  `formatEuros` (Intl fr-FR) ; « à jour » sous un centime d'écart.
+- Tâches récurrentes : `lib/taskRecurrence.ts` (échéance lue en date
+  locale, rattrapage jusqu'à aujourd'hui, jour d'ancrage des mensuelles).
+  La colonne FACULTATIVE `orbit_tasks.recurrence_day` garde ce jour d'un
+  coche à l'autre (31/01 -> 28/02 -> 31/03) ; elle n'est écrite que si les
+  lignes lues la contiennent déjà (migration passée — appliquée sur le
+  projet le 2026-09-30, fin de `supabase/schema.sql`), sinon rien ne change.
+- Une date « aaaa-mm-jj » se lit TOUJOURS avec `parseISO` (date locale),
+  jamais `new Date("aaaa-mm-jj")` : minuit UTC, soit la veille à l'ouest de
+  Greenwich. Une date reçue de l'extérieur (lien, URL) passe par
+  `parseDateParam` (lib/localDate.ts) avant tout `format()`.
 - Le cycle/règles de la copine (widget "Orbite", pastilles dans le calendrier
   et le widget) est **lu depuis les tables Wenn** du même projet Supabase —
-  Orbit n'écrit jamais ces données, seulement `useCyclePeriodDays`/
-  `cyclePredictions.ts` les consomment en lecture, désactivable dans Réglages
-  (calendrier et widget ont chacun leur propre interrupteur).
+  Orbit n'écrit jamais ces données. Source unique `useCycleDays`
+  (useRealtimeCollection sur `cycle_days`, colonnes `id, date, flow`
+  seulement : temps réel, rechargement au premier plan, cache, lecture
+  paginée), consommée par `useCyclePeriodDays` (calendrier, widget ;
+  désactivable dans Réglages, chacun son interrupteur) et `useCycleStatus`
+  (widget de l'accueil). Phase (`computeCycleStatus`) : « règles » d'après
+  les vraies saisies (jour du cycle ≤ durée moyenne des règles, ou vrai
+  flux — pas du spotting — saisi aujourd'hui), « retard » si la date prévue
+  est passée sans nouvelles règles ; jamais d'après la seule date prédite.
+  Règles enregistrées = point plein, seulement prévues = contour (app et
+  widget).
 
-## Widgets Android (trois, au choix dans le sélecteur de widgets)
+## Widgets Android (quatre, au choix dans le sélecteur de widgets : Calendrier, Tâches, Fusion, Journal)
 
 Tous lisent les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites par
 `WidgetDataPlugin.update()` côté natif, appelé depuis `WidgetSync.tsx`
@@ -85,6 +122,20 @@ Tous lisent les mêmes `SharedPreferences` (`OrbitWidgetPrefs`), écrites par
 exposer à un widget suit ce chemin : calculer dans `WidgetSync.tsx` →
 ajouter un champ à `WidgetDataPlugin.update()` (JS + Java) → lire depuis
 `SharedPreferences` dans le(s) `AppWidgetProvider`.
+
+**Libellés relatifs** (« Demain à 10:00 », « Hier », « Il y a 3 j ») :
+jamais calculés une fois pour toutes côté JS (ils restaient figés jusqu'à
+la réouverture de l'app). L'app pousse des dates absolues — `nextEventsJson`
+(10 prochaines occurrences : titre, début en ms epoch, journée entière) et
+`journalCreatedAt` — en chaînes (`PluginCall` ne relit un nombre que selon
+son type exact Integer/Long/Double), et `OrbitWidgetLabels` recalcule à
+chaque rendu, avec les mêmes formulations que `lib/widgetLabels.ts` (à
+garder alignées) ; le widget Fusion passe seul à l'événement suivant. Les
+anciennes clés figées ne servent plus que de repli. `WidgetSync` ne pousse
+rien avant que le thème soit résolu (`themeVersion` à 0 : palette violette
+par défaut sinon) ni un contenu identique au précédent (`syncWidgets`
+compare), et sa fenêtre de calendrier est mémoïsée par mois.
+`WidgetDataPlugin.clear()` vide le contenu (déconnexion, espace quitté).
 
 **Important — un rendu de widget qui plante emporte toute l'app** :
 `AppWidgetProvider.onUpdate()`/`refreshAll()` tournent dans le processus de
@@ -149,6 +200,12 @@ et widgets ne peuvent donc jamais diverger, contrairement à l'ancien risque
 palette JS, widget sur palette système — pas de `system_accent1` en
 lui-même).
 
+Une image de thème (`profiles.theme_*`, partagé avec Wenn — ne jamais
+l'effacer) ne passe devant le fond d'écran sur Android que si la
+préférence par appareil `preferThemeImage` le veut (Réglages > Couleurs de
+l'app, vrai par défaut) ; à faux, app et widgets reprennent les couleurs
+système.
+
 Plus de dépendance `com.google.android.material` (aucune classe
 `color.utilities` n'est plus utilisée nulle part) : ni calcul natif ni
 polling de rattrapage plus nécessaires pour la couleur, tout est
@@ -173,7 +230,8 @@ qu'on compte teindre.
 **Taille d'un widget** (`res/xml/widget_*_info.xml`) — deux règles se
 cumulent, et il faut que les DEUX disent la même chose :
 - `targetCellWidth`/`targetCellHeight` (Android 12+), ce que les lanceurs
-  récents utilisent en priorité ;
+  récents utilisent en priorité (valable aussi pour la largeur :
+  250dp = 4 colonnes, 110dp = 2) ;
 - `minWidth`/`minHeight`, le repli, qu'Android convertit en cases avec
   `70 × cases − 30` dp → **40dp = 1 ligne, 110dp = 2, 180dp = 3**. Une
   valeur "raisonnable" comme 120dp réclame donc 3 lignes entières, d'où une
@@ -184,7 +242,9 @@ taille réellement posée : le lanceur n'a alors aucune plage valide et
 désactive complètement les poignées de redimensionnement.
 
 **Police adaptative (Tâches, Fusion, Journal)** : les tailles `sp` en dur
-dans les layouts sont calées pour la hauteur minimale (1 ligne). Comme un
+dans les layouts sont calées pour la hauteur minimale (1 ligne ; exception
+assumée : Tâches reste calé sur 60dp, son ancien minHeight, bien que
+déclaré à 40dp — sinon son compteur en 28sp grossirait d'un tiers). Comme un
 lanceur peut accorder une tuile bien plus haute (grille plus grossière, ou
 redimensionnement à la main), `OrbitWidgetTheme.heightScale()` compare la
 hauteur réellement accordée (`AppWidgetManager.getAppWidgetOptions()` →
@@ -271,7 +331,41 @@ Temps réel : Supabase ne livre **jamais un DELETE sur un abonnement filtré**
 `useRealtimeCollection`/`useCycleStatus` écoutent donc les DELETE à part,
 sans filtre (id seulement), et rechargent au retour au premier plan.
 `CoupleContext` dépend de `user?.id` et non de l'objet `user` (recréé à
-chaque rafraîchissement de jeton, ce qui démontait toute l'app).
+chaque rafraîchissement de jeton, ce qui démontait toute l'app). Noms de
+canaux toujours suffixés d'un aléatoire (sinon « tried to subscribe
+multiple times » sur un remontage rapide).
+
+Lectures : PostgREST plafonne silencieusement à 1000 lignes, d'où
+`fetchAllRows` (lib/paging.ts, réexporté par lib/supabase.ts) avec un tri
+stable. Écritures optimistes : toujours via `mutate` de
+useRealtimeCollection — en cas d'échec, `revertOptimistic` remet les
+lignes touchées (sans écraser un écho plus récent) et `showToast` le dit ;
+avant, hors ligne, un élément disparaissait puis revenait sans
+explication. Copies hors ligne (`orbit-couple-cache-*`, `orbit-cache-*`),
+contenu des widgets et rappels programmés sont effacés par
+`purgeLocalSpaceData` (lib/localData.ts) : espace quitté, SIGNED_OUT, ou
+plus d'espace côté serveur alors que ce téléphone en gardait une copie.
+
+## Connexion — lien magique en flux PKCE
+
+`flowType: "pkce"` (lib/supabase.ts) : le lien ne porte plus qu'un `code`,
+échangé par `exchangeCodeForSession` avec le vérificateur gardé sur le
+téléphone qui a demandé le lien (même `emailRedirectTo`
+`io.karelisio.orbit://login-callback`, sans paramètre ajouté : la liste
+blanche Supabase reste valable). `deepLink.ts` :
+- n'accepte JAMAIS `access_token`/`refresh_token` dans une URL (fragment
+  ou paramètres) : un lien forgé connectait sinon l'app au compte de
+  quelqu'un d'autre (injection de session) ;
+- `token_hash` + `type` (magiclink/email) seulement si ce téléphone a
+  demandé un lien il y a moins d'une heure (marqueur `orbit-pending-login`,
+  posé par AuthContext) ;
+- un code déjà échangé n'est pas rejoué (getLaunchUrl renvoie la même URL
+  après un rechargement), mais un lien en échec reste réessayable ;
+- en échec (autre téléphone, expiré) : message clair sur l'écran de
+  connexion (`AuthContext.authLinkError`).
+Les sessions déjà ouvertes ne sont pas touchées. Test sur téléphone :
+se déconnecter, demander un lien, l'ouvrir depuis l'appli mail du même
+téléphone -> connecté.
 
 ## Mise à jour in-app — piège CORS déjà résolu, ne pas régresser
 
@@ -284,9 +378,20 @@ le téléchargement recassera.
 ## Workflow Git/CI — à suivre à chaque changement
 
 La branche de travail est `claude/orbit-couple-calendar-ftaa40`. Le push sur
-`main` déclenche le build + un **auto-tag patch** + une **Release GitHub**
-(APK signé), en lisant `## Non publié` de `CHANGELOG.md`, en l'archivant
-sous `## vX.Y.Z — DATE`, puis en repoussant ce commit directement sur `main`.
+`main` déclenche, dans cet ordre (`build-android.yml`) : calcul de la
+prochaine version (patch + 1, rien de poussé ; `versionCode` = majeur ×
+1 000 000 + mineur × 1 000 + patch, toujours au-dessus des anciens codes
+tirés du numéro d'exécution), extraction des notes de `## Non publié`
+(`scripts/archive-changelog.cjs notes`, « Corrections et améliorations
+internes. » si vide), `npm run check` (Node 22), build web, arrêt net si
+un secret de signature manque, APK signé, puis seulement **Release GitHub +
+tag** sur le commit construit (`target_commitish`), et enfin archivage de
+`## Non publié` sous `## vX.Y.Z — DATE` (`archive-changelog.cjs archive`),
+refait sur la pointe de `main` et repoussé avec nouvel essai si `main` a
+bougé. Un build raté ne laisse donc ni tag orphelin ni notes archivées ;
+deux exécutions sur `main` ne se chevauchent jamais (`concurrency`, sans
+annulation). Sur une branche de travail : build de vérification seulement
+(versionName `X.Y.Z-dev.<sha>`), ni tag, ni release, ni push.
 
 1. Avant de commiter un changement visible, ajouter une puce sous
    `## Non publié` dans `CHANGELOG.md`.
@@ -304,6 +409,15 @@ sous `## vX.Y.Z — DATE`, puis en repoussant ce commit directement sur `main`.
 5. Pousser sur la branche de travail **et** sur `main`
    (`git push origin claude/orbit-couple-calendar-ftaa40:main`).
 
+## Tests
+
+`npm run check` = `tsc --noEmit` + `scripts/smoke-test.ts` (Node 22,
+`--experimental-strip-types` : les modules testés n'importent que des
+paquets ou des types — `import type` —, jamais le client Supabase ni
+Capacitor ; d'où la logique pure dans lib/). Dates construites en heure
+locale : lancer aussi `TZ=Europe/Paris npm run check` et
+`TZ=America/Montreal npm run check`.
+
 ## Style de commit / conventions
 
 - Commits et code sans mention de modèle Claude ; l'attribution va dans les
@@ -311,3 +425,13 @@ sous `## vX.Y.Z — DATE`, puis en repoussant ce commit directement sur `main`.
   de message.
 - Pas de sur-ingénierie : cette app sert un couple, pas un produit à grande
   échelle — préférer la solution la plus directe.
+
+## RLS : performance (2026-09-30)
+
+Toutes les policies utilisent `(select auth.uid())` (évalué une fois par
+requête, pas par ligne), les policies « member write » (FOR ALL) sont
+scindées en insert/update/delete (une seule policy permissive par rôle et
+action) et chaque clé étrangère a son index — fin de `supabase/schema.sql`
+pour les tables orbit_*, fin de celui de Wenn pour les tables communes. Déjà
+appliqué sur le projet. Garder cette forme pour toute nouvelle policy
+(advisor Supabase `performance`).

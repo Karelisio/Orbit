@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Capacitor } from "@capacitor/core";
-import { differenceInCalendarDays, eachDayOfInterval, format } from "date-fns";
+import { eachDayOfInterval, format } from "date-fns";
 import { useAuth } from "../context/AuthContext";
 import { useEvents } from "../hooks/useEvents";
 import { useTasks } from "../hooks/useTasks";
@@ -10,8 +10,9 @@ import { useCyclePeriodDays } from "../hooks/useCyclePeriodDays";
 import { usePreferences, type WidgetFontScale } from "../context/PreferencesContext";
 import { useThemeMode } from "../context/ThemeModeContext";
 import { syncWidgets } from "../lib/widgetSync";
+import { eventTimeLabel, journalTimeLabel } from "../lib/widgetLabels";
 import { resyncEventReminders } from "../lib/notifications";
-import { eventDisplayColor, eventOccursOnDay, nextEventOccurrence } from "../types";
+import { eventDisplayColor, eventOccursOnDay, isOccurrenceUpcoming, nextEventOccurrence } from "../types";
 
 /**
  * Facteur manuel (Réglages > Widgets), composé avec l'ajustement automatique
@@ -26,24 +27,21 @@ const WIDGET_FONT_SCALE_FACTORS: Record<WidgetFontScale, number> = {
   grande: 1.25,
 };
 
-function eventTimeLabel(startsAt: string, allDay: boolean): string {
-  const date = new Date(startsAt);
-  const days = differenceInCalendarDays(date, new Date());
-  const time = allDay ? "" : ` à ${format(date, "HH:mm")}`;
-  if (days <= 0) return `Aujourd'hui${time}`;
-  if (days === 1) return `Demain${time}`;
-  if (days < 7) return `Dans ${days} j${time}`;
-  return format(date, "d MMM") + time;
-}
+/**
+ * Prochaines occurrences poussées au widget Fusion : plusieurs, et pas
+ * seulement la première, pour que le widget puisse passer tout seul à la
+ * suivante quand celle-ci est passée alors que l'app est fermée.
+ */
+const WIDGET_NEXT_EVENTS = 10;
 
-/** Symétrique de eventTimeLabel, mais pour une date passée (dernière note du journal). */
-function journalTimeLabel(createdAt: string): string {
-  const days = differenceInCalendarDays(new Date(), new Date(createdAt));
-  if (days <= 0) return "Aujourd'hui";
-  if (days === 1) return "Hier";
-  if (days < 7) return `Il y a ${days} j`;
-  return format(new Date(createdAt), "d MMM");
-}
+/**
+ * Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
+ * à venir, pour que la navigation ‹ › du widget affiche de vraies données
+ * au lieu de retomber sur une grille vide dès qu'on quitte le mois du jour
+ * (voir OrbitCalendarWidgetProvider.java, qui ne rend qu'un mois à la fois
+ * — seul le stockage couvre plusieurs mois, pas le rendu).
+ */
+const WIDGET_MONTHS_AHEAD = 12;
 
 /**
  * Nettoie un texte pour l'encodage compact envoyé au widget natif (retire les
@@ -68,17 +66,22 @@ export default function WidgetSync() {
   const { couple, partnerId } = useCouple();
   const { showPeriodInWidget, widgetFontScale } = usePreferences();
   const { themeVersion, seedColor, seedFollowsWallpaper } = useThemeMode();
+  const userId = user?.id ?? null;
 
-  // Fenêtre poussée au widget calendrier : le mois courant plus quelques mois
-  // à venir, pour que la navigation ‹ › du widget affiche de vraies données
-  // au lieu de retomber sur une grille vide dès qu'on quitte le mois du jour
-  // (voir OrbitCalendarWidgetProvider.java, qui ne rend qu'un mois à la fois
-  // — seul le stockage couvre plusieurs mois, pas le rendu).
-  const WIDGET_MONTHS_AHEAD = 12;
-  const now = new Date();
-  const windowStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1 + WIDGET_MONTHS_AHEAD, 0);
-  const periodDates = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
+  // Fenêtre recalculée seulement quand le mois change (clé "aaaa-mm"), et le
+  // jour du jour en dépendance de la synchro : avant, de nouveaux objets Date
+  // à chaque rendu donnaient un nouvel ensemble de jours de règles, donc une
+  // synchro complète et la reconstruction de tous les widgets à CHAQUE rendu.
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  const monthKey = todayKey.slice(0, 7);
+  const { windowStart, windowEnd } = useMemo(() => {
+    const [year, month] = monthKey.split("-").map(Number);
+    return {
+      windowStart: new Date(year, month - 1, 1),
+      windowEnd: new Date(year, month + WIDGET_MONTHS_AHEAD, 0),
+    };
+  }, [monthKey]);
+  const periodDays = useCyclePeriodDays(windowStart, windowEnd, showPeriodInWidget);
 
   // Rappels d'événements resynchronisés au démarrage et à chaque changement
   // de la liste, y compris ceux faits par l'autre téléphone (reçus en temps
@@ -91,12 +94,27 @@ export default function WidgetSync() {
   }, [events, eventsLoading]);
 
   useEffect(() => {
+    // Pas de synchro tant que le thème n'est pas résolu (themeVersion à 0) :
+    // la toute première poussait sinon la palette violette par défaut
+    // (seedFollowsWallpaper encore à faux), appliquée un instant par-dessus
+    // les couleurs système des widgets.
+    if (themeVersion === 0) return;
     const now = new Date();
+    // Même règle que l'accueil : une journée entière reste « à venir » jusqu'au soir.
     const upcoming = events
       .map((event) => ({ event, occursAt: nextEventOccurrence(event, now) }))
-      .filter(({ occursAt }) => occursAt.getTime() >= now.getTime())
+      .filter(({ event, occursAt }) => isOccurrenceUpcoming(event, occursAt, now))
       .sort((a, b) => a.occursAt.getTime() - b.occursAt.getTime());
     const nextEvent = upcoming[0] ?? null;
+    // Dates absolues (ms epoch) et non des libellés : le widget recalcule
+    // « Demain à 10:00 » / « Aujourd'hui » à chaque rendu (voir
+    // OrbitWidgetLabels.java), au lieu de garder un texte figé au moment de
+    // la synchro.
+    const nextEventsJson = JSON.stringify(
+      upcoming
+        .slice(0, WIDGET_NEXT_EVENTS)
+        .map(({ event, occursAt }) => ({ t: event.title, s: occursAt.getTime(), a: event.all_day }))
+    );
     const pendingTasks = tasks.filter((t) => !t.done);
 
     // Événements du jour affichés en pastilles empilées sur le widget
@@ -126,10 +144,12 @@ export default function WidgetSync() {
     }
     const eventsCsv = entries.join(";");
 
-    // Jours de règles (déjà enregistrées ou prédites, voir useCyclePeriodDays)
-    // sur la fenêtre poussée au widget, désactivable dans Réglages.
-    // useCyclePeriodDays filtre déjà sur [windowStart, windowEnd].
-    const periodDaysCsv = Array.from(periodDates).join(";");
+    // Jours de règles sur la fenêtre poussée au widget, désactivable dans
+    // Réglages : enregistrés d'un côté, seulement prévus de l'autre (point
+    // plein / simple contour sur le widget, comme dans l'app). Déjà filtrés
+    // sur [windowStart, windowEnd] par useCyclePeriodDays.
+    const periodDaysCsv = Array.from(periodDays.recorded).join(";");
+    const predictedPeriodDaysCsv = Array.from(periodDays.predicted).join(";");
 
     // Jours ayant au moins une tâche en attente, sur la même fenêtre : pas
     // besoin de boucler jour par jour, due_date est déjà une date absolue.
@@ -147,7 +167,7 @@ export default function WidgetSync() {
     // useJournal), pour le widget dédié et la 3e ligne du widget Fusion.
     const latestEntry = journalEntries[0] ?? null;
     const journalAuthorLabel = latestEntry
-      ? latestEntry.author_id === user?.id
+      ? latestEntry.author_id === userId
         ? "Toi"
         : latestEntry.author_id === partnerId
           ? "Ton/ta partenaire"
@@ -156,27 +176,35 @@ export default function WidgetSync() {
 
     syncWidgets({
       nextEventTitle: nextEvent?.event.title ?? null,
-      nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt.toISOString(), nextEvent.event.all_day) : null,
+      nextEventTimeLabel: nextEvent ? eventTimeLabel(nextEvent.occursAt, nextEvent.event.all_day, now) : null,
+      nextEventsJson,
       pendingTasksCount: pendingTasks.length,
       nextTaskTitle: pendingTasks[0]?.title ?? null,
       eventsCsv,
       periodDaysCsv,
+      predictedPeriodDaysCsv,
       taskDaysCsv,
       journalContent: latestEntry ? sanitizeForWidget(latestEntry.content, 90) : null,
       journalAuthorLabel,
-      journalTimeLabel: latestEntry ? journalTimeLabel(latestEntry.created_at) : null,
+      journalTimeLabel: latestEntry ? journalTimeLabel(new Date(latestEntry.created_at), now) : null,
+      journalCreatedAt: latestEntry ? String(new Date(latestEntry.created_at).getTime()) : null,
       seedColor,
       seedFollowsWallpaper,
       fontScale: WIDGET_FONT_SCALE_FACTORS[widgetFontScale],
     });
+    // Identique à la dernière poussée (écho temps réel, rafraîchissement de
+    // session...) : syncWidgets ne refait rien, voir lib/widgetSync.ts.
   }, [
     events,
     tasks,
     journalEntries,
     couple,
     partnerId,
-    user,
-    periodDates,
+    userId,
+    periodDays,
+    windowStart,
+    windowEnd,
+    todayKey,
     themeVersion,
     seedColor,
     seedFollowsWallpaper,

@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Quatre lignes sur quatre colonnes par défaut. Les deux règles de taille
+     doivent dire la même chose (voir widget_combined_info.xml) :
+     targetCellWidth/Height = 4, et minWidth/minHeight = 70 x 4 - 30 = 250dp.
+     Les 280dp d'avant réclamaient 5 lignes aux lanceurs qui ne lisent que
+     minHeight. Pas de maxResizeWidth/Height (voir widget_combined_info.xml). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="280dp"
+    android:minHeight="250dp"
     android:minResizeWidth="180dp"
     android:minResizeHeight="200dp"
     android:targetCellWidth="4"
