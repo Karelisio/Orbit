@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { format } from "date-fns";
 import { computeBalance } from "../src/lib/balances.ts";
 import { computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { reminderLabel, nextEventOccurrence, eventOccursOnDay, taskRecurrenceLabel } from "../src/types/index.ts";
@@ -73,15 +74,23 @@ check("libellés", () => {
 });
 
 console.log("\nprédiction des règles");
-// 3 cycles de 28 jours, règles de 4 jours
-const days: { date: string; flow: string | null }[] = [];
-for (const start of ["2026-06-01", "2026-06-29", "2026-07-27"]) {
-  for (let i = 0; i < 4; i++) {
-    const d = new Date(start + "T00:00:00");
-    d.setDate(d.getDate() + i);
-    days.push({ date: d.toISOString().slice(0, 10), flow: "moyen" });
+/**
+ * Règles de 4 jours à partir de chaque début. Date locale via format() :
+ * toISOString() d'un minuit local donne la veille en France (UTC+1/+2).
+ */
+function periodDays(starts: string[]): { date: string; flow: string | null }[] {
+  const result: { date: string; flow: string | null }[] = [];
+  for (const start of starts) {
+    for (let i = 0; i < 4; i++) {
+      const d = new Date(start + "T00:00:00");
+      d.setDate(d.getDate() + i);
+      result.push({ date: format(d, "yyyy-MM-dd"), flow: "moyen" });
+    }
   }
+  return result;
 }
+// 3 cycles de 28 jours, règles de 4 jours
+const days = periodDays(["2026-06-01", "2026-06-29", "2026-07-27"]);
 check("longueurs moyennes déduites de l'historique", () => {
   const s = computeCycleSummary(days);
   assert.equal(s.averageCycleLength, 28);
@@ -106,6 +115,18 @@ check("pas de boucle infinie sur une plage très lointaine", () => {
   const s = computeCycleSummary(days);
   const predicted = predictedPeriodDatesUntil(s.nextPeriodStart, s.averageCycleLength, s.averagePeriodLength, new Date("2200-01-01"));
   assert.ok(predicted.size <= 24 * s.averagePeriodLength, "garde-fou des 24 cycles respecté");
+});
+check("un spotting en milieu de cycle ne décale pas la prochaine date", () => {
+  const s = computeCycleSummary([...days, { date: "2026-08-10", flow: "spotting" }]);
+  assert.equal(s.nextPeriodStart, "2026-08-24", "pas pris pour un début de règles (sinon 2026-09-07)");
+  assert.equal(s.averageCycleLength, 28);
+  assert.equal(s.averagePeriodLength, 4, "pas compté dans la durée des règles");
+});
+check("la médiane ignore un cycle aberrant", () => {
+  // cycles de 28, 45 puis 28 jours : moyenne 34, médiane 28
+  const s = computeCycleSummary(periodDays(["2026-06-01", "2026-06-29", "2026-08-13", "2026-09-10"]));
+  assert.equal(s.averageCycleLength, 28);
+  assert.equal(s.nextPeriodStart, "2026-10-08");
 });
 
 console.log(`\n${passed} vérifications OK\n`);
