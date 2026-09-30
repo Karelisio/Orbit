@@ -1,18 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { useCouple } from "../context/CoupleContext";
-import { supabase } from "../lib/supabase";
+import { useMemo } from "react";
+import { format, parseISO } from "date-fns";
 import { computeCycleSummary, predictedPeriodDatesUntil } from "../lib/cyclePredictions";
-
-interface MinimalCycleDay {
-  date: string;
-  flow: string | null;
-}
+import { useCycleDays } from "./useCycleDays";
 
 /**
- * Jours de règles (lecture seule, table cycle_days de Wenn) sur une plage de
- * dates — utilisé pour un affichage discret dans le calendrier d'Orbit,
- * activable/désactivable dans Réglages. Orbit n'écrit jamais dans cette table.
+ * Jours de règles (lecture seule, cycle_days de Wenn) sur une plage de dates
+ * — affichage discret dans le calendrier d'Orbit et sur le widget
+ * calendrier, activable/désactivable dans Réglages.
  *
  * Combine les jours déjà enregistrés (flow non nul, spotting compris : simple
  * affichage de ce qui a été saisi) et les jours prédits (projection du cycle
@@ -20,45 +14,17 @@ interface MinimalCycleDay {
  * prédiction, seuls les mois déjà vécus affichaient quelque chose, jamais
  * les mois à venir.
  *
- * L'historique complet n'est chargé qu'une fois par couple : changer de mois
- * ne refait plus la requête, seul le filtrage local est recalculé.
+ * L'historique complet vient de la source partagée useCycleDays (chargée
+ * une fois, puis tenue à jour en temps réel) : changer de mois ne refait
+ * aucune requête, seul le filtrage local est recalculé — à partir des dates
+ * de la plage (chaînes), pas des objets Date, que certains appelants
+ * recréent à chaque rendu.
  */
 export function useCyclePeriodDays(rangeStart: Date, rangeEnd: Date, enabled: boolean): Set<string> {
-  const { couple } = useCouple();
-  const [cycleDays, setCycleDays] = useState<MinimalCycleDay[]>([]);
+  const { days: cycleDays } = useCycleDays(enabled);
 
   const startStr = format(rangeStart, "yyyy-MM-dd");
   const endStr = format(rangeEnd, "yyyy-MM-dd");
-
-  useEffect(() => {
-    if (!enabled || !couple) {
-      setCycleDays([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    // L'historique complet (pas seulement la plage affichée) est nécessaire
-    // pour calculer la longueur moyenne du cycle et projeter la prédiction.
-    supabase
-      .from("cycle_days")
-      .select("date, flow")
-      .eq("couple_id", couple.id)
-      .order("date")
-      .then(
-        ({ data }) => {
-          if (cancelled || !data) return;
-          setCycleDays(data as MinimalCycleDay[]);
-        },
-        () => {
-          // hors ligne : on garde les jours de règles déjà chargés
-        }
-      );
-
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, couple?.id]);
 
   return useMemo(() => {
     if (!enabled || cycleDays.length === 0) return new Set<string>();
@@ -72,12 +38,12 @@ export function useCyclePeriodDays(rangeStart: Date, rangeEnd: Date, enabled: bo
       summary.nextPeriodStart,
       summary.averageCycleLength,
       summary.averagePeriodLength,
-      rangeEnd
+      parseISO(endStr)
     );
     for (const date of predicted) {
       if (date >= startStr && date <= endStr) dates.add(date);
     }
 
     return dates;
-  }, [enabled, cycleDays, startStr, endStr, rangeEnd]);
+  }, [enabled, cycleDays, startStr, endStr]);
 }

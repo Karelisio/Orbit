@@ -1,4 +1,5 @@
 import { addDays, differenceInCalendarDays, parseISO, format } from "date-fns";
+import type { CyclePhase, CycleStatus } from "../types";
 
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_PERIOD_LENGTH = 5;
@@ -132,6 +133,39 @@ export function computeCycleSummary(
     fertileWindowEnd: format(addDays(ovulation, FERTILE_WINDOW_AFTER_OVULATION), "yyyy-MM-dd"),
     currentCycleDay: differenceInCalendarDays(new Date(), toDate(lastPeriodStart)) + 1,
   };
+}
+
+const UNAVAILABLE_STATUS: CycleStatus = {
+  available: false,
+  phase: "inconnu",
+  daysUntilNextPeriod: null,
+  nextPeriodStart: null,
+};
+
+/**
+ * État du cycle affiché par le widget cycle de l'accueil (CycleWidget), à la
+ * date `today` : phase et jours avant les prochaines règles. Indisponible
+ * sans historique de règles (ex. Wenn pas utilisée).
+ */
+export function computeCycleStatus(days: MinimalCycleDay[], today: Date = new Date()): CycleStatus {
+  if (days.length === 0) return UNAVAILABLE_STATUS;
+  const summary = computeCycleSummary(days);
+  if (!summary.nextPeriodStart) return UNAVAILABLE_STATUS;
+
+  const todayStr = format(today, "yyyy-MM-dd");
+  const daysUntilNextPeriod = differenceInCalendarDays(toDate(summary.nextPeriodStart), today);
+
+  let phase: CyclePhase = "normal";
+  if (daysUntilNextPeriod <= 0 && daysUntilNextPeriod > -7) phase = "regles";
+  else if (summary.ovulationDate === todayStr) phase = "ovulation";
+  else if (isWithin(todayStr, summary.fertileWindowStart, summary.fertileWindowEnd)) phase = "fertile";
+
+  return { available: true, phase, daysUntilNextPeriod, nextPeriodStart: summary.nextPeriodStart };
+}
+
+function isWithin(date: string, start: string | null, end: string | null): boolean {
+  if (!start || !end) return false;
+  return date >= start && date <= end;
 }
 
 /**
