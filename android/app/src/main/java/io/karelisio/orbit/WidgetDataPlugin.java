@@ -113,6 +113,38 @@ public class WidgetDataPlugin extends Plugin {
         call.resolve();
     }
 
+    /**
+     * Vide le contenu des widgets (événements, tâches, journal, jours de
+     * règles et de tâches) à la déconnexion ou en quittant l'espace (voir
+     * lib/localData.ts) : sinon ils continuaient d'afficher les données du
+     * couple. Couleurs, taille du texte et mois affiché restent ; chaque
+     * widget retombe sur son affichage « vide » par défaut.
+     */
+    @PluginMethod
+    public void clear(PluginCall call) {
+        Context context = getContext();
+        context.getSharedPreferences(OrbitWidgetPrefs.NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(OrbitWidgetPrefs.KEY_HAS_EVENT)
+            .remove(OrbitWidgetPrefs.KEY_EVENT_TITLE)
+            .remove(OrbitWidgetPrefs.KEY_EVENT_TIME_LABEL)
+            .remove(OrbitWidgetPrefs.KEY_NEXT_EVENTS_JSON)
+            .remove(OrbitWidgetPrefs.KEY_PENDING_TASKS_COUNT)
+            .remove(OrbitWidgetPrefs.KEY_NEXT_TASK_TITLE)
+            .remove(OrbitWidgetPrefs.KEY_EVENTS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_PERIOD_DAYS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_PREDICTED_PERIOD_DAYS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_TASK_DAYS_CSV)
+            .remove(OrbitWidgetPrefs.KEY_HAS_JOURNAL)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_CONTENT)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_AUTHOR_LABEL)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_TIME_LABEL)
+            .remove(OrbitWidgetPrefs.KEY_JOURNAL_CREATED_AT)
+            .apply();
+        refreshQuietly(context);
+        call.resolve();
+    }
+
     private static void refreshQuietly(Context context) {
         try {
             OrbitCalendarWidgetProvider.refreshAll(context);

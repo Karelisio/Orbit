@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { App } from "@capacitor/app";
 import { supabase } from "../lib/supabase";
+import { purgeLocalSpaceData } from "../lib/localData";
 import { useAuth } from "./AuthContext";
 import type { Couple } from "../types";
 
@@ -82,6 +83,10 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
       if (!error) {
         setCouple((data as Couple) ?? null);
         if (data) writeCoupleCache(userId, data as Couple);
+        // Plus d'espace pour ce compte (quitté ou supprimé depuis l'autre
+        // téléphone) alors que ce téléphone en gardait une copie : on efface
+        // tout ce qui en restait ici (sinon réaffiché au lancement hors ligne).
+        else if (readCoupleCache(userId)) purgeLocalSpaceData();
       }
     } catch {
       // hors ligne : on garde le cache déjà affiché s'il existe
@@ -147,6 +152,7 @@ export function CoupleProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.rpc("leave_couple");
     if (error) return { error: error.message };
     setCouple(null);
+    purgeLocalSpaceData();
     return { error: null };
   }
 

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { Capacitor } from "@capacitor/core";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { purgeLocalSpaceData } from "../lib/localData";
 import {
   NATIVE_AUTH_REDIRECT_URL,
   clearAuthLinkError,
@@ -55,6 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // n'a plus lieu d'être sur le prochain écran de connexion.
       if (event === "SIGNED_IN" || event === "SIGNED_OUT") clearAuthLinkError();
       if (event === "SIGNED_IN") clearPendingLogin();
+      // Déconnecté (bouton, ou session révoquée) : plus rien de l'espace ne
+      // doit rester sur ce téléphone — copies hors ligne, widgets, rappels.
+      if (event === "SIGNED_OUT") purgeLocalSpaceData();
     });
     const unsubscribeLinkError = subscribeAuthLinkError(setAuthLinkError);
 

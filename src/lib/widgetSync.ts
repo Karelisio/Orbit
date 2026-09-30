@@ -33,6 +33,7 @@ interface WidgetDataPlugin {
     fontScale: number;
     seedFollowsWallpaper: boolean;
   }): Promise<void>;
+  clear(): Promise<void>;
 }
 
 const WidgetData = registerPlugin<WidgetDataPlugin>("WidgetData");
@@ -148,5 +149,19 @@ export async function syncWidgets(data: {
     // plateforme sans widgets (ou plugin indisponible) : tant pis — la
     // prochaine synchro retentera, même à contenu identique
     lastPushedPayload = null;
+  }
+}
+
+/**
+ * Vide le contenu des widgets (déconnexion, espace quitté : voir
+ * lib/localData.ts), sans toucher à leurs réglages d'affichage.
+ */
+export async function clearWidgets(): Promise<void> {
+  lastPushedPayload = null;
+  if (Capacitor.getPlatform() !== "android") return;
+  try {
+    await WidgetData.clear();
+  } catch {
+    // plateforme sans widgets (ou plugin indisponible) : tant pis
   }
 }
