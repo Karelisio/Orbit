@@ -94,7 +94,8 @@ scripts/               smoke-test.ts (`npm run check`), archive-changelog.cjs (C
   locale, rattrapage jusqu'à aujourd'hui, jour d'ancrage des mensuelles).
   La colonne FACULTATIVE `orbit_tasks.recurrence_day` garde ce jour d'un
   coche à l'autre (31/01 -> 28/02 -> 31/03) ; elle n'est écrite que si les
-  lignes lues la contiennent déjà (migration passée), sinon rien ne change.
+  lignes lues la contiennent déjà (migration passée — appliquée sur le
+  projet le 2026-09-30, fin de `supabase/schema.sql`), sinon rien ne change.
 - Une date « aaaa-mm-jj » se lit TOUJOURS avec `parseISO` (date locale),
   jamais `new Date("aaaa-mm-jj")` : minuit UTC, soit la veille à l'ouest de
   Greenwich. Une date reçue de l'extérieur (lien, URL) passe par
@@ -424,3 +425,13 @@ locale : lancer aussi `TZ=Europe/Paris npm run check` et
   de message.
 - Pas de sur-ingénierie : cette app sert un couple, pas un produit à grande
   échelle — préférer la solution la plus directe.
+
+## RLS : performance (2026-09-30)
+
+Toutes les policies utilisent `(select auth.uid())` (évalué une fois par
+requête, pas par ligne), les policies « member write » (FOR ALL) sont
+scindées en insert/update/delete (une seule policy permissive par rôle et
+action) et chaque clé étrangère a son index — fin de `supabase/schema.sql`
+pour les tables orbit_*, fin de celui de Wenn pour les tables communes. Déjà
+appliqué sur le projet. Garder cette forme pour toute nouvelle policy
+(advisor Supabase `performance`).
