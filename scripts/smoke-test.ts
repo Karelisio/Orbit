@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { addDays, addMonths, addYears, format } from "date-fns";
 import { computeBalance } from "../src/lib/balances.ts";
-import { computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
+import { computeCycleStatus, computeCycleSummary, predictedPeriodDatesUntil } from "../src/lib/cyclePredictions.ts";
 import { fetchAllRows } from "../src/lib/paging.ts";
 import { formatTogetherDuration, togetherDuration } from "../src/lib/togetherSince.ts";
 import { reminderLabel, nextEventOccurrence, eventOccursOnDay, taskRecurrenceLabel } from "../src/types/index.ts";
@@ -134,6 +134,49 @@ check("la médiane ignore un cycle aberrant", () => {
   const s = computeCycleSummary(periodDays(["2026-06-01", "2026-06-29", "2026-08-13", "2026-09-10"]));
   assert.equal(s.averageCycleLength, 28);
   assert.equal(s.nextPeriodStart, "2026-10-08");
+});
+
+console.log("\nphase du cycle (widget de l'accueil)");
+// Même historique : règles de 4 jours les 1/6, 29/6 et 27/7, prochaines prévues le 24/8.
+const status = (today: Date, extra: { date: string; flow: string | null }[] = []) => computeCycleStatus([...days, ...extra], today);
+check("pendant de vraies règles : « règles en cours » (le bug : « prochaines règles dans 26 j »)", () => {
+  const s = status(new Date(2026, 6, 28, 18, 0));
+  assert.equal(s.phase, "regles");
+  assert.equal(s.currentCycleDay, 2);
+  assert.equal(s.daysUntilNextPeriod, 27);
+});
+check("3 jours après la date prévue sans rien de saisi : « en retard », pas « règles en cours »", () => {
+  const s = status(new Date(2026, 7, 27, 9, 0));
+  assert.equal(s.phase, "retard");
+  assert.equal(s.daysUntilNextPeriod, -3);
+});
+check("le jour prévu lui-même : pas encore en retard", () => {
+  const s = status(new Date(2026, 7, 24, 7, 0));
+  assert.equal(s.phase, "normal");
+  assert.equal(s.daysUntilNextPeriod, 0);
+});
+check("les nouvelles règles saisies mettent fin au retard", () => {
+  const s = status(new Date(2026, 7, 27, 9, 0), [{ date: "2026-08-27", flow: "abondant" }]);
+  assert.equal(s.phase, "regles");
+  assert.equal(s.currentCycleDay, 1);
+  assert.equal(s.nextPeriodStart, "2026-09-24");
+});
+check("un vrai flux saisi aujourd'hui compte, même au-delà de la durée moyenne", () => {
+  const s = status(new Date(2026, 6, 31, 12, 0), [{ date: "2026-07-31", flow: "leger" }]);
+  assert.equal(s.currentCycleDay, 5);
+  assert.equal(s.phase, "regles");
+});
+check("un spotting du jour n'est pas « règles en cours »", () => {
+  assert.equal(status(new Date(2026, 7, 15, 12, 0), [{ date: "2026-08-15", flow: "spotting" }]).phase, "normal");
+});
+check("ovulation et période fertile inchangées", () => {
+  assert.equal(status(new Date(2026, 7, 10, 12, 0)).phase, "ovulation");
+  assert.equal(status(new Date(2026, 7, 7, 12, 0)).phase, "fertile");
+  assert.equal(status(new Date(2026, 7, 3, 12, 0)).phase, "normal");
+});
+check("sans historique : widget masqué", () => {
+  assert.equal(computeCycleStatus([], new Date(2026, 7, 3)).available, false);
+  assert.equal(computeCycleStatus([{ date: "2026-08-01", flow: "spotting" }], new Date(2026, 7, 3)).available, false);
 });
 
 console.log("\ncompteur « Ensemble depuis »");

@@ -20,7 +20,7 @@ interface MinimalCycleDay {
  */
 const PERIOD_FLOWS = new Set(["leger", "moyen", "abondant"]);
 
-function isPeriodDay(day: MinimalCycleDay): boolean {
+export function isPeriodDay(day: MinimalCycleDay): boolean {
   return day.flow !== null && PERIOD_FLOWS.has(day.flow);
 }
 
@@ -91,7 +91,8 @@ function computeAveragePeriodLength(days: MinimalCycleDay[], fallback: number): 
 export function computeCycleSummary(
   days: MinimalCycleDay[],
   fallbackCycleLength = DEFAULT_CYCLE_LENGTH,
-  fallbackPeriodLength = DEFAULT_PERIOD_LENGTH
+  fallbackPeriodLength = DEFAULT_PERIOD_LENGTH,
+  today: Date = new Date()
 ): CycleSummary {
   const starts = getPeriodStarts(days);
 
@@ -131,7 +132,7 @@ export function computeCycleSummary(
     ovulationDate,
     fertileWindowStart: format(addDays(ovulation, -FERTILE_WINDOW_BEFORE_OVULATION), "yyyy-MM-dd"),
     fertileWindowEnd: format(addDays(ovulation, FERTILE_WINDOW_AFTER_OVULATION), "yyyy-MM-dd"),
-    currentCycleDay: differenceInCalendarDays(new Date(), toDate(lastPeriodStart)) + 1,
+    currentCycleDay: differenceInCalendarDays(today, toDate(lastPeriodStart)) + 1,
   };
 }
 
@@ -140,27 +141,46 @@ const UNAVAILABLE_STATUS: CycleStatus = {
   phase: "inconnu",
   daysUntilNextPeriod: null,
   nextPeriodStart: null,
+  currentCycleDay: null,
 };
 
 /**
  * État du cycle affiché par le widget cycle de l'accueil (CycleWidget), à la
  * date `today` : phase et jours avant les prochaines règles. Indisponible
  * sans historique de règles (ex. Wenn pas utilisée).
+ *
+ * « Règles en cours » se déduit des règles réellement enregistrées : jour du
+ * cycle (depuis le dernier vrai début) dans la durée moyenne des règles, ou
+ * un vrai flux (pas du spotting) saisi aujourd'hui. Avant, il se déduisait
+ * de la date PRÉDITE : pendant de vraies règles, le widget annonçait
+ * « prochaines règles dans 26 j », et trois jours de retard sans saisie
+ * donnaient « Règles en cours ». Une date prévue dépassée sans nouvelles
+ * règles donne maintenant un état distinct, « en retard ».
  */
 export function computeCycleStatus(days: MinimalCycleDay[], today: Date = new Date()): CycleStatus {
   if (days.length === 0) return UNAVAILABLE_STATUS;
-  const summary = computeCycleSummary(days);
+  const summary = computeCycleSummary(days, DEFAULT_CYCLE_LENGTH, DEFAULT_PERIOD_LENGTH, today);
   if (!summary.nextPeriodStart) return UNAVAILABLE_STATUS;
 
   const todayStr = format(today, "yyyy-MM-dd");
   const daysUntilNextPeriod = differenceInCalendarDays(toDate(summary.nextPeriodStart), today);
+  const cycleDay = summary.currentCycleDay;
+  const periodFlowToday = days.some((d) => d.date === todayStr && isPeriodDay(d));
+  const inPeriod = periodFlowToday || (cycleDay !== null && cycleDay >= 1 && cycleDay <= summary.averagePeriodLength);
 
   let phase: CyclePhase = "normal";
-  if (daysUntilNextPeriod <= 0 && daysUntilNextPeriod > -7) phase = "regles";
+  if (inPeriod) phase = "regles";
+  else if (daysUntilNextPeriod < 0) phase = "retard";
   else if (summary.ovulationDate === todayStr) phase = "ovulation";
   else if (isWithin(todayStr, summary.fertileWindowStart, summary.fertileWindowEnd)) phase = "fertile";
 
-  return { available: true, phase, daysUntilNextPeriod, nextPeriodStart: summary.nextPeriodStart };
+  return {
+    available: true,
+    phase,
+    daysUntilNextPeriod,
+    nextPeriodStart: summary.nextPeriodStart,
+    currentCycleDay: cycleDay,
+  };
 }
 
 function isWithin(date: string, start: string | null, end: string | null): boolean {

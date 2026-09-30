@@ -10,6 +10,7 @@ la vide.
 - « Ensemble depuis » compte maintenant des durées pleines : ensemble depuis le 15 décembre, on voit « 9 mois, 15 jours » le 30 septembre (et plus « 1 an, 15 jours »).
 - Plus rien ne manque dans les très longues listes (au-delà de 1000 éléments, par exemple plusieurs années d'historique de cycle) : tout est maintenant chargé.
 - Une saisie faite dans Wenn (règles ajoutées, modifiées ou effacées) apparaît maintenant tout de suite dans le calendrier et le widget calendrier d'Orbit, sans avoir à redémarrer Orbit.
+- Widget cycle de l'accueil : pendant les règles, il affiche bien « Règles en cours » (il annonçait « Prochaines règles dans 26 j »), et quand la date prévue est passée sans nouvelles règles, il affiche « Règles en retard » (au lieu de « Règles en cours »).
 
 ## v1.0.39 — 2026-09-30
 - Supprimer l'espace (Réglages → Couple lié, côté titulaire) prévient maintenant clairement que tout l'historique de cycle de Wenn est effacé aussi, conseille d'exporter une sauvegarde avant, et demande de taper SUPPRIMER pour confirmer.

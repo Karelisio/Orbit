@@ -209,11 +209,15 @@ export interface OrbitExpense {
   created_at: string;
 }
 
-export type CyclePhase = "regles" | "fertile" | "ovulation" | "normal" | "inconnu";
+/** "retard" : la date prévue des règles est passée sans que de nouvelles règles soient enregistrées. */
+export type CyclePhase = "regles" | "retard" | "fertile" | "ovulation" | "normal" | "inconnu";
 
 export interface CycleStatus {
   available: boolean;
   phase: CyclePhase;
+  /** Négatif en cas de retard (jours depuis la date prévue). */
   daysUntilNextPeriod: number | null;
   nextPeriodStart: string | null;
+  /** Jour du cycle en cours (1 = premier jour des dernières règles enregistrées). */
+  currentCycleDay: number | null;
 }
